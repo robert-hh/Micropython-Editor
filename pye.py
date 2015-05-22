@@ -466,8 +466,8 @@ class Editor:
             self.content[self.cur_line] = l[:self.col + self.margin]
             if self.autoindent and self.col + self.margin > 0:
                 ni = self.spaces(l, 0)
-                if self.content[self.cur_line].rstrip()[-1] == ':':
-                    ni += self.tab_size
+##                if self.content[self.cur_line].partition(":")[1] == ':':
+##                   ni += self.tab_size
             else:
                 ni = 0
             self.cur_line += 1

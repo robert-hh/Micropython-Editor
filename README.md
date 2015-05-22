@@ -14,7 +14,7 @@ Th editor assumes a VT100 terminal. The editor works in Insert mode. Cursor Keys
 ----
 Files:
 Pyboard Editor.pdf: A short documentation
-README.md: Thi one
+README.md: This one
 pe.py: Editor Python file with all fucntions in a stripped down version for PyBoard only without comments
 pemin.py: Editor Python file wit a reduced fucntion set in a stripped down version for PyBoard only without comments
 pye.hlp: Help file for online help
