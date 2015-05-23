@@ -663,7 +663,7 @@ def pye(name="", content=[""], width=80, height=24, tab_size=4, status=True, dev
             with open(name) as f:
                 content = [l.rstrip('\r\n') for l in f]
        except Exception as err:
-            print("Could not load %s, Reason" % (name, err))
+            print("Could not load %s, Reason %s" % (name, err))
             return              
 
     e = Editor(width, height, tab_size, status)
