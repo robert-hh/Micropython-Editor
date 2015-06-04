@@ -665,6 +665,8 @@ def pye(name="", content=[""], width=80, height=24, tab_size=4, status=True, dev
        except Exception as err:
             print("Could not load %s, Reason %s" % (name, err))
             return              
+    else:
+        content = ["", ""]
 
     e = Editor(width, height, tab_size, status)
     e.init_tty(device, baud)
@@ -702,7 +704,7 @@ if __name__ == "__main__":
 ##
     if False:
 ##
-## This is the regex version of finf. Standard search is up north
+## This is the regex version of find. Standard search is up north
 
         def find_in_file(self, pattern, pos):
             self.find_pattern = pattern ## remember it

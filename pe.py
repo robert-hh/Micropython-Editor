@@ -500,6 +500,8 @@ def pye(name="", content=[""], width=80, height=24, tab_size=4, status=True, dev
        except Exception as err:
             print("Could not load %s, Reason %s" % (name, err))
             return
+    else:
+        content = ["", ""]
     e = Editor(width, height, tab_size, status)
     e.init_tty(device, baud)
     e.set_lines(content, name)
