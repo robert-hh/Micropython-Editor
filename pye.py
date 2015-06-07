@@ -126,15 +126,12 @@ class Editor:
     b"\x12"   : KEY_REPLC, ## Ctrl-R
     }
 
-    def __init__(self, width, height, tab_size, status):
+    def __init__(self, tab_size, status):
         self.top_line = 0
         self.cur_line = 0
         self.row = 0
         self.col = 0
         self.margin = 0
-        self.height = height - 1
-        self.width = width
-        self.hstep = int(width / 6)
         self.k_buffer = b""
         self.tab_size = tab_size
         self.status = status
@@ -626,21 +623,24 @@ class Editor:
 #endif
 #ifdef LINUX        
         if sys.platform == "linux":
-            import tty, termios, curses
-            try:
-                curses.setupterm()
-                n = curses.tigetnum("lines")
-                if n > 0: 
-                    self.height = n - 1
-                n =  curses.tigetnum("cols")
-                if n > 0: 
-                    self.width = n
-            except:
-                pass
+            import tty, termios
             self.org_termios = termios.tcgetattr(0)
             tty.setraw(0)
 #endif
-        pass
+        ## Print out a sequence of ANSI escape code which will report back the size of the window.
+        self.wr(b'\x1b7\x1b[r\x1b[999;999H\x1b[6n')
+        pos = b''
+        while True:
+            char = self.rd()
+            if char == b'R':
+                break
+            if char != b'\x1b' and char != b'[':
+                pos += char
+        self.wr(b'\x1b8')
+        (height, width) = [int(i, 10) for i in pos.split(b';')]
+        self.height = height - 1
+        self.width = width
+        self.hstep = int(width / 6)
 
     def deinit_tty(self):
         ## Do not leave cursor in the middle of screen
@@ -656,7 +656,21 @@ class Editor:
             termios.tcsetattr(0, termios.TCSANOW, self.org_termios)
 #endif
 
-def pye(name="", content=[""], width=80, height=24, tab_size=4, status=True, device=0, baud=38400):
+    def term_size(self):
+        ## Print out a sequence of ANSI escape code which will report back the size of the window.
+        self.wr(b'\x1b7\x1b[r\x1b[999;999H\x1b[6n')
+        pos = b''
+        while True:
+            char = self.rd()
+            if char == b'R':
+                break
+            if char != b'\x1b' and char != b'[':
+                pos += char
+        self.wr(b'\x1b8')
+        (height, width) = [int(i, 10) for i in pos.split(b';')]
+        return height, width
+
+def pye(name="", content=[""], tab_size=4, status=True, device=0, baud=38400):
 
     if name:
        try:
@@ -668,7 +682,7 @@ def pye(name="", content=[""], width=80, height=24, tab_size=4, status=True, dev
     else:
         content = ["", ""]
 
-    e = Editor(width, height, tab_size, status)
+    e = Editor(tab_size, status)
     e.init_tty(device, baud)
     e.set_lines(content, name)
     e.loop()
@@ -685,9 +699,9 @@ def pye(name="", content=[""], width=80, height=24, tab_size=4, status=True, dev
 if __name__ == "__main__":
     if sys.platform == "linux":
         import getopt
-        args_dict = { '-w' : '80' , '-h' : '24' , '-t' : '4'}
+        args_dict = {'-t' : '4'}
         try:
-            options, args = getopt.getopt(sys.argv[1:],"w:h:t:") ## get the options -w xx -h xx -t x -s B
+            options, args = getopt.getopt(sys.argv[1:],"t:") ## get the options -t x -s B
         except:
             print ("Undefined option in: " + ' '.join(sys.argv[1:]))
             sys.exit()
@@ -696,7 +710,7 @@ if __name__ == "__main__":
             name = args[0]
         else:
             name = ""
-        pye(name, [], width=int(args_dict["-w"]), height=int(args_dict["-h"]), tab_size=int(args_dict["-t"]))
+        pye(name, [], tab_size=int(args_dict["-t"]))
 #endif
 
 #ifdef JUNK

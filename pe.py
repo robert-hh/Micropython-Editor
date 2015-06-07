@@ -48,15 +48,12 @@ class Editor:
     b"\x01" : 0x4018, 
     b"\x12" : 0x4019, 
     }
-    def __init__(self, width, height, tab_size, status):
+    def __init__(self, tab_size, status):
         self.top_line = 0
         self.cur_line = 0
         self.row = 0
         self.col = 0
         self.margin = 0
-        self.height = height - 1
-        self.width = width
-        self.hstep = int(width / 6)
         self.k_buffer = b""
         self.tab_size = tab_size
         self.status = status
@@ -485,14 +482,40 @@ class Editor:
                 Editor.serialcomm = pyb.USB_VCP()
                 Editor.serialcomm.setinterrupt(-1)
             Editor.sdev = device
-        pass
+        
+        self.wr(b'\x1b7\x1b[r\x1b[999;999H\x1b[6n')
+        pos = b''
+        while True:
+            char = self.rd()
+            if char == b'R':
+                break
+            if char != b'\x1b' and char != b'[':
+                pos += char
+        self.wr(b'\x1b8')
+        (height, width) = [int(i, 10) for i in pos.split(b';')]
+        self.height = height - 1
+        self.width = width
+        self.hstep = int(width / 6)
     def deinit_tty(self):
         
         self.goto(self.height, 0)
         self.clear_to_eol()
         if sys.platform == "pyboard":
             Editor.serialcomm.setinterrupt(3)
-def pye(name="", content=[""], width=80, height=24, tab_size=4, status=True, device=0, baud=38400):
+    def term_size(self):
+        
+        self.wr(b'\x1b7\x1b[r\x1b[999;999H\x1b[6n')
+        pos = b''
+        while True:
+            char = self.rd()
+            if char == b'R':
+                break
+            if char != b'\x1b' and char != b'[':
+                pos += char
+        self.wr(b'\x1b8')
+        (height, width) = [int(i, 10) for i in pos.split(b';')]
+        return height, width
+def pye(name="", content=[""], tab_size=4, status=True, device=0, baud=38400):
     if name:
        try:
             with open(name) as f:
@@ -502,7 +525,7 @@ def pye(name="", content=[""], width=80, height=24, tab_size=4, status=True, dev
             return
     else:
         content = ["", ""]
-    e = Editor(width, height, tab_size, status)
+    e = Editor(tab_size, status)
     e.init_tty(device, baud)
     e.set_lines(content, name)
     e.loop()
