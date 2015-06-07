@@ -19,6 +19,5 @@ Pyboard Editor.pdf: A short documentation
 README.md: This one
 pe.py: Editor Python file with all functions in a stripped down version for PyBoard only without comments
 pemin.py: Editor Python file wit a reduced function set in a stripped down version for PyBoard only without comments
-pye.hlp: Help file for online help
 pye.py: Source file with comments and code for both PyBoard and Linux micropython/python3. Runs on PyBoard as well, but the file size is much larger.
 

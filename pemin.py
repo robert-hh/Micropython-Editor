@@ -43,8 +43,6 @@ class Editor:
     b"\x1b[Z" : 0x400f, 
     b"\x15" : 0x400f, 
     b"\x16" : 0x4017, 
-    b"\x1bOP" : 0x4016, 
-    b"\x1bOQ" : 0x4016, 
     b"\x01" : 0x4018, 
     b"\x12" : 0x4019, 
     }
@@ -355,8 +353,17 @@ class Editor:
                     if not res or res[0].upper() != 'Y':
                         continue
                 return None
-            elif self.handle_buffer_keys(key):
-                pass
+            elif key == 0x400d:
+                fname = self.line_edit("File Name: ", self.fname)
+                if fname:
+                    try:
+                        with open(fname, "w") as f:
+                            self.wr(" ..Saving..")
+                            for l in self.content:
+                                f.write(l + '\n')
+                        self.changed = " "
+                    except:
+                        pass
             elif self.handle_cursor_keys(key):
                 pass
             else: self.handle_key(key)

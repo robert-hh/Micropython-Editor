@@ -43,7 +43,6 @@ if sys.platform == "pyboard":
 #define KEY_LAST    0x4013
 #define KEY_FIND_AGAIN 0x4014
 #define KEY_YANK    0x4015
-#define KEY_HELP    0x4016
 #define KEY_ZAP     0x4017
 #define KEY_AITOGL  0x4018
 #define KEY_REPLC   0x4019
@@ -71,7 +70,6 @@ KEY_YANK    = 0x4015
 KEY_TAB     = 0x400e
 KEY_BACKTAB = 0x400f
 KEY_ZAP     = 0x4017
-KEY_HELP    = 0x4016
 KEY_AITOGL  = 0x4018
 KEY_REPLC   = 0x4019
 #endif
@@ -120,8 +118,6 @@ class Editor:
     b"\x1b[Z" : KEY_BACKTAB, ## Shift Tab
     b"\x15"   : KEY_BACKTAB, ## Ctrl-U
     b"\x16"   : KEY_ZAP, ## Ctrl-V
-    b"\x1bOP" : KEY_HELP, ## F1
-    b"\x1bOQ" : KEY_HELP, ## F2
     b"\x01"   : KEY_AITOGL, ## Ctrl-A
     b"\x12"   : KEY_REPLC, ## Ctrl-R
     }
@@ -434,23 +430,6 @@ class Editor:
                         self.changed = " "
                     except:
                         pass
-#ifndef BASIC
-            elif key == KEY_HELP:
-                try:
-                    with open("pybe.hlp") as f:
-                        self.cls()
-                        ln = 0
-                        for l in f:
-                            self.goto(ln, 0)
-                            self.wr(l.strip("\r\n")[:self.width])
-                            ln += 1
-                            if ln > self.height: break
-                    f.close()
-                    self.line_edit("Press Enter to continue", "")
-                    self.update_screen()
-                except:
-                    self.message = "Help file not found!"
-#endif
             else:
                 return False
             return True
@@ -604,8 +583,17 @@ class Editor:
                     if not res or res[0].upper() != 'Y':
                         continue
                 return None
-            elif  self.handle_buffer_keys(key):
-                pass
+            elif key == KEY_WRITE:
+                fname = self.line_edit("File Name: ", self.fname)
+                if fname:
+                    try:
+                        with open(fname, "w") as f:
+                            self.wr(" ..Saving..")
+                            for l in self.content:
+                                f.write(l + '\n')
+                        self.changed = " "
+                    except:
+                        pass
             elif  self.handle_cursor_keys(key):
                 pass
             else: self.handle_key(key)
