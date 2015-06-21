@@ -286,7 +286,7 @@ class Editor:
     def show_line(self, l):
         l = l[self.margin:]
         l = l[:self.width]
-        self.wr(l.replace("\x09", "→"))
+        self.wr(l)
         if len(l) < self.width: self.clear_to_eol()
 
     def show_status(self):
@@ -643,27 +643,26 @@ class Editor:
             import termios
             termios.tcsetattr(0, termios.TCSANOW, self.org_termios)
 #endif
-
-    def term_size(self):
-        ## Print out a sequence of ANSI escape code which will report back the size of the window.
-        self.wr(b'\x1b7\x1b[r\x1b[999;999H\x1b[6n')
-        pos = b''
-        while True:
-            char = self.rd()
-            if char == b'R':
-                break
-            if char != b'\x1b' and char != b'[':
-                pos += char
-        self.wr(b'\x1b8')
-        (height, width) = [int(i, 10) for i in pos.split(b';')]
-        return height, width
+## expandtabs in a version which should minimize stack and gc use
+def expandtabs(s):
+    if '\t' in s:
+        r, last, i = ("", 0, 0) ## start values
+        while i < len(s):
+            if s[i] == '\t': ## do not copy before a tab is seen
+                r += s[last:i]
+                r += " " * ( 8 - len(r) % 8)
+                last = i + 1
+            i += 1
+        return r + s[last:i+1]
+    else:
+        return s
 
 def pye(name="", content=[""], tab_size=4, status=True, device=0, baud=38400):
 
     if name:
        try:
             with open(name) as f:
-                content = [l.rstrip('\r\n') for l in f]
+                content = [expandtabs(l.rstrip('\r\n\t')) for l in f]
        except Exception as err:
             print("Could not load %s, Reason %s" % (name, err))
             return              
