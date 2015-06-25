@@ -111,8 +111,15 @@ class Editor:
                         break
             else: 
                 c = self.k_buffer[0]
-                self.k_buffer = self.k_buffer[1:]
-                return c
+                if c >= ord(' '): 
+                    self.k_buffer = self.k_buffer[1:]
+                    return c
+                else: 
+                    if c == ord('\x1b'): 
+                        c = chr(self.k_buffer[-1])
+                        self.k_buffer = b""
+                        while c != '~' and not c.isalpha():
+                            c = Editor.rd().decode()
             self.k_buffer += Editor.rd() 
     def adjust_cursor_eol(self):
         self.col = min(self.col, len(self.content[self.cur_line]) - self.margin)
@@ -377,7 +384,7 @@ class Editor:
                 Editor.serialcomm.setinterrupt(-1)
             Editor.sdev = device
         
-        self.wr(b'\x1b7\x1b[r\x1b[999;999H\x1b[6n')
+        self.wr(b'\x1b[2J\x1b7\x1b[r\x1b[999;999H\x1b[6n')
         pos = b''
         while True:
             char = self.rd()
@@ -385,7 +392,6 @@ class Editor:
                 break
             if char != b'\x1b' and char != b'[':
                 pos += char
-        self.wr(b'\x1b8')
         (height, width) = [int(i, 10) for i in pos.split(b';')]
         self.height = height - 1
         self.width = width
@@ -412,7 +418,7 @@ def pye(name="", content=[""], tab_size=4, status=True, device=0, baud=38400):
     if name:
        try:
             with open(name) as f:
-                content = [expandtabs(l.rstrip('\r\n\t')) for l in f]
+                content = [expandtabs(l.rstrip('\r\n\t ')) for l in f]
        except Exception as err:
             print("Could not load %s, Reason %s" % (name, err))
             return

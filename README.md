@@ -12,7 +12,10 @@ A small text editor written in Python running on PYBoard, allwoing to edit files
 - Added an optional status line and single line prompts for Quit, Save, Find, Replace, and Goto. 
   The status line can be turned (almost) off for slow connections.
 
-The editor assumes a VT100 terminal. The editor works in Insert mode. Cursor Keys, Home, End, PgUp, PgDn, Del and Backspace work as you would expect. Most functions are available with Ctrl-Keys too, if a VT100 keyboard mapping is not available. 
+The editor assumes a VT100 terminal. The editor works in Insert mode. Cursor Keys, Home, End, PgUp, PgDn, Del and Backspace work as you would expect. Most functions are available with Ctrl-Keys too, if a VT100 keyboard mapping is not available. On reading files, tab characters are expanded to spaces with a tab
+size of 8, and trailing whitespace on a line will be discarded. This will not restored when the file is written.
+
+The editor works also well in a Linux environment, with both python3 and micropython.
 
 **Files:**
 

@@ -12,7 +12,7 @@
 ## - Added a status line and single line prompts for Quit, Save, Find and Goto
 ##
 import sys
-##import re  ## needed for regex search
+##
 #ifdef LINUX
 if sys.platform == "linux":
     import os
@@ -211,8 +211,15 @@ class Editor:
                         break
             else:   ## nothing matched, return first char from buffer
                 c = self.k_buffer[0]
-                self.k_buffer = self.k_buffer[1:]
-                return c
+                if c >= ord(' '): ## but only if no Ctrl-Char
+                    self.k_buffer = self.k_buffer[1:]
+                    return c
+                else: ## try to suppress function keys
+                    if c == ord('\x1b'): ## starting with ESC
+                        c = chr(self.k_buffer[-1])
+                        self.k_buffer = b""
+                        while c != '~' and not c.isalpha(): 
+                            c = Editor.rd().decode()
 ## something matched, get more
             self.k_buffer += Editor.rd()   ## get one more char
 
@@ -616,7 +623,7 @@ class Editor:
             tty.setraw(0)
 #endif
         ## Print out a sequence of ANSI escape code which will report back the size of the window.
-        self.wr(b'\x1b7\x1b[r\x1b[999;999H\x1b[6n')
+        self.wr(b'\x1b[2J\x1b7\x1b[r\x1b[999;999H\x1b[6n')
         pos = b''
         while True:
             char = self.rd()
@@ -624,7 +631,6 @@ class Editor:
                 break
             if char != b'\x1b' and char != b'[':
                 pos += char
-        self.wr(b'\x1b8')
         (height, width) = [int(i, 10) for i in pos.split(b';')]
         self.height = height - 1
         self.width = width
@@ -662,7 +668,7 @@ def pye(name="", content=[""], tab_size=4, status=True, device=0, baud=38400):
     if name:
        try:
             with open(name) as f:
-                content = [expandtabs(l.rstrip('\r\n\t')) for l in f]
+                content = [expandtabs(l.rstrip('\r\n\t ')) for l in f]
        except Exception as err:
             print("Could not load %s, Reason %s" % (name, err))
             return              
