@@ -186,8 +186,7 @@ class Editor:
             self.cursor(False)
             self.goto(self.height, 0)
             self.hilite(True)
-            self.wr("%c Ln: %d Col: %d  %s" %
-                    (self.changed, self.cur_line + 1, self.col + self.margin + 1, self.message))
+            self.wr("%c Ln: %d Col: %d  %s" % (self.changed, self.cur_line + 1, self.col + self.margin + 1, self.message))
             self.clear_to_eol()
             self.hilite(False)
             self.cursor(True)
@@ -237,7 +236,7 @@ class Editor:
         else:
             self.message = pattern + " not found"
             return False
-        self.col = match - self.margin
+        self.col = match - self.margin + spos
         self.cur_line = line
         self.adjust_col(False)
         self.adjust_row()
@@ -313,8 +312,11 @@ class Editor:
         self.changed = '*'
         if key == 0x400a:
             self.content[self.cur_line] = l[:self.col + self.margin]
-            if self.autoindent and self.col + self.margin > 0:
-                ni = self.spaces(l, 0)
+            if self.autoindent:
+                ni = self.spaces(l, 0) 
+                r = self.content[self.cur_line].partition("\x23")[0].rstrip() 
+                if r and r[-1] == ':': 
+                    ni += self.tab_size
             else:
                 ni = 0
             self.cur_line += 1

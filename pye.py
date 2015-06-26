@@ -6,7 +6,7 @@
 ## - Ported the code to pyboard (still runs on Linux Python3 and on Linux Micropython)
 ##   It uses VCP_USB on Pyboard, but that may easyly be changed to UART
 ## - changed read keyboard function to comply with char-by-char input (on serial lines)
-## - added support for TAB, BACKTAB, SAVE, DEL at end joining lines, Find, 
+## - added support for TAB, BACKTAB, SAVE, DEL at end joining lines, Find,
 ## - Goto Line, Yank (delete line into buffer), Zap (insert buffer)
 ## - moved main into a function with some optional parameters
 ## - Added a status line and single line prompts for Quit, Save, Find and Goto
@@ -154,13 +154,13 @@ class Editor:
 #endif
 #ifdef PYBOARD
     if sys.platform == "pyboard":
-    
+
         @staticmethod
         def wr(s):
             ns = 0
             while ns < len(s): # complicated but needed, since USB_VCP.write() has issues
                 res = Editor.serialcomm.write(s[ns:])
-                if res != None: 
+                if res != None:
                     ns += res
 
         @staticmethod
@@ -218,16 +218,16 @@ class Editor:
                     if c == ord('\x1b'): ## starting with ESC
                         c = chr(self.k_buffer[-1])
                         self.k_buffer = b""
-                        while c != '~' and not c.isalpha(): 
+                        while c != '~' and not c.isalpha():
                             c = Editor.rd().decode()
 ## something matched, get more
             self.k_buffer += Editor.rd()   ## get one more char
 
 ## check, if cursor beyond EOL, and correct. Return True if update_screen() was called
-    def adjust_cursor_eol(self): 
-        self.col = min(self.col, len(self.content[self.cur_line]) - self.margin) 
+    def adjust_cursor_eol(self):
+        self.col = min(self.col, len(self.content[self.cur_line]) - self.margin)
         if not (0 <= self.col < self.width): # Screen update required?
-            return self.adjust_col(True) 
+            return self.adjust_col(True)
 
 ## Update col and screen if out of view. Return True if update_screen() was called
     def adjust_col(self, updt):
@@ -262,7 +262,7 @@ class Editor:
                 self.top_line = 0
                 self.row = self.cur_line
             if not self.adjust_cursor_eol(): # check for hor. shifts
-                self.update_screen() 
+                self.update_screen()
             return True
 
     def set_lines(self, lines, fname):
@@ -301,8 +301,7 @@ class Editor:
             self.cursor(False)
             self.goto(self.height, 0)
             self.hilite(True)
-            self.wr("%c Ln: %d Col: %d  %s" % \
-                    (self.changed, self.cur_line + 1, self.col + self.margin + 1, self.message))
+            self.wr("%c Ln: %d Col: %d  %s" % (self.changed, self.cur_line + 1, self.col + self.margin + 1, self.message))
             self.clear_to_eol()
             self.hilite(False)
             self.cursor(True)
@@ -356,7 +355,7 @@ class Editor:
         else:
             self.message = pattern + " not found"
             return False
-        self.col = match - self.margin
+        self.col = match - self.margin + spos
         self.cur_line = line
         self.adjust_col(False)
         self.adjust_row()
@@ -381,7 +380,7 @@ class Editor:
             ns = self.spaces(self.content[self.cur_line])
             if self.col + self.margin > ns:
                 self.col = ns - self.margin
-            else:    
+            else:
                 self.col = -self.margin
             self.adjust_col(False)
         elif key == KEY_END:
@@ -447,10 +446,11 @@ class Editor:
         self.changed = '*'
         if key == KEY_ENTER:
             self.content[self.cur_line] = l[:self.col + self.margin]
-            if self.autoindent and self.col + self.margin > 0:
-                ni = self.spaces(l, 0)
-##                if self.content[self.cur_line].partition(":")[1] == ':':
-##                   ni += self.tab_size
+            if self.autoindent:
+                ni = self.spaces(l, 0)  ## query indentation
+                r = self.content[self.cur_line].partition("\x23")[0].rstrip() # \x23 == #
+                if r and r[-1] == ':': ## look for colon as the last char (before comment)
+                    ni += self.tab_size
             else:
                 ni = 0
             self.cur_line += 1
@@ -505,7 +505,7 @@ class Editor:
                 self.content[self.cur_line] = ''
             if not self.adjust_row(): ## if no update here
                 self.update_screen()  ## do it here
-        elif key == KEY_TAB: ## TABify line 
+        elif key == KEY_TAB: ## TABify line
             ns = self.spaces(l, 0)
             ni = self.tab_size - ns % self.tab_size
             self.content[self.cur_line] = l[:self.col + self.margin] + ' ' * ni + l[self.col + self.margin:]
@@ -523,7 +523,7 @@ class Editor:
                 ni = (self.col + self.margin - 1) % self.tab_size + 1
                 if (ns >= ni):
                     self.content[self.cur_line] = l[:self.col + self.margin - ni] + l[self.col + self.margin:]
-                    self.col -= ni    
+                    self.col -= ni
                     self.adjust_col(True)
                 else:
                     self.changed = sc
@@ -552,10 +552,10 @@ class Editor:
                                 self.goto(self.row, self.col)
                                 key = self.c_or_f()  ## Get Char of Fct.
                                 q = chr(key).lower()
-                            if q == 'q' or key == KEY_QUIT: 
+                            if q == 'q' or key == KEY_QUIT:
                                 break
                             elif q in ('a','y'):
-                                self.content[self.cur_line] = self.content[self.cur_line][:self.col + self.margin] + rpat +  self.content[self.cur_line][self.col + self.margin + len(pat):]
+                                self.content[self.cur_line] = self.content[self.cur_line][:self.col + self.margin] + rpat + self.content[self.cur_line][self.col + self.margin + len(pat):]
                                 self.col += len(rpat)
                                 count += 1
                             else: ## everything else is no
@@ -583,7 +583,7 @@ class Editor:
             self.goto(self.row, self.col) ## deferred
             key = self.c_or_f()  ## Get Char of Fct-key code
             self.clear_status()
-            
+
             if key == KEY_QUIT:
                 if self.changed != ' ':
                     res = self.line_edit("Content changed! Quit without saving (y/N)? ", "N")
@@ -616,7 +616,7 @@ class Editor:
                 Editor.serialcomm.setinterrupt(-1)
             Editor.sdev = device
 #endif
-#ifdef LINUX        
+#ifdef LINUX
         if sys.platform == "linux":
             import tty, termios
             self.org_termios = termios.tcgetattr(0)
@@ -644,7 +644,7 @@ class Editor:
         if sys.platform == "pyboard":
             Editor.serialcomm.setinterrupt(3)
 #endif
-#ifdef LINUX        
+#ifdef LINUX
         if sys.platform == "linux":
             import termios
             termios.tcsetattr(0, termios.TCSANOW, self.org_termios)
@@ -671,7 +671,7 @@ def pye(name="", content=[""], tab_size=4, status=True, device=0, baud=38400):
                 content = [expandtabs(l.rstrip('\r\n\t ')) for l in f]
        except Exception as err:
             print("Could not load %s, Reason %s" % (name, err))
-            return              
+            return
     else:
         content = ["", ""]
 
