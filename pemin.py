@@ -33,18 +33,6 @@ class Editor:
     b"\x06" : 0x4010, 
     b"\x0e" : 0x4014, 
     b"\x07" : 0x4011, 
-    b"\x14" : 0x4012, 
-    b"\x1b[1;5H": 0x4012,
-    b"\x02" : 0x4013, 
-    b"\x1b[1;5F": 0x4013,
-    b"\x1b[3;5~": 0x4015,
-    b"\x18" : 0x4015, 
-    b"\x09" : 0x400e,
-    b"\x1b[Z" : 0x400f, 
-    b"\x15" : 0x400f, 
-    b"\x16" : 0x4017, 
-    b"\x01" : 0x4018, 
-    b"\x12" : 0x4019, 
     }
     def __init__(self, tab_size, status):
         self.top_line = 0
@@ -99,10 +87,10 @@ class Editor:
             Editor.wr(b"\x1b[0m")
     def get_input(self): 
         if len(self.k_buffer) == 0:
-            self.k_buffer += Editor.rd() 
+            self.k_buffer = Editor.rd() 
         while True:
             for k in self.KEYMAP.keys():
-                if self.k_buffer == k[:len(self.k_buffer)]: 
+                if k.startswith(self.k_buffer): 
                     if self.k_buffer == k:
                         c = self.KEYMAP[self.k_buffer]
                         self.k_buffer = b""
@@ -120,6 +108,8 @@ class Editor:
                         self.k_buffer = b""
                         while c != '~' and not c.isalpha():
                             c = Editor.rd().decode()
+                    else: 
+                        self.k_buffer = self.k_buffer[1:]
             self.k_buffer += Editor.rd() 
     def display_window(self):
         self.col = min(self.col, len(self.content[self.cur_line]))

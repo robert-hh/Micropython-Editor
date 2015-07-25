@@ -46,6 +46,7 @@ if sys.platform == "pyboard":
 #define KEY_ZAP     0x4017
 #define KEY_AITOGL  0x4018
 #define KEY_REPLC   0x4019
+#define KEY_DUP     0x4020
 #else
 KEY_UP      = 0x4001
 KEY_DOWN    = 0x4002
@@ -72,6 +73,7 @@ KEY_BACKTAB = 0x400f
 KEY_ZAP     = 0x4017
 KEY_AITOGL  = 0x4018
 KEY_REPLC   = 0x4019
+KEY_DUP     = 0x4020
 #endif
 #endif
 
@@ -108,6 +110,7 @@ class Editor:
     b"\x06"   : KEY_FIND, ## Ctrl-F
     b"\x0e"   : KEY_FIND_AGAIN, ## Ctrl-N
     b"\x07"   : KEY_GOTO, ##  Ctrl-G
+#ifndef BASIC
     b"\x14"   : KEY_FIRST, ## Ctrl-T
     b"\x1b[1;5H": KEY_FIRST,
     b"\x02"   : KEY_LAST,  ## Ctrl-B
@@ -120,6 +123,8 @@ class Editor:
     b"\x16"   : KEY_ZAP, ## Ctrl-V
     b"\x01"   : KEY_AITOGL, ## Ctrl-A
     b"\x12"   : KEY_REPLC, ## Ctrl-R
+    b"\x04"   : KEY_DUP, ## Ctrl-D
+#endif
     }
 
     def __init__(self, tab_size, status):
@@ -199,10 +204,10 @@ class Editor:
 
     def get_input(self):  ## read from interface/keyboard one byte each and match against function keys
         if len(self.k_buffer) == 0:
-            self.k_buffer += Editor.rd()  ## get one char to start with
+            self.k_buffer = Editor.rd()  ## get one char to start with
         while True:
             for k in self.KEYMAP.keys():
-                if self.k_buffer == k[:len(self.k_buffer)]:  ## content of buffer matches start of escape sequence
+                if k.startswith(self.k_buffer):  ## content of buffer matches start of code sequence
                     if self.k_buffer == k:
                         c = self.KEYMAP[self.k_buffer]
                         self.k_buffer = b""
@@ -220,6 +225,8 @@ class Editor:
                         self.k_buffer = b""
                         while c != '~' and not c.isalpha():
                             c = Editor.rd().decode()
+                    else: ## Drop anything else
+                        self.k_buffer = self.k_buffer[1:]
 ## something matched, get more
             self.k_buffer += Editor.rd()   ## get one more char
 
@@ -455,7 +462,6 @@ class Editor:
             else:
                 del self.y_buffer # set line
                 self.y_buffer = [l]
-            self.y_mode = True
             if self.total_lines > 1: ## not a single line
                 del self.content[self.cur_line]
                 self.total_lines -= 1
@@ -463,6 +469,15 @@ class Editor:
                     self.cur_line -= 1
             else: ## line is kept but wiped
                 self.content[self.cur_line] = ''
+        elif key == KEY_DUP:  # copy line into buffer and go down one line
+            if key == self.lastkey: # dup series?
+                self.y_buffer.append(l) # add line
+            else:
+                del self.y_buffer # set line
+                self.y_buffer = [l]
+            if self.cur_line + 1 < self.total_lines:
+                self.cur_line += 1
+            self.changed = sc
         elif key == KEY_ZAP: ## insert buffer
             if self.y_buffer:
                 self.content[self.cur_line:self.cur_line] = self.y_buffer # insert lines
@@ -662,7 +677,7 @@ if __name__ == "__main__":
             except:
                 self.message = "Invalid pattern: " + pattern
                 return True
-            spos = pos + self.margin
+            spos = pos
             for line in range(self.cur_line, self.total_lines):
                 if case:
                     match = rex.search(self.content[line][spos:].lower())
@@ -677,7 +692,10 @@ if __name__ == "__main__":
 ## pyboard does not support span(), therefere a second simple find on the target line
 #ifdef PYBOARD
             if sys.platform == "pyboard":
-                self.col = max(self.content[line][spos:].lower().find(match.group(0)), 0) + spos
+                if case:
+                    self.col = max(self.content[line][spos:].find(match.group(0)), 0) + spos
+                else:
+                    self.col = max(self.content[line][spos:].lower().find(match.group(0)), 0) + spos
 #endif
 #ifdef LINUX
             if sys.platform == "linux":

@@ -45,6 +45,7 @@ class Editor:
     b"\x16" : 0x4017, 
     b"\x01" : 0x4018, 
     b"\x12" : 0x4019, 
+    b"\x04" : 0x4020, 
     }
     def __init__(self, tab_size, status):
         self.top_line = 0
@@ -99,10 +100,10 @@ class Editor:
             Editor.wr(b"\x1b[0m")
     def get_input(self): 
         if len(self.k_buffer) == 0:
-            self.k_buffer += Editor.rd() 
+            self.k_buffer = Editor.rd() 
         while True:
             for k in self.KEYMAP.keys():
-                if self.k_buffer == k[:len(self.k_buffer)]: 
+                if k.startswith(self.k_buffer): 
                     if self.k_buffer == k:
                         c = self.KEYMAP[self.k_buffer]
                         self.k_buffer = b""
@@ -120,6 +121,8 @@ class Editor:
                         self.k_buffer = b""
                         while c != '~' and not c.isalpha():
                             c = Editor.rd().decode()
+                    else: 
+                        self.k_buffer = self.k_buffer[1:]
             self.k_buffer += Editor.rd() 
     def display_window(self):
         self.col = min(self.col, len(self.content[self.cur_line]))
@@ -333,7 +336,6 @@ class Editor:
             else:
                 del self.y_buffer 
                 self.y_buffer = [l]
-            self.y_mode = True
             if self.total_lines > 1: 
                 del self.content[self.cur_line]
                 self.total_lines -= 1
@@ -341,6 +343,15 @@ class Editor:
                     self.cur_line -= 1
             else: 
                 self.content[self.cur_line] = ''
+        elif key == 0x4020: 
+            if key == self.lastkey: 
+                self.y_buffer.append(l) 
+            else:
+                del self.y_buffer 
+                self.y_buffer = [l]
+            if self.cur_line + 1 < self.total_lines:
+                self.cur_line += 1
+            self.changed = sc
         elif key == 0x4017: 
             if self.y_buffer:
                 self.content[self.cur_line:self.cur_line] = self.y_buffer 
