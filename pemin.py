@@ -97,7 +97,7 @@ class Editor:
             Editor.wr(b"\x1b[1m")
         else:
             Editor.wr(b"\x1b[0m")
-    def c_or_f(self): 
+    def get_input(self): 
         if len(self.k_buffer) == 0:
             self.k_buffer += Editor.rd() 
         while True:
@@ -121,75 +121,46 @@ class Editor:
                         while c != '~' and not c.isalpha():
                             c = Editor.rd().decode()
             self.k_buffer += Editor.rd() 
-    def adjust_cursor_eol(self):
-        self.col = min(self.col, len(self.content[self.cur_line]) - self.margin)
-        if not (0 <= self.col < self.width): 
-            return self.adjust_col(True)
-    def adjust_col(self, updt):
-        
-            if self.col >= self.width:
-                self.margin = self.col + self.margin - (self.width - 1) + self.hstep
-                self.col = self.width - 1 - self.hstep
-                self.update_screen()
-                return True
-            elif self.col < 0:
-                val = self.col + self.margin 
-                self.margin = max(self.margin - self.width, 0)
-                self.col = val - self.margin
-                self.update_screen()
-                return True
-            else:
-                if updt: self.update_line()
-                return False
-    def adjust_row(self):
-        
+    def display_window(self):
+        self.col = min(self.col, len(self.content[self.cur_line]))
+        if self.col >= self.width + self.margin:
+            self.margin = self.col - self.width + int(self.width / 4)
+        elif self.col < self.margin:
+            self.margin = max(self.col - int(self.width / 4), 0)
         if self.top_line <= self.cur_line < self.top_line + self.height: 
             self.row = self.cur_line - self.top_line
-            return self.adjust_cursor_eol() 
-        else:
+        else: 
             self.top_line = self.cur_line - self.row
             if self.top_line < 0:
                 self.top_line = 0
                 self.row = self.cur_line
-            if not self.adjust_cursor_eol(): 
-                self.update_screen()
-            return True
-    def set_lines(self, lines, fname):
-        self.content = lines
-        self.total_lines = len(lines)
-        self.fname = fname
-    def update_screen(self):
-        self.cursor(False)
-        self.cls()
         self.cursor(False)
         i = self.top_line
         for c in range(self.height):
             self.goto(c, 0)
             if i == self.total_lines:
                 self.clear_to_eol()
+                self.scrbuf[c] = ""
             else:
-                self.show_line(self.content[i])
+                l = self.content[i]
+                match = ("def " in l or "class " in l) and ':' in l
+                l = l[self.margin:self.margin + self.width]
+                if l != self.scrbuf[c]: 
+                    if match: self.hilite(True)
+                    self.wr(l)
+                    if match: self.hilite(False)
+                    if len(l) < self.width:
+                        self.clear_to_eol()
+                    self.scrbuf[c] = l
                 i += 1
-        self.cursor(True)
-    def update_line(self):
-        self.cursor(False)
-        self.goto(self.row, 0)
-        self.show_line(self.content[self.cur_line])
-        self.cursor(True)
-    def show_line(self, l):
-        l = l[self.margin:]
-        l = l[:self.width]
-        self.wr(l)
-        if len(l) < self.width: self.clear_to_eol()
-    def show_status(self):
         if self.status or self.message:
-            self.cursor(False)
             self.goto(self.height, 0)
             self.hilite(True)
-            self.wr("%c Ln: %d Col: %d  %s" % (self.changed, self.cur_line + 1, self.col + self.margin + 1, self.message))
+            self.wr("%c Ln: %d Col: %d  %s" % (self.changed, self.cur_line + 1, self.col + 1, self.message))
             self.clear_to_eol()
             self.hilite(False)
-            self.cursor(True)
+        self.cursor(True)
+        self.goto(self.row, self.col - self.margin)
     def clear_status(self):
         if (not self.status) and self.message:
             self.goto(self.height, 0)
@@ -209,8 +180,8 @@ class Editor:
         res = default
         self.message = ' ' 
         while True:
-            key = self.c_or_f() 
-            if key == 0x400a: 
+            key = self.get_input() 
+            if key in (0x400a, 0x400e): 
                 self.hilite(False)
                 return res
             elif key == 0x4009: 
@@ -225,137 +196,111 @@ class Editor:
                 self.wr(chr(key))
             else: 
                 pass
-    def find_in_file(self, pattern, pos):
+    def find_in_file(self, pattern, pos, case = False):
         self.find_pattern = pattern 
-        spos = pos + self.margin
+        spos = pos
         for line in range(self.cur_line, self.total_lines):
-            match = self.content[line][spos:].lower().find(pattern)
+            if case:
+                match = self.content[line][spos:].find(pattern)
+            else:
+                match = self.content[line][spos:].lower().find(pattern)
             if match >= 0:
                 break
             spos = 0
         else:
             self.message = pattern + " not found"
             return False
-        self.col = match - self.margin + spos
+        self.col = match + spos
         self.cur_line = line
-        self.adjust_col(False)
-        self.adjust_row()
         return True
     def handle_cursor_keys(self, key): 
         if key == 0x4002:
             if self.cur_line + 1 < self.total_lines:
                 self.cur_line += 1
-                self.adjust_row()
         elif key == 0x4001:
             if self.cur_line > 0:
                 self.cur_line -= 1
-                self.adjust_row()
         elif key == 0x4003:
-            self.col -= 1
-            self.adjust_col(False)
+            if (self.col > 0):
+                self.col -= 1
         elif key == 0x4004:
             self.col += 1
-            self.adjust_cursor_eol()
         elif key == 0x4005:
             ns = self.spaces(self.content[self.cur_line])
-            if self.col + self.margin > ns:
-                self.col = ns - self.margin
+            if self.col > ns:
+                self.col = ns
             else:
-                self.col = -self.margin
-            self.adjust_col(False)
+                self.col = 0
         elif key == 0x4006:
-            self.col = len(self.content[self.cur_line]) - self.margin
-            self.adjust_col(False)
+            self.col = len(self.content[self.cur_line])
         elif key == 0x4007:
             self.cur_line -= self.height
             if self.cur_line < 0:
                 self.cur_line = 0
-            self.adjust_row()
         elif key == 0x4008:
             self.cur_line += self.height
             if self.cur_line >= self.total_lines:
                 self.cur_line = self.total_lines - 1
-            self.adjust_row()
         elif key == 0x4010:
             pat = self.line_edit("Find: ", self.find_pattern)
             if pat:
-                self.find_in_file(pat.lower(), self.col)
+                self.find_in_file(pat.lower(), self.col, False)
         elif key == 0x4014:
-            self.find_in_file(self.find_pattern, self.col + 1)
-            self.message = ' ' 
+            if self.find_in_file(self.find_pattern, self.col + 1, False):
+                self.message = ' ' 
         elif key == 0x4011: 
             line = self.line_edit("Goto Line: ", "")
             if line:
-                self.cur_line = min(self.total_lines - 1, max(int(line) - 1, 0))
-                self.adjust_row()
+                try:
+                    target = int(line)
+                    self.cur_line = min(self.total_lines - 1, max(target - 1, 0))
+                except:
+                    pass
         else:
             return False
         return True
-    def handle_buffer_keys(self, key): 
-            if key == 0x400d:
-                fname = self.line_edit("File Name: ", self.fname)
-                if fname:
-                    try:
-                        with open(fname, "w") as f:
-                            self.wr(" ..Saving..")
-                            for l in self.content:
-                                f.write(l + '\n')
-                        self.changed = " "
-                    except:
-                        pass
-            else:
-                return False
-            return True
     def handle_key(self, key): 
         l = self.content[self.cur_line]
         sc = self.changed
         self.changed = '*'
         if key == 0x400a:
-            self.content[self.cur_line] = l[:self.col + self.margin]
+            self.content[self.cur_line] = l[:self.col]
             if self.autoindent:
-                ni = self.spaces(l, 0) 
+                ni = min(self.spaces(l, 0), self.col) 
                 r = self.content[self.cur_line].partition("\x23")[0].rstrip() 
-                if r and r[-1] == ':': 
+                if r and r[-1] == ':' and self.col >= len(r): 
                     ni += self.tab_size
             else:
                 ni = 0
             self.cur_line += 1
-            self.content[self.cur_line:self.cur_line] = [' ' * ni + l[self.col + self.margin:]]
+            self.content[self.cur_line:self.cur_line] = [' ' * ni + l[self.col:]]
             self.total_lines += 1
-            self.col = ni - self.margin
-            if not self.adjust_row(): 
-                self.update_screen() 
+            self.col = ni
         elif key == 0x400b:
-            if self.col + self.margin:
-                self.content[self.cur_line] = l[:self.col + self.margin - 1] + l[self.col + self.margin:]
+            if self.col:
+                self.content[self.cur_line] = l[:self.col - 1] + l[self.col:]
                 self.col -= 1
-                self.adjust_col(True)
             else:
                 self.changed = sc
         elif key == 0x400c:
-            if (self.col + self.margin) < len(l):
-                l = l[:self.col + self.margin] + l[self.col + self.margin + 1:]
+            if self.col < len(l):
+                l = l[:self.col] + l[self.col + 1:]
                 self.content[self.cur_line] = l
-                self.update_line()
             elif (self.cur_line + 1) < self.total_lines: 
                 self.content[self.cur_line] = l + self.content.pop(self.cur_line + 1)
                 self.total_lines -= 1
-                self.update_screen()
             else:
                 self.changed = sc
         elif 32 <= key < 0x4000:
-            self.content[self.cur_line] = l[:self.col + self.margin] + chr(key) + l[self.col + self.margin:]
+            self.content[self.cur_line] = l[:self.col] + chr(key) + l[self.col:]
             self.col += 1
-            self.adjust_col(True)
         else: 
             self.changed = sc
     def loop(self): 
-        self.update_screen()
         while True:
-            self.show_status()
-            self.goto(self.row, self.col) 
-            key = self.c_or_f() 
-            self.clear_status()
+            self.display_window() 
+            key = self.get_input() 
+            self.clear_status() 
             if key == 0x4009:
                 if self.changed != ' ':
                     res = self.line_edit("Content changed! Quit without saving (y/N)? ", "N")
@@ -377,6 +322,12 @@ class Editor:
                 pass
             else: self.handle_key(key)
             self.lastkey = key
+    def set_lines(self, lines, fname):
+        self.content = lines
+        self.total_lines = len(lines)
+        self.fname = fname
+        self.cls()
+        self.scrbuf = [""] * self.height
     def init_tty(self, device, baud):
         if sys.platform == "pyboard":
             if (device):
@@ -397,12 +348,11 @@ class Editor:
         (height, width) = [int(i, 10) for i in pos.split(b';')]
         self.height = height - 1
         self.width = width
-        self.hstep = int(width / 6)
     def deinit_tty(self):
         
         self.goto(self.height, 0)
         self.clear_to_eol()
-        if sys.platform == "pyboard":
+        if sys.platform == "pyboard" and not Editor.sdev:
             Editor.serialcomm.setinterrupt(3)
 def expandtabs(s):
     if '\t' in s:
@@ -413,25 +363,26 @@ def expandtabs(s):
                 r += " " * ( 8 - len(r) % 8)
                 last = i + 1
             i += 1
-        return r + s[last:i+1]
+        return r + s[last:]
     else:
         return s
-def pye(name="", content=[""], tab_size=4, status=True, device=0, baud=38400):
+def pye(name = "", content = [" "], tab_size = 4, status = True, device = 0, baud = 38400):
     if name:
-       try:
+        try:
             with open(name) as f:
                 content = [expandtabs(l.rstrip('\r\n\t ')) for l in f]
-       except Exception as err:
+        except Exception as err:
             print("Could not load %s, Reason %s" % (name, err))
             return
-    else:
-        content = ["", ""]
+    elif not content:
+        content = [" "]
     e = Editor(tab_size, status)
     e.init_tty(device, baud)
     e.set_lines(content, name)
     e.loop()
     e.deinit_tty()
  
+    del e
     if name:
         content.clear()
     if sys.platform == "pyboard":
