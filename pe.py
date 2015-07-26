@@ -33,6 +33,7 @@ class Editor:
     b"\x06" : 0x4010, 
     b"\x0e" : 0x4014, 
     b"\x07" : 0x4011, 
+    b"\x01" : 0x4018, 
     b"\x14" : 0x4012, 
     b"\x1b[1;5H": 0x4012,
     b"\x02" : 0x4013, 
@@ -43,11 +44,10 @@ class Editor:
     b"\x1b[Z" : 0x400f, 
     b"\x15" : 0x400f, 
     b"\x16" : 0x4017, 
-    b"\x01" : 0x4018, 
     b"\x12" : 0x4019, 
     b"\x04" : 0x4020, 
     }
-    def __init__(self, tab_size, status):
+    def __init__(self, tab_size):
         self.top_line = 0
         self.cur_line = 0
         self.row = 0
@@ -55,7 +55,6 @@ class Editor:
         self.margin = 0
         self.k_buffer = b""
         self.tab_size = tab_size
-        self.status = status
         self.autoindent = True
         self.changed = ' '
         self.message = ""
@@ -63,6 +62,7 @@ class Editor:
         self.replc_pattern = ""
         self.y_buffer = []
         self.lastkey = 0
+        self.toggle=3
     if sys.platform == "pyboard":
         @staticmethod
         def wr(s):
@@ -140,15 +140,17 @@ class Editor:
         self.cursor(False)
         i = self.top_line
         for c in range(self.height):
-            self.goto(c, 0)
             if i == self.total_lines:
-                self.clear_to_eol()
-                self.scrbuf[c] = ""
+                if self.scrbuf[c]:
+                    self.goto(c, 0)
+                    self.clear_to_eol()
+                    self.scrbuf[c] = ""
             else:
                 l = self.content[i]
                 match = ("def " in l or "class " in l) and ':' in l
                 l = l[self.margin:self.margin + self.width]
                 if l != self.scrbuf[c]: 
+                    self.goto(c, 0)
                     if match: self.hilite(True)
                     self.wr(l)
                     if match: self.hilite(False)
@@ -249,8 +251,9 @@ class Editor:
             if pat:
                 self.find_in_file(pat.lower(), self.col, False)
         elif key == 0x4014:
-            if self.find_in_file(self.find_pattern, self.col + 1, False):
-                self.message = ' ' 
+            if self.find_pattern:
+                if self.find_in_file(self.find_pattern, self.col + 1, False):
+                    self.message = ' ' 
         elif key == 0x4011: 
             line = self.line_edit("Goto Line: ", "")
             if line:
@@ -259,14 +262,16 @@ class Editor:
                     self.cur_line = min(self.total_lines - 1, max(target - 1, 0))
                 except:
                     pass
+        elif key == 0x4018: 
+            self.toggle = (self.toggle + 1) % 4
+            self.autoindent = (self.toggle & 1) != 0
+            self.status = (self.toggle & 2) != 0
+            self.message = "Autoindent %s, Statusline %s" % (self.autoindent, self.status)
         elif key == 0x4012: 
             self.cur_line = 0
         elif key == 0x4013: 
             self.cur_line = self.total_lines - 1
             self.message = ' ' 
-        elif key == 0x4018: 
-            self.autoindent = not self.autoindent
-            self.message = "Autoindent %s" % self.autoindent
         else:
             return False
         return True
@@ -432,9 +437,11 @@ class Editor:
         if sys.platform == "pyboard":
             if (device):
                 Editor.serialcomm = pyb.UART(device, baud)
+                self.status = False
             else:
                 Editor.serialcomm = pyb.USB_VCP()
                 Editor.serialcomm.setinterrupt(-1)
+                self.status = True
             Editor.sdev = device
         
         self.wr(b'\x1b[2J\x1b7\x1b[r\x1b[999;999H\x1b[6n')
@@ -466,7 +473,7 @@ def expandtabs(s):
         return r + s[last:]
     else:
         return s
-def pye(name = "", content = [" "], tab_size = 4, status = True, device = 0, baud = 38400):
+def pye(name = "", content = [" "], tab_size = 4, device = 0, baud = 115200):
     if name:
         try:
             with open(name) as f:
@@ -476,7 +483,7 @@ def pye(name = "", content = [" "], tab_size = 4, status = True, device = 0, bau
             return
     elif not content:
         content = [" "]
-    e = Editor(tab_size, status)
+    e = Editor(tab_size)
     e.init_tty(device, baud)
     e.set_lines(content, name)
     e.loop()

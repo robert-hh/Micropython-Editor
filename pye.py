@@ -14,7 +14,7 @@
 import sys
 ##
 #ifdef LINUX
-if sys.platform == "linux":
+if sys.platform in ("linux", "darwin"):
     import os
 #endif
 #ifdef PYBOARD
@@ -64,6 +64,7 @@ KEY_WRITE   = 0x400d
 KEY_FIND    = 0x4010
 KEY_FIND_AGAIN = 0x4014
 KEY_GOTO    = 0x4011
+KEY_AITOGL  = 0x4018
 #ifndef BASIC
 KEY_FIRST   = 0x4012
 KEY_LAST    = 0x4013
@@ -71,7 +72,6 @@ KEY_YANK    = 0x4015
 KEY_TAB     = 0x400e
 KEY_BACKTAB = 0x400f
 KEY_ZAP     = 0x4017
-KEY_AITOGL  = 0x4018
 KEY_REPLC   = 0x4019
 KEY_DUP     = 0x4020
 #endif
@@ -110,6 +110,7 @@ class Editor:
     b"\x06"   : KEY_FIND, ## Ctrl-F
     b"\x0e"   : KEY_FIND_AGAIN, ## Ctrl-N
     b"\x07"   : KEY_GOTO, ##  Ctrl-G
+    b"\x01"   : KEY_AITOGL, ## Ctrl-A
 #ifndef BASIC
     b"\x14"   : KEY_FIRST, ## Ctrl-T
     b"\x1b[1;5H": KEY_FIRST,
@@ -121,13 +122,12 @@ class Editor:
     b"\x1b[Z" : KEY_BACKTAB, ## Shift Tab
     b"\x15"   : KEY_BACKTAB, ## Ctrl-U
     b"\x16"   : KEY_ZAP, ## Ctrl-V
-    b"\x01"   : KEY_AITOGL, ## Ctrl-A
     b"\x12"   : KEY_REPLC, ## Ctrl-R
     b"\x04"   : KEY_DUP, ## Ctrl-D
 #endif
     }
 
-    def __init__(self, tab_size, status):
+    def __init__(self, tab_size):
         self.top_line = 0
         self.cur_line = 0
         self.row = 0
@@ -135,7 +135,6 @@ class Editor:
         self.margin = 0
         self.k_buffer = b""
         self.tab_size = tab_size
-        self.status = status
         self.autoindent = True
         self.changed = ' '
         self.message = ""
@@ -143,8 +142,9 @@ class Editor:
         self.replc_pattern = ""
         self.y_buffer = []
         self.lastkey = 0
+        self.toggle=3
 #ifdef LINUX
-    if sys.platform == "linux":
+    if sys.platform in ("linux", "darwin"):
 
         @staticmethod
         def wr(s):
@@ -254,15 +254,17 @@ class Editor:
         self.cursor(False)
         i = self.top_line
         for c in range(self.height):
-            self.goto(c, 0)
             if i == self.total_lines:
-                self.clear_to_eol()
-                self.scrbuf[c] = ""
+                if self.scrbuf[c]:
+                    self.goto(c, 0)
+                    self.clear_to_eol()
+                    self.scrbuf[c] = ""
             else:
                 l = self.content[i]
                 match = ("def " in l or "class " in l) and ':' in l
                 l = l[self.margin:self.margin + self.width]
                 if l != self.scrbuf[c]: ## line changed, print it
+                    self.goto(c, 0)
                     if match: self.hilite(True)
                     self.wr(l)
                     if match: self.hilite(False)
@@ -369,8 +371,9 @@ class Editor:
             if pat:
                 self.find_in_file(pat.lower(), self.col, False)
         elif key == KEY_FIND_AGAIN:
-            if self.find_in_file(self.find_pattern, self.col + 1, False):
-                self.message = ' ' ## force status once
+            if self.find_pattern: 
+                if self.find_in_file(self.find_pattern, self.col + 1, False):
+                    self.message = ' ' ## force status once
         elif key == KEY_GOTO: ## goto line
             line = self.line_edit("Goto Line: ", "")
             if line:
@@ -379,15 +382,17 @@ class Editor:
                     self.cur_line = min(self.total_lines - 1, max(target - 1, 0))
                 except:
                     pass
+        elif key == KEY_AITOGL: ## Toggle Autoindent
+            self.toggle = (self.toggle + 1) % 4
+            self.autoindent = (self.toggle & 1) != 0
+            self.status = (self.toggle & 2) != 0
+            self.message = "Autoindent %s, Statusline %s" % (self.autoindent, self.status)
 #ifndef BASIC
         elif key == KEY_FIRST: ## first line
             self.cur_line = 0
         elif key == KEY_LAST: ## last line
             self.cur_line = self.total_lines - 1
             self.message = ' ' ## force status once
-        elif key == KEY_AITOGL: ## Toggle Autoindent
-            self.autoindent = not self.autoindent
-            self.message = "Autoindent %s" % self.autoindent
 #endif
         else:
             return False
@@ -402,7 +407,7 @@ class Editor:
             if self.autoindent:
                 ni = min(self.spaces(l, 0), self.col)  ## query indentation
                 r = self.content[self.cur_line].partition("\x23")[0].rstrip() # \x23 == #
-                if r and r[-1] == ':' and self.col >= len(r): ## look for colon as the last char (before comment)
+                if r and r[-1] == ':' and self.col >= len(r): ## look for : as the last non-space before comment
                     ni += self.tab_size
             else:
                 ni = 0
@@ -564,16 +569,20 @@ class Editor:
         if sys.platform == "pyboard":
             if (device):
                 Editor.serialcomm = pyb.UART(device, baud)
+                self.status = False
+                
             else:
                 Editor.serialcomm = pyb.USB_VCP()
                 Editor.serialcomm.setinterrupt(-1)
+                self.status = True
             Editor.sdev = device
 #endif
 #ifdef LINUX
-        if sys.platform == "linux":
+        if sys.platform in ("linux", "darwin"):
             import tty, termios
             self.org_termios = termios.tcgetattr(0)
             tty.setraw(0)
+            self.status = True
 #endif
         ## Print out a sequence of ANSI escape code which will report back the size of the window.
         self.wr(b'\x1b[2J\x1b7\x1b[r\x1b[999;999H\x1b[6n')
@@ -597,7 +606,7 @@ class Editor:
             Editor.serialcomm.setinterrupt(3)
 #endif
 #ifdef LINUX
-        if sys.platform == "linux":
+        if sys.platform in ("linux", "darwin"):
             import termios
             termios.tcsetattr(0, termios.TCSANOW, self.org_termios)
 #endif
@@ -615,7 +624,7 @@ def expandtabs(s):
     else:
         return s
 
-def pye(name = "", content = [" "], tab_size = 4, status = True, device = 0, baud = 38400):
+def pye(name = "", content = [" "], tab_size = 4, device = 0, baud = 115200):
 
     if name:
         try:
@@ -627,7 +636,7 @@ def pye(name = "", content = [" "], tab_size = 4, status = True, device = 0, bau
     elif not content:
         content = [" "]
 
-    e = Editor(tab_size, status)
+    e = Editor(tab_size)
     e.init_tty(device, baud)
     e.set_lines(content, name)
     e.loop()
@@ -643,7 +652,7 @@ def pye(name = "", content = [" "], tab_size = 4, status = True, device = 0, bau
 #endif
 #ifdef LINUX
 if __name__ == "__main__":
-    if sys.platform == "linux":
+    if sys.platform in ("linux", "darwin"):
         import getopt
         args_dict = {'-t' : '4'}
         try:
@@ -698,7 +707,7 @@ if __name__ == "__main__":
                     self.col = max(self.content[line][spos:].lower().find(match.group(0)), 0) + spos
 #endif
 #ifdef LINUX
-            if sys.platform == "linux":
+            if sys.platform in ("linux", "darwin"):
                 self.col = match.span()[0] + spos
 #endif
             self.cur_line = line
