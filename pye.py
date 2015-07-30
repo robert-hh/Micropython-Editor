@@ -44,7 +44,7 @@ if sys.platform == "pyboard":
 #define KEY_FIND_AGAIN 0x4014
 #define KEY_YANK    0x4015
 #define KEY_ZAP     0x4017
-#define KEY_AITOGL  0x4018
+#define KEY_TOGGLE  0x4018
 #define KEY_REPLC   0x4019
 #define KEY_DUP     0x4020
 #else
@@ -64,7 +64,7 @@ KEY_WRITE   = 0x400d
 KEY_FIND    = 0x4010
 KEY_FIND_AGAIN = 0x4014
 KEY_GOTO    = 0x4011
-KEY_AITOGL  = 0x4018
+KEY_TOGGLE  = 0x4018
 #ifndef BASIC
 KEY_FIRST   = 0x4012
 KEY_LAST    = 0x4013
@@ -110,7 +110,7 @@ class Editor:
     b"\x06"   : KEY_FIND, ## Ctrl-F
     b"\x0e"   : KEY_FIND_AGAIN, ## Ctrl-N
     b"\x07"   : KEY_GOTO, ##  Ctrl-G
-    b"\x01"   : KEY_AITOGL, ## Ctrl-A
+    b"\x01"   : KEY_TOGGLE, ## Ctrl-A
 #ifndef BASIC
     b"\x14"   : KEY_FIRST, ## Ctrl-T
     b"\x1b[1;5H": KEY_FIRST,
@@ -135,7 +135,6 @@ class Editor:
         self.margin = 0
         self.k_buffer = b""
         self.tab_size = tab_size
-        self.autoindent = True
         self.changed = ' '
         self.message = ""
         self.find_pattern = ""
@@ -382,11 +381,10 @@ class Editor:
                     self.cur_line = min(self.total_lines - 1, max(target - 1, 0))
                 except:
                     pass
-        elif key == KEY_AITOGL: ## Toggle Autoindent
+        elif key == KEY_TOGGLE: ## Toggle Autoindent/Statusline
             self.toggle = (self.toggle + 1) % 4
-            self.autoindent = (self.toggle & 1) != 0
             self.status = (self.toggle & 2) != 0
-            self.message = "Autoindent %s, Statusline %s" % (self.autoindent, self.status)
+            self.message = "%sAutoindent, Statusline %s" % (("No ", "")[self.toggle & 1], ("Off", "On")[self.status])
 #ifndef BASIC
         elif key == KEY_FIRST: ## first line
             self.cur_line = 0
@@ -404,7 +402,7 @@ class Editor:
         self.changed = '*'
         if key == KEY_ENTER:
             self.content[self.cur_line] = l[:self.col]
-            if self.autoindent:
+            if self.toggle & 1: ## Autoindent
                 ni = min(self.spaces(l, 0), self.col)  ## query indentation
                 r = self.content[self.cur_line].partition("\x23")[0].rstrip() # \x23 == #
                 if r and r[-1] == ':' and self.col >= len(r): ## look for : as the last non-space before comment
@@ -624,16 +622,18 @@ def expandtabs(s):
     else:
         return s
 
-def pye(name = "", content = [" "], tab_size = 4, device = 0, baud = 115200):
+def pye(name = "", tab_size = 4, device = 0, baud = 115200):
 
-    if name:
+    if type(name) == str and name:
         try:
             with open(name) as f:
                 content = [expandtabs(l.rstrip('\r\n\t ')) for l in f]
         except Exception as err:
             print("Could not load %s, Reason %s" % (name, err))
             return
-    elif not content:
+    elif type(name) == list and type(name[0]) == str:
+        content = name
+    else:
         content = [" "]
 
     e = Editor(tab_size)

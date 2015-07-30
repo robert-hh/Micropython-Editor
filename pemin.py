@@ -43,7 +43,6 @@ class Editor:
         self.margin = 0
         self.k_buffer = b""
         self.tab_size = tab_size
-        self.autoindent = True
         self.changed = ' '
         self.message = ""
         self.find_pattern = ""
@@ -252,9 +251,8 @@ class Editor:
                     pass
         elif key == 0x4018: 
             self.toggle = (self.toggle + 1) % 4
-            self.autoindent = (self.toggle & 1) != 0
             self.status = (self.toggle & 2) != 0
-            self.message = "Autoindent %s, Statusline %s" % (self.autoindent, self.status)
+            self.message = "%sAutoindent, Statusline %s" % (("No ", "")[self.toggle & 1], ("Off", "On")[self.status])
         else:
             return False
         return True
@@ -264,7 +262,7 @@ class Editor:
         self.changed = '*'
         if key == 0x400a:
             self.content[self.cur_line] = l[:self.col]
-            if self.autoindent:
+            if self.toggle & 1: 
                 ni = min(self.spaces(l, 0), self.col) 
                 r = self.content[self.cur_line].partition("\x23")[0].rstrip() 
                 if r and r[-1] == ':' and self.col >= len(r): 
@@ -367,15 +365,17 @@ def expandtabs(s):
         return r + s[last:]
     else:
         return s
-def pye(name = "", content = [" "], tab_size = 4, device = 0, baud = 115200):
-    if name:
+def pye(name = "", tab_size = 4, device = 0, baud = 115200):
+    if type(name) == str and name:
         try:
             with open(name) as f:
                 content = [expandtabs(l.rstrip('\r\n\t ')) for l in f]
         except Exception as err:
             print("Could not load %s, Reason %s" % (name, err))
             return
-    elif not content:
+    elif type(name) == list and type(name[0]) == str:
+        content = name
+    else:
         content = [" "]
     e = Editor(tab_size)
     e.init_tty(device, baud)
