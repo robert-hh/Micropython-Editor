@@ -669,7 +669,7 @@ if __name__ == "__main__":
             tsize = int(args_dict["-t"])
         except:
             tsize = 4
-        pye(name, [], tab_size = tsize)
+        pye(name, tab_size = tsize)
 #endif
 
 #ifdef JUNK
