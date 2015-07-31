@@ -405,12 +405,13 @@ class Editor:
             key = self.get_input() 
             self.clear_status() 
             if key == 0x4009:
-                if self.changed != ' ':
+                if self.changed != ' ' and self.fname != None:
                     res = self.line_edit("Content changed! Quit without saving (y/N)? ", "N")
                     if not res or res[0].upper() != 'Y':
                         continue
                 return None
             elif key == 0x400d:
+                if self.fname == None: self.fname = ""
                 fname = self.line_edit("File Name: ", self.fname)
                 if fname:
                     try:
@@ -471,26 +472,28 @@ def expandtabs(s):
         return r + s[last:]
     else:
         return s
-def pye(name = "", tab_size = 4, device = 0, baud = 115200):
-    if type(name) == str and name:
+def pye(content = [" "], tab_size = 4, device = 0, baud = 115200):
+    if type(content) == str and content:
         try:
-            with open(name) as f:
+            fname = content
+            with open(fname) as f:
                 content = [expandtabs(l.rstrip('\r\n\t ')) for l in f]
         except Exception as err:
             print("Could not load %s, Reason %s" % (name, err))
             return
-    elif type(name) == list and type(name[0]) == str:
-        content = name
+    elif type(content) == list and type(content[0]) == str:
+        fname = None
     else:
         content = [" "]
+        fname = ""
     e = Editor(tab_size)
     e.init_tty(device, baud)
-    e.set_lines(content, name)
+    e.set_lines(content, fname)
     e.loop()
     e.deinit_tty()
  
     del e
-    if name:
+    if fname != None:
         content.clear()
     if sys.platform == "pyboard":
         import gc
