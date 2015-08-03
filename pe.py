@@ -460,33 +460,34 @@ class Editor:
         self.clear_to_eol()
         if sys.platform == "pyboard" and not Editor.sdev:
             Editor.serialcomm.setinterrupt(3)
-def expandtabs(s):
-    if '\t' in s:
-        r, last, i = ("", 0, 0) 
-        while i < len(s):
-            if s[i] == '\t': 
-                r += s[last:i]
-                r += " " * ( 8 - len(r) % 8)
-                last = i + 1
-            i += 1
-        return r + s[last:]
-    else:
-        return s
+    def expandtabs(self, s):
+        if '\t' in s:
+            r, last, i = ("", 0, 0) 
+            while i < len(s):
+                if s[i] == '\t': 
+                    r += s[last:i]
+                    r += " " * ( 8 - len(r) % 8)
+                    last = i + 1
+                i += 1
+            return r + s[last:]
+        else:
+            return s
 def pye(content = [" "], tab_size = 4, device = 0, baud = 115200):
+    e = Editor(tab_size)
     if type(content) == str and content:
         try:
             fname = content
             with open(fname) as f:
-                content = [expandtabs(l.rstrip('\r\n\t ')) for l in f]
+                content = [e.expandtabs(l.rstrip('\r\n\t ')) for l in f]
         except Exception as err:
-            print("Could not load %s, Reason %s" % (name, err))
+            print("Could not load %s, Reason %s" % (fname, err))
+            del e
             return
     elif type(content) == list and type(content[0]) == str:
         fname = None
     else:
         content = [" "]
         fname = ""
-    e = Editor(tab_size)
     e.init_tty(device, baud)
     e.set_lines(content, fname)
     e.loop()
@@ -498,3 +499,4 @@ def pye(content = [" "], tab_size = 4, device = 0, baud = 115200):
     if sys.platform == "pyboard":
         import gc
         gc.collect()
+edit = pye
