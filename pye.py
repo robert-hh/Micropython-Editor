@@ -64,14 +64,14 @@ KEY_WRITE   = 0x400d
 KEY_FIND    = 0x4010
 KEY_FIND_AGAIN = 0x4014
 KEY_GOTO    = 0x4011
-KEY_TOGGLE  = 0x4018
+KEY_TAB     = 0x400e
 #ifndef BASIC
 KEY_FIRST   = 0x4012
 KEY_LAST    = 0x4013
 KEY_YANK    = 0x4015
-KEY_TAB     = 0x400e
 KEY_BACKTAB = 0x400f
 KEY_ZAP     = 0x4017
+KEY_TOGGLE  = 0x4018
 KEY_REPLC   = 0x4019
 KEY_DUP     = 0x4020
 #endif
@@ -84,34 +84,27 @@ class Editor:
     b"\x1b[B" : KEY_DOWN,
     b"\x1b[D" : KEY_LEFT,
     b"\x1b[C" : KEY_RIGHT,
-    b"\x0b"   : KEY_UP,   ## Ctrl-K
-    b"\x0a"   : KEY_DOWN, ## Ctrl-J
-    b"\x08"   : KEY_LEFT, ## Ctrl-H
-    b"\x0c"   : KEY_RIGHT,## Ctrl-L
     b"\x1b[H" : KEY_HOME, ## in Linux Terminal
     b"\x1bOH" : KEY_HOME, ## Picocom, Minicom
     b"\x1b[1~": KEY_HOME, ## Putty
-    b"\x17"   : KEY_HOME, ## Ctrl W
     b"\x1b[F" : KEY_END,  ## Linux Terminal
     b"\x1bOF" : KEY_END,  ## Picocom, Minicom
     b"\x1b[4~": KEY_END,  ## Putty
-    b"\x05"   : KEY_END,  ## Ctrl-E
     b"\x1b[5~": KEY_PGUP,
-    b"\x0f"   : KEY_PGUP, ## Ctrl-O
     b"\x1b[6~": KEY_PGDN,
-    b"\x10"   : KEY_PGDN, ## Ctrl-P
     b"\x11"   : KEY_QUIT, ## Ctrl-Q
     b"\x03"   : KEY_QUIT, ## Ctrl-C as well
     b"\r"     : KEY_ENTER,
+    b"\n"     : KEY_ENTER,
     b"\x7f"   : KEY_BACKSPACE, ## Ctrl-? (127)
+    b"\x08"   : KEY_BACKSPACE,
     b"\x1b[3~": KEY_DELETE,
-    b"\x19"   : KEY_DELETE, ## Ctr-Y
     b"\x13"   : KEY_WRITE,  ## Ctrl-S
     b"\x06"   : KEY_FIND, ## Ctrl-F
     b"\x0e"   : KEY_FIND_AGAIN, ## Ctrl-N
     b"\x07"   : KEY_GOTO, ##  Ctrl-G
-    b"\x01"   : KEY_TOGGLE, ## Ctrl-A
 #ifndef BASIC
+    b"\x01"   : KEY_TOGGLE, ## Ctrl-A
     b"\x14"   : KEY_FIRST, ## Ctrl-T
     b"\x1b[1;5H": KEY_FIRST,
     b"\x02"   : KEY_LAST,  ## Ctrl-B
@@ -144,7 +137,6 @@ class Editor:
         self.toggle=3
 #ifdef LINUX
     if sys.platform in ("linux", "darwin"):
-
         @staticmethod
         def wr(s):
             ## TODO: When Python is 3.5, update this to use only bytes
@@ -158,7 +150,6 @@ class Editor:
 #endif
 #ifdef PYBOARD
     if sys.platform == "pyboard":
-
         @staticmethod
         def wr(s):
             ns = 0
@@ -230,18 +221,18 @@ class Editor:
             self.k_buffer += Editor.rd()   ## get one more char
 
 ## check, if cursor beyond EOL, and correct. 
-## If self.cur_line is already on screen, just set row accordinly
-## Otherwise, update top_line and display the screen, but keep row
-## Update col and screen if out of view.
+## Update margin and top_line if col and cur_line are out of view.
+## Display changed parts of the screen
 
     def display_window(self):
-## Check Column
+## Check if cursor is beyond EOL
         self.col = min(self.col, len(self.content[self.cur_line]))
+## Check if Column is out of view
         if self.col >= self.width + self.margin:
             self.margin = self.col - self.width + int(self.width / 4)
         elif self.col < self.margin:
             self.margin = max(self.col - int(self.width / 4), 0)
-## check row
+## check if row is out of view
         if self.top_line <= self.cur_line < self.top_line + self.height: # Visible?
             self.row = self.cur_line - self.top_line
         else: ## not visible
@@ -260,7 +251,7 @@ class Editor:
                     self.scrbuf[c] = ""
             else:
                 l = self.content[i]
-                match = ("def " in l or "class " in l) and ':' in l
+                match = ("def " in l or "class " in l) and '\x3a' in l
                 l = l[self.margin:self.margin + self.width]
                 if l != self.scrbuf[c]: ## line changed, print it
                     self.goto(c, 0)
@@ -345,7 +336,7 @@ class Editor:
             if self.cur_line > 0:
                 self.cur_line -= 1
         elif key == KEY_LEFT:
-            if (self.col > 0):
+            if self.col > 0:
                 self.col -= 1
         elif key == KEY_RIGHT:
             self.col += 1
@@ -381,11 +372,11 @@ class Editor:
                     self.cur_line = min(self.total_lines - 1, max(target - 1, 0))
                 except:
                     pass
+#ifndef BASIC
         elif key == KEY_TOGGLE: ## Toggle Autoindent/Statusline
             self.toggle = (self.toggle + 1) % 4
             self.status = (self.toggle & 2) != 0
             self.message = "%sAutoindent, Statusline %s" % (("No ", "")[self.toggle & 1], ("Off", "On")[self.status])
-#ifndef BASIC
         elif key == KEY_FIRST: ## first line
             self.cur_line = 0
         elif key == KEY_LAST: ## last line
@@ -396,17 +387,20 @@ class Editor:
             return False
         return True
 
-    def handle_key(self, key): ## keys which change content
+    def handle_edit_key(self, key): ## keys which change content
         l = self.content[self.cur_line]
         sc = self.changed
         self.changed = '*'
         if key == KEY_ENTER:
             self.content[self.cur_line] = l[:self.col]
-            if self.toggle & 1: ## Autoindent
+            if False: pass
+#ifndef BASIC
+            elif self.toggle & 1: ## Autoindent
                 ni = min(self.spaces(l, 0), self.col)  ## query indentation
                 r = self.content[self.cur_line].partition("\x23")[0].rstrip() # \x23 == #
                 if r and r[-1] == ':' and self.col >= len(r): ## look for : as the last non-space before comment
                     ni += self.tab_size
+#endif
             else:
                 ni = 0
             self.cur_line += 1
@@ -414,7 +408,7 @@ class Editor:
             self.total_lines += 1
             self.col = ni
         elif key == KEY_BACKSPACE:
-            if self.col:
+            if self.col > 0:
                 self.content[self.cur_line] = l[:self.col - 1] + l[self.col:]
                 self.col -= 1
 #ifndef BASIC
@@ -521,6 +515,20 @@ class Editor:
             if count == 0:
                 self.changed = sc
 #endif
+        elif key == KEY_WRITE:
+            fname = self.fname
+            if fname == None: 
+                fname = ""
+            fname = self.line_edit("File Name: ", fname)
+            if fname:
+                try:
+                    with open(fname, "w") as f:
+                        for l in self.content:
+                            f.write(l + '\n')
+                    self.changed = " "
+                    self.fname = fname
+                except:
+                    pass
         elif 32 <= key < 0x4000:
             self.content[self.cur_line] = l[:self.col] + chr(key) + l[self.col:]
             self.col += 1
@@ -539,21 +547,9 @@ class Editor:
                     if not res or res[0].upper() != 'Y':
                         continue
                 return None
-            elif key == KEY_WRITE:
-                if self.fname == None: self.fname = ""
-                fname = self.line_edit("File Name: ", self.fname)
-                if fname:
-                    try:
-                        with open(fname, "w") as f:
-                            self.wr(" ..Saving..")
-                            for l in self.content:
-                                f.write(l + '\n')
-                        self.changed = " "
-                    except:
-                        pass
             elif  self.handle_cursor_keys(key):
                 pass
-            else: self.handle_key(key)
+            else: self.handle_edit_key(key)
             self.lastkey = key
             
     def set_lines(self, lines, fname):
@@ -632,7 +628,7 @@ def pye(content = [" "], tab_size = 4, device = 0, baud = 115200):
             with open(fname) as f:
                 content = [e.expandtabs(l.rstrip('\r\n\t ')) for l in f]
         except Exception as err:
-            print("Could not load %s, Reason %s" % (fname, err))
+            print('Could not load %s, Reason: "%s"' % (fname, err))
             del e
             return
     elif type(content) == list and type(content[0]) == str:
@@ -654,7 +650,6 @@ def pye(content = [" "], tab_size = 4, device = 0, baud = 115200):
         import gc
         gc.collect()
 #endif
-edit = pye
 #ifdef LINUX
 if __name__ == "__main__":
     if sys.platform in ("linux", "darwin"):

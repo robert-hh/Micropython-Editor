@@ -7,33 +7,25 @@ class Editor:
     b"\x1b[B" : 0x4002,
     b"\x1b[D" : 0x4003,
     b"\x1b[C" : 0x4004,
-    b"\x0b" : 0x4001, 
-    b"\x0a" : 0x4002, 
-    b"\x08" : 0x4003, 
-    b"\x0c" : 0x4004,
     b"\x1b[H" : 0x4005, 
     b"\x1bOH" : 0x4005, 
     b"\x1b[1~": 0x4005, 
-    b"\x17" : 0x4005, 
     b"\x1b[F" : 0x4006, 
     b"\x1bOF" : 0x4006, 
     b"\x1b[4~": 0x4006, 
-    b"\x05" : 0x4006, 
     b"\x1b[5~": 0x4007,
-    b"\x0f" : 0x4007, 
     b"\x1b[6~": 0x4008,
-    b"\x10" : 0x4008, 
     b"\x11" : 0x4009, 
     b"\x03" : 0x4009, 
     b"\r" : 0x400a,
+    b"\n" : 0x400a,
     b"\x7f" : 0x400b, 
+    b"\x08" : 0x400b,
     b"\x1b[3~": 0x400c,
-    b"\x19" : 0x400c, 
     b"\x13" : 0x400d, 
     b"\x06" : 0x4010, 
     b"\x0e" : 0x4014, 
     b"\x07" : 0x4011, 
-    b"\x01" : 0x4018, 
     }
     def __init__(self, tab_size):
         self.top_line = 0
@@ -134,7 +126,7 @@ class Editor:
                     self.scrbuf[c] = ""
             else:
                 l = self.content[i]
-                match = ("def " in l or "class " in l) and ':' in l
+                match = ("def " in l or "class " in l) and '\x3a' in l
                 l = l[self.margin:self.margin + self.width]
                 if l != self.scrbuf[c]: 
                     self.goto(c, 0)
@@ -213,7 +205,7 @@ class Editor:
             if self.cur_line > 0:
                 self.cur_line -= 1
         elif key == 0x4003:
-            if (self.col > 0):
+            if self.col > 0:
                 self.col -= 1
         elif key == 0x4004:
             self.col += 1
@@ -249,24 +241,16 @@ class Editor:
                     self.cur_line = min(self.total_lines - 1, max(target - 1, 0))
                 except:
                     pass
-        elif key == 0x4018: 
-            self.toggle = (self.toggle + 1) % 4
-            self.status = (self.toggle & 2) != 0
-            self.message = "%sAutoindent, Statusline %s" % (("No ", "")[self.toggle & 1], ("Off", "On")[self.status])
         else:
             return False
         return True
-    def handle_key(self, key): 
+    def handle_edit_key(self, key): 
         l = self.content[self.cur_line]
         sc = self.changed
         self.changed = '*'
         if key == 0x400a:
             self.content[self.cur_line] = l[:self.col]
-            if self.toggle & 1: 
-                ni = min(self.spaces(l, 0), self.col) 
-                r = self.content[self.cur_line].partition("\x23")[0].rstrip() 
-                if r and r[-1] == ':' and self.col >= len(r): 
-                    ni += self.tab_size
+            if False: pass
             else:
                 ni = 0
             self.cur_line += 1
@@ -274,7 +258,7 @@ class Editor:
             self.total_lines += 1
             self.col = ni
         elif key == 0x400b:
-            if self.col:
+            if self.col > 0:
                 self.content[self.cur_line] = l[:self.col - 1] + l[self.col:]
                 self.col -= 1
             else:
@@ -288,6 +272,20 @@ class Editor:
                 self.total_lines -= 1
             else:
                 self.changed = sc
+        elif key == 0x400d:
+            fname = self.fname
+            if fname == None:
+                fname = ""
+            fname = self.line_edit("File Name: ", fname)
+            if fname:
+                try:
+                    with open(fname, "w") as f:
+                        for l in self.content:
+                            f.write(l + '\n')
+                    self.changed = " "
+                    self.fname = fname
+                except:
+                    pass
         elif 32 <= key < 0x4000:
             self.content[self.cur_line] = l[:self.col] + chr(key) + l[self.col:]
             self.col += 1
@@ -304,21 +302,9 @@ class Editor:
                     if not res or res[0].upper() != 'Y':
                         continue
                 return None
-            elif key == 0x400d:
-                if self.fname == None: self.fname = ""
-                fname = self.line_edit("File Name: ", self.fname)
-                if fname:
-                    try:
-                        with open(fname, "w") as f:
-                            self.wr(" ..Saving..")
-                            for l in self.content:
-                                f.write(l + '\n')
-                        self.changed = " "
-                    except:
-                        pass
             elif self.handle_cursor_keys(key):
                 pass
-            else: self.handle_key(key)
+            else: self.handle_edit_key(key)
             self.lastkey = key
     def set_lines(self, lines, fname):
         self.content = lines
@@ -374,7 +360,7 @@ def pye(content = [" "], tab_size = 4, device = 0, baud = 115200):
             with open(fname) as f:
                 content = [e.expandtabs(l.rstrip('\r\n\t ')) for l in f]
         except Exception as err:
-            print("Could not load %s, Reason %s" % (fname, err))
+            print('Could not load %s, Reason: "%s"' % (fname, err))
             del e
             return
     elif type(content) == list and type(content[0]) == str:
@@ -393,4 +379,3 @@ def pye(content = [" "], tab_size = 4, device = 0, baud = 115200):
     if sys.platform == "pyboard":
         import gc
         gc.collect()
-edit = pye
