@@ -529,6 +529,8 @@ class Editor:
                     self.fname = fname
                 except:
                     pass
+            else:
+                self.changed = sc
         elif 32 <= key < 0x4000:
             self.content[self.cur_line] = l[:self.col] + chr(key) + l[self.col:]
             self.col += 1
