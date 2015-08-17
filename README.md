@@ -6,13 +6,13 @@ A small text editor written in Python running on PYBoard, allowing to edit files
 
 - Use USB_VCP or UART for input and output.
 - Changed the read keyboard function to comply with slow byte-by-byte input on serial lines.
-- Added support for TAB, BACKTAB, SAVE, FIND, REPLACE, GOTO line, YANK (delete line into a buffer), ZAP (insert buffer)
+- Added support for TAB, BACKTAB, SAVE, FIND, REPLACE, GOTO line, YANK (delete line into a buffer), DUP (copy line into a buffer), ZAP (insert buffer)
 - Join Lines by 'Delete Char' at the end or Backspace at the beginning of a line, Auto-indent for ENTER, context sensitive TAB, BACKTAB and HOME
 - Moved main into a function with some optional parameters
 - Added an optional status line and single line prompts for QUIT, SAVE, FIND, REPLACE, and GOTO. 
   The status line can be turned (almost) off for slow connections.
 
-The editor assumes a VT100 terminal. It works in Insert mode. Cursor Keys, Home, End, PgUp, PgDn, Del and Backspace work as you would expect. Most functions are available with Ctrl-Keys too, if a VT100 keyboard mapping is not available. On reading files, tab characters are expanded to spaces with a tab size of 8, and trailing white space on a line will be discarded. It will not restored when the file is written.
+The editor assumes a VT100 terminal. It works in Insert mode. Cursor Keys, Home, End, PgUp, PgDn, Del and Backspace work as you would expect. The additional functions like FIND etc. are available with Ctrl-Keys. On reading files, tab characters are expanded to spaces with a tab size of 8, and trailing white space on a line will be discarded. It will not restored when the file is written.
 
 The editor works also well in a Linux environment, with both python3 and micropython.
 
