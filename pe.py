@@ -1,4 +1,5 @@
 import sys
+import gc
 if sys.platform == "pyboard":
     import pyb
 class Editor:
@@ -53,6 +54,8 @@ class Editor:
         self.find_pattern = ""
         self.replc_pattern = ""
         self.y_buffer = []
+        self.content = [""]
+        self.fname = None
         self.lastkey = 0
         self.toggle=3
     if sys.platform == "pyboard":
@@ -158,6 +161,7 @@ class Editor:
             self.hilite(False)
         self.cursor(True)
         self.goto(self.row, self.col - self.margin)
+        gc.collect()
     def clear_status(self):
         if (not self.status) and self.message:
             self.goto(self.height, 0)
@@ -409,7 +413,10 @@ class Editor:
             self.col += 1
         else: 
             self.changed = sc
-    def loop(self): 
+    def edit_loop(self): 
+        self.scrbuf = [""] * self.height
+        self.cls()
+        self.total_lines = len(self.content)
         while True:
             self.display_window() 
             key = self.get_input() 
@@ -424,12 +431,6 @@ class Editor:
                 pass
             else: self.handle_edit_key(key)
             self.lastkey = key
-    def set_lines(self, lines, fname):
-        self.content = lines
-        self.total_lines = len(lines)
-        self.fname = fname
-        self.cls()
-        self.scrbuf = [""] * self.height
     def init_tty(self, device, baud):
         if sys.platform == "pyboard":
             if (device):
@@ -449,9 +450,8 @@ class Editor:
                 break
             if char != b'\x1b' and char != b'[':
                 pos += char
-        (height, width) = [int(i, 10) for i in pos.split(b';')]
-        self.height = height - 1
-        self.width = width
+        (self.height, self.width) = [int(i, 10) for i in pos.split(b';')]
+        self.height -= 1
     def deinit_tty(self):
         
         self.goto(self.height, 0)
@@ -459,6 +459,8 @@ class Editor:
         if sys.platform == "pyboard" and not Editor.sdev:
             Editor.serialcomm.setinterrupt(3)
     def expandtabs(self, s):
+        if sys.implementation.name == 'micropython':
+            gc.collect() 
         if '\t' in s:
             r, last, i = ("", 0, 0) 
             while i < len(s):
@@ -470,30 +472,30 @@ class Editor:
             return r + s[last:]
         else:
             return s
-def pye(content = [" "], tab_size = 4, device = 0, baud = 115200):
+def pye(content = None, tab_size = 4, device = 0, baud = 115200):
     e = Editor(tab_size)
-    if type(content) == str and content:
-        try:
-            fname = content
-            with open(fname) as f:
-                content = [e.expandtabs(l.rstrip('\r\n\t ')) for l in f]
-        except Exception as err:
-            print('Could not load %s, Reason: "%s"' % (fname, err))
-            del e
-            return
-    elif type(content) == list and type(content[0]) == str:
-        fname = None
-    else:
-        content = [" "]
-        fname = ""
+    if type(content) == str: 
+        e.fname = content
+        if e.fname: 
+            try:
+                with open(e.fname) as f:
+                    e.content = [e.expandtabs(l.rstrip('\r\n\t ')) for l in f]
+                if not e.content: 
+                    e.content = [""]
+            except Exception as err:
+                print ('Could not load %s, Reason: "%s"' % (e.fname, err))
+                del e
+                return
+    elif type(content) == list and len(content) > 0 and type(content[0]) == str:
+        
+        e.content = content
     e.init_tty(device, baud)
-    e.set_lines(content, fname)
-    e.loop()
+    e.edit_loop()
     e.deinit_tty()
- 
+    if e.fname == None:
+        content = e.content
+    else:
+        content = e.fname
     del e
-    if fname != None:
-        content.clear()
-    if sys.platform == "pyboard":
-        import gc
-        gc.collect()
+    gc.collect()
+    return content

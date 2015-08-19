@@ -12,6 +12,7 @@
 ## - Added a status line and single line prompts for Quit, Save, Find and Goto
 ##
 import sys
+import gc
 ##
 #ifdef LINUX
 if sys.platform in ("linux", "darwin"):
@@ -133,6 +134,8 @@ class Editor:
         self.find_pattern = ""
         self.replc_pattern = ""
         self.y_buffer = []
+        self.content = [""]
+        self.fname = None
         self.lastkey = 0
         self.toggle=3
 #ifdef LINUX
@@ -251,13 +254,19 @@ class Editor:
                     self.scrbuf[c] = ""
             else:
                 l = self.content[i]
+#ifndef BASIC
                 match = ("def " in l or "class " in l) and '\x3a' in l
+#endif
                 l = l[self.margin:self.margin + self.width]
                 if l != self.scrbuf[c]: ## line changed, print it
                     self.goto(c, 0)
+#ifndef BASIC
                     if match: self.hilite(True)
+#endif
                     self.wr(l)
+#ifndef BASIC
                     if match: self.hilite(False)
+#endif
                     if len(l) < self.width: 
                         self.clear_to_eol()
                     self.scrbuf[c] = l
@@ -271,6 +280,7 @@ class Editor:
             self.hilite(False)
         self.cursor(True)
         self.goto(self.row, self.col - self.margin)
+        gc.collect()
 
     def clear_status(self):
         if (not self.status) and self.message:
@@ -537,7 +547,11 @@ class Editor:
         else: # Ctrl key or not supported function, ignore
             self.changed = sc
 
-    def loop(self): ## main editing loop
+    def edit_loop(self): ## main editing loop
+        self.scrbuf = [""] * self.height
+        self.cls()
+        self.total_lines = len(self.content)
+
         while True:
             self.display_window()  ## 
             key = self.get_input()  ## Get Char of Fct-key code
@@ -554,13 +568,6 @@ class Editor:
             else: self.handle_edit_key(key)
             self.lastkey = key
             
-    def set_lines(self, lines, fname):
-        self.content = lines
-        self.total_lines = len(lines)
-        self.fname = fname
-        self.cls()
-        self.scrbuf = [""] * self.height
-
     def init_tty(self, device, baud):
 #ifdef PYBOARD
         if sys.platform == "pyboard":
@@ -590,9 +597,8 @@ class Editor:
                 break
             if char != b'\x1b' and char != b'[':
                 pos += char
-        (height, width) = [int(i, 10) for i in pos.split(b';')]
-        self.height = height - 1
-        self.width = width
+        (self.height, self.width) = [int(i, 10) for i in pos.split(b';')]
+        self.height -= 1
 
     def deinit_tty(self):
         ## Do not leave cursor in the middle of screen
@@ -609,6 +615,8 @@ class Editor:
 #endif
 ## expandtabs in a version which should minimize stack and gc use
     def expandtabs(self, s):
+        if sys.implementation.name == 'micropython':
+            gc.collect() ## ugly and slow! but it helps
         if '\t' in s:
             r, last, i = ("", 0, 0) ## start values
             while i < len(s):
@@ -621,37 +629,38 @@ class Editor:
         else:
             return s
 
-def pye(content = [" "], tab_size = 4, device = 0, baud = 115200):
+def pye(content = None, tab_size = 4, device = 0, baud = 115200):
 
+## prepare content
     e = Editor(tab_size)
-    if type(content) == str and content:
-        try:
-            fname = content
-            with open(fname) as f:
-                content = [e.expandtabs(l.rstrip('\r\n\t ')) for l in f]
-        except Exception as err:
-            print('Could not load %s, Reason: "%s"' % (fname, err))
-            del e
-            return
-    elif type(content) == list and type(content[0]) == str:
-        fname = None
-    else:
-        content = [" "]
-        fname = ""
-
+    if type(content) == str: ## String = Filename
+        e.fname = content
+        if e.fname:  ## non-empty String -> read it
+            try:
+                with open(e.fname) as f:
+                    e.content = [e.expandtabs(l.rstrip('\r\n\t ')) for l in f]
+                if not e.content: ## empty file
+                    e.content = [""]
+            except Exception as err:
+                print ('Could not load %s, Reason: "%s"' % (e.fname, err))
+                del e
+                return
+    elif type(content) == list and len(content) > 0 and type(content[0]) == str:
+        ## non-empty list of strings -> edit
+        e.content = content
+## edit
     e.init_tty(device, baud)
-    e.set_lines(content, fname)
-    e.loop()
+    e.edit_loop()
     e.deinit_tty()
- ## clean up memory
+## clean-up
+    if e.fname == None: 
+        content = e.content
+    else:
+        content = e.fname
     del e
-    if fname != None:
-        content.clear()
-#ifdef PYBOARD
-    if sys.platform == "pyboard":
-        import gc
-        gc.collect()
-#endif
+    gc.collect()
+    return content
+
 #ifdef LINUX
 if __name__ == "__main__":
     if sys.platform in ("linux", "darwin"):
