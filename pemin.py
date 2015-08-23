@@ -44,7 +44,8 @@ class Editor:
         self.content = [""]
         self.fname = None
         self.lastkey = 0
-        self.toggle=3
+        self.autoindent = "y"
+        self.case = "n"
     if sys.platform == "pyboard":
         @staticmethod
         def wr(s):
@@ -137,7 +138,7 @@ class Editor:
                         self.clear_to_eol()
                     self.scrbuf[c] = l
                 i += 1
-        if self.status or self.message:
+        if self.status == "y" or self.message:
             self.goto(self.height, 0)
             self.hilite(True)
             self.wr("%c Ln: %d Col: %d  %s" % (self.changed, self.cur_line + 1, self.col + 1, self.message))
@@ -145,9 +146,8 @@ class Editor:
             self.hilite(False)
         self.cursor(True)
         self.goto(self.row, self.col - self.margin)
-        gc.collect()
     def clear_status(self):
-        if (not self.status) and self.message:
+        if (self.status != "y") and self.message:
             self.goto(self.height, 0)
             self.clear_to_eol()
         self.message = ''
@@ -181,11 +181,13 @@ class Editor:
                 self.wr(chr(key))
             else: 
                 pass
-    def find_in_file(self, pattern, pos, case = False):
+    def find_in_file(self, pattern, pos):
         self.find_pattern = pattern 
+        if self.case != "y":
+            pattern = pattern.lower()
         spos = pos
         for line in range(self.cur_line, self.total_lines):
-            if case:
+            if self.case == "y":
                 match = self.content[line][spos:].find(pattern)
             else:
                 match = self.content[line][spos:].lower().find(pattern)
@@ -197,6 +199,7 @@ class Editor:
             return False
         self.col = match + spos
         self.cur_line = line
+        self.message = ' ' 
         return True
     def handle_cursor_keys(self, key): 
         if key == 0x4002:
@@ -229,11 +232,10 @@ class Editor:
         elif key == 0x4010:
             pat = self.line_edit("Find: ", self.find_pattern)
             if pat:
-                self.find_in_file(pat.lower(), self.col, False)
+                self.find_in_file(pat, self.col)
         elif key == 0x4014:
             if self.find_pattern:
-                if self.find_in_file(self.find_pattern, self.col + 1, False):
-                    self.message = ' ' 
+                self.find_in_file(self.find_pattern, self.col + 1)
         elif key == 0x4011: 
             line = self.line_edit("Goto Line: ", "")
             if line:
@@ -298,6 +300,10 @@ class Editor:
         self.scrbuf = [""] * self.height
         self.cls()
         self.total_lines = len(self.content)
+        
+        for i in range(self.total_lines):
+            if sys.implementation.name == 'micropython':
+                self.content[i] = self.expandtabs(self.content[i].rstrip('\r\n\t '))
         while True:
             self.display_window() 
             key = self.get_input() 
@@ -316,11 +322,11 @@ class Editor:
         if sys.platform == "pyboard":
             if (device):
                 Editor.serialcomm = pyb.UART(device, baud)
-                self.status = False
+                self.status = "n"
             else:
                 Editor.serialcomm = pyb.USB_VCP()
                 Editor.serialcomm.setinterrupt(-1)
-                self.status = True
+                self.status = "y"
             Editor.sdev = device
         
         self.wr(b'\x1b[2J\x1b7\x1b[r\x1b[999;999H\x1b[6n')
@@ -340,17 +346,12 @@ class Editor:
         if sys.platform == "pyboard" and not Editor.sdev:
             Editor.serialcomm.setinterrupt(3)
     def expandtabs(self, s):
-        if sys.implementation.name == 'micropython':
-            gc.collect() 
         if '\t' in s:
-            r, last, i = ("", 0, 0) 
-            while i < len(s):
-                if s[i] == '\t': 
-                    r += s[last:i]
-                    r += " " * ( 8 - len(r) % 8)
-                    last = i + 1
-                i += 1
-            return r + s[last:]
+            r = ''
+            for c in s:
+                if c == '\t': r += ' ' * ( 8 - len(r) % 8)
+                else: r += c
+            return r
         else:
             return s
 def pye(content = None, tab_size = 4, device = 0, baud = 115200):
@@ -360,7 +361,7 @@ def pye(content = None, tab_size = 4, device = 0, baud = 115200):
         if e.fname: 
             try:
                 with open(e.fname) as f:
-                    e.content = [e.expandtabs(l.rstrip('\r\n\t ')) for l in f]
+                    e.content = f.readlines()
                 if not e.content: 
                     e.content = [""]
             except Exception as err:

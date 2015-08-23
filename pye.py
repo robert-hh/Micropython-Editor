@@ -13,6 +13,8 @@
 ##
 import sys
 import gc
+## import re  ## if rex-search is used
+
 ##
 #ifdef LINUX
 if sys.platform in ("linux", "darwin"):
@@ -137,7 +139,8 @@ class Editor:
         self.content = [""]
         self.fname = None
         self.lastkey = 0
-        self.toggle=3
+        self.autoindent = "y"
+        self.case = "n"
 #ifdef LINUX
     if sys.platform in ("linux", "darwin"):
         @staticmethod
@@ -223,7 +226,7 @@ class Editor:
 ## something matched, get more
             self.k_buffer += Editor.rd()   ## get one more char
 
-## check, if cursor beyond EOL, and correct. 
+## check, if cursor beyond EOL, and correct.
 ## Update margin and top_line if col and cur_line are out of view.
 ## Display changed parts of the screen
 
@@ -267,12 +270,12 @@ class Editor:
 #ifndef BASIC
                     if match: self.hilite(False)
 #endif
-                    if len(l) < self.width: 
+                    if len(l) < self.width:
                         self.clear_to_eol()
                     self.scrbuf[c] = l
                 i += 1
 ## display Status-Line
-        if self.status or self.message:
+        if self.status == "y" or self.message:
             self.goto(self.height, 0)
             self.hilite(True)
             self.wr("%c Ln: %d Col: %d  %s" % (self.changed, self.cur_line + 1, self.col + 1, self.message))
@@ -280,10 +283,9 @@ class Editor:
             self.hilite(False)
         self.cursor(True)
         self.goto(self.row, self.col - self.margin)
-        gc.collect()
 
     def clear_status(self):
-        if (not self.status) and self.message:
+        if (self.status != "y") and self.message:
             self.goto(self.height, 0)
             self.clear_to_eol()
         self.message = ''
@@ -320,11 +322,13 @@ class Editor:
             else:  ## ignore everything else
                 pass
 
-    def find_in_file(self, pattern, pos, case = False):
+    def find_in_file(self, pattern, pos):
         self.find_pattern = pattern # remember it
+        if self.case != "y":
+            pattern = pattern.lower()
         spos = pos
         for line in range(self.cur_line, self.total_lines):
-            if case:
+            if self.case == "y":
                 match = self.content[line][spos:].find(pattern)
             else:
                 match = self.content[line][spos:].lower().find(pattern)
@@ -336,6 +340,7 @@ class Editor:
             return False
         self.col = match + spos
         self.cur_line = line
+        self.message = ' ' ## force status once
         return True
 
     def handle_cursor_keys(self, key): ## keys which move
@@ -369,11 +374,10 @@ class Editor:
         elif key == KEY_FIND:
             pat = self.line_edit("Find: ", self.find_pattern)
             if pat:
-                self.find_in_file(pat.lower(), self.col, False)
+                self.find_in_file(pat, self.col)
         elif key == KEY_FIND_AGAIN:
-            if self.find_pattern: 
-                if self.find_in_file(self.find_pattern, self.col + 1, False):
-                    self.message = ' ' ## force status once
+            if self.find_pattern:
+                self.find_in_file(self.find_pattern, self.col + 1)
         elif key == KEY_GOTO: ## goto line
             line = self.line_edit("Goto Line: ", "")
             if line:
@@ -383,10 +387,16 @@ class Editor:
                 except:
                     pass
 #ifndef BASIC
-        elif key == KEY_TOGGLE: ## Toggle Autoindent/Statusline
-            self.toggle = (self.toggle + 1) % 4
-            self.status = (self.toggle & 2) != 0
-            self.message = "%sAutoindent, Statusline %s" % (("No ", "")[self.toggle & 1], ("Off", "On")[self.status])
+        elif key == KEY_TOGGLE: ## Toggle Autoindent/Statusline/Search case
+            pat = "%c, %c, %c" % (self.case, self.status, self.autoindent)
+            pat = self.line_edit("Case Sensitive Search, Statusline, Autoindent (y/n): ", pat)
+            try:
+                res =  [i.strip().lower() for i in pat.split(",")]
+                if res[0]: self.case = res[0][0]
+                if res[1]: self.status = res[1][0]
+                if res[2]: self.autoindent = res[2][0]
+            except:
+                pass
         elif key == KEY_FIRST: ## first line
             self.cur_line = 0
         elif key == KEY_LAST: ## last line
@@ -405,7 +415,7 @@ class Editor:
             self.content[self.cur_line] = l[:self.col]
             if False: pass
 #ifndef BASIC
-            elif self.toggle & 1: ## Autoindent
+            elif self.autoindent == "y": ## Autoindent
                 ni = min(self.spaces(l, 0), self.col)  ## query indentation
                 r = self.content[self.cur_line].partition("\x23")[0].rstrip() # \x23 == #
                 if r and r[-1] == ':' and self.col >= len(r): ## look for : as the last non-space before comment
@@ -501,7 +511,7 @@ class Editor:
                     self.replc_pattern = rpat
                     q = ''
                     while True:
-                        if self.find_in_file(pat, self.col, True):
+                        if self.find_in_file(pat, self.col):
                             found = True
                             if q != 'a':
                                 self.display_window()
@@ -520,14 +530,14 @@ class Editor:
                                 self.col += 1
                         else:
                             break
-                    if found: 
+                    if found:
                         self.message = "Replaced %d times" % count
             if count == 0:
                 self.changed = sc
 #endif
         elif key == KEY_WRITE:
             fname = self.fname
-            if fname == None: 
+            if fname == None:
                 fname = ""
             fname = self.line_edit("File Name: ", fname)
             if fname:
@@ -551,9 +561,16 @@ class Editor:
         self.scrbuf = [""] * self.height
         self.cls()
         self.total_lines = len(self.content)
-
+        ## strip trailing whitespace and expand tabs
+        for i in range(self.total_lines):
+            if sys.implementation.name == 'micropython':
+                self.content[i] = self.expandtabs(self.content[i].rstrip('\r\n\t '))
+#ifdef LINUX
+            else:
+                self.content[i] = self.content[i].rstrip('\r\n\t ').expandtabs()
+#endif
         while True:
-            self.display_window()  ## 
+            self.display_window()  ## Update & display window
             key = self.get_input()  ## Get Char of Fct-key code
             self.clear_status() ## From messages
 
@@ -567,18 +584,18 @@ class Editor:
                 pass
             else: self.handle_edit_key(key)
             self.lastkey = key
-            
+
     def init_tty(self, device, baud):
 #ifdef PYBOARD
         if sys.platform == "pyboard":
             if (device):
                 Editor.serialcomm = pyb.UART(device, baud)
-                self.status = False
-                
+                self.status = "n"
+
             else:
                 Editor.serialcomm = pyb.USB_VCP()
                 Editor.serialcomm.setinterrupt(-1)
-                self.status = True
+                self.status = "y"
             Editor.sdev = device
 #endif
 #ifdef LINUX
@@ -586,7 +603,7 @@ class Editor:
             import tty, termios
             self.org_termios = termios.tcgetattr(0)
             tty.setraw(0)
-            self.status = True
+            self.status = "y"
 #endif
         ## Print out a sequence of ANSI escape code which will report back the size of the window.
         self.wr(b'\x1b[2J\x1b7\x1b[r\x1b[999;999H\x1b[6n')
@@ -613,24 +630,18 @@ class Editor:
             import termios
             termios.tcsetattr(0, termios.TCSANOW, self.org_termios)
 #endif
-## expandtabs in a version which should minimize stack and gc use
+## expandtabs: hopefully sometimes replaced by the built-in function
     def expandtabs(self, s):
-        if sys.implementation.name == 'micropython':
-            gc.collect() ## ugly and slow! but it helps
         if '\t' in s:
-            r, last, i = ("", 0, 0) ## start values
-            while i < len(s):
-                if s[i] == '\t': ## do not copy before a tab is seen
-                    r += s[last:i]
-                    r += " " * ( 8 - len(r) % 8)
-                    last = i + 1
-                i += 1
-            return r + s[last:]
+            r = ''
+            for c in s:
+                if c == '\t': r += ' ' * ( 8 - len(r) % 8)
+                else: r += c
+            return r
         else:
             return s
 
 def pye(content = None, tab_size = 4, device = 0, baud = 115200):
-
 ## prepare content
     e = Editor(tab_size)
     if type(content) == str: ## String = Filename
@@ -638,7 +649,7 @@ def pye(content = None, tab_size = 4, device = 0, baud = 115200):
         if e.fname:  ## non-empty String -> read it
             try:
                 with open(e.fname) as f:
-                    e.content = [e.expandtabs(l.rstrip('\r\n\t ')) for l in f]
+                    e.content = f.readlines()
                 if not e.content: ## empty file
                     e.content = [""]
             except Exception as err:
@@ -653,7 +664,7 @@ def pye(content = None, tab_size = 4, device = 0, baud = 115200):
     e.edit_loop()
     e.deinit_tty()
 ## clean-up
-    if e.fname == None: 
+    if e.fname == None:
         content = e.content
     else:
         content = e.fname
@@ -689,39 +700,34 @@ if __name__ == "__main__":
     if False:
 ##
 ## This is the regex version of find. Standard search is up north
-
-        def find_in_file(self, pattern, pos, case = False):
+        def find_in_file(self, pattern, pos):
             self.find_pattern = pattern ## remember it
+            if self.case != "y":
+                pattern = pattern.lower()
             try:
                 rex = re.compile(pattern)
             except:
                 self.message = "Invalid pattern: " + pattern
-                return True
+                return False
             spos = pos
             for line in range(self.cur_line, self.total_lines):
-                if case:
-                    match = rex.search(self.content[line][spos:].lower())
-                else:
+                if self.case == "y":
                     match = rex.search(self.content[line][spos:])
+                else:
+                    match = rex.search(self.content[line][spos:].lower())
                 if match:
                     break
                 spos = 0
             else:
                 self.message = pattern + " not found"
                 return False
-## pyboard does not support span(), therefere a second simple find on the target line
-#ifdef PYBOARD
-            if sys.platform == "pyboard":
-                if case:
-                    self.col = max(self.content[line][spos:].find(match.group(0)), 0) + spos
-                else:
-                    self.col = max(self.content[line][spos:].lower().find(match.group(0)), 0) + spos
-#endif
-#ifdef LINUX
-            if sys.platform in ("linux", "darwin"):
-                self.col = match.span()[0] + spos
-#endif
+## micropython does not support span(), therefore a second simple find on the target line
+            if self.case == "y":
+                self.col = max(self.content[line][spos:].find(match.group(0)), 0) + spos
+            else:
+                self.col = max(self.content[line][spos:].lower().find(match.group(0)), 0) + spos
             self.cur_line = line
+            self.message = ' ' ## force status once
             return True
 #endif
 
