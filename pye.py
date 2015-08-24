@@ -13,6 +13,8 @@
 ##
 import sys
 import gc
+import _io
+
 ## import re  ## if rex-search is used
 
 ##
@@ -49,7 +51,10 @@ if sys.platform == "pyboard":
 #define KEY_ZAP     0x4017
 #define KEY_TOGGLE  0x4018
 #define KEY_REPLC   0x4019
-#define KEY_DUP     0x4020
+#define KEY_DUP     0x401a
+#define KEY_MOUSE   0x401b
+#define KEY_SCRLUP  0x401c
+#define KEY_SCRLDN  0x401d
 #else
 KEY_UP      = 0x4001
 KEY_DOWN    = 0x4002
@@ -68,6 +73,9 @@ KEY_FIND    = 0x4010
 KEY_FIND_AGAIN = 0x4014
 KEY_GOTO    = 0x4011
 KEY_TAB     = 0x400e
+KEY_MOUSE   = 0x401b
+KEY_SCRLUP  = 0x401c
+KEY_SCRLDN  = 0x401d
 #ifndef BASIC
 KEY_FIRST   = 0x4012
 KEY_LAST    = 0x4013
@@ -76,7 +84,7 @@ KEY_BACKTAB = 0x400f
 KEY_ZAP     = 0x4017
 KEY_TOGGLE  = 0x4018
 KEY_REPLC   = 0x4019
-KEY_DUP     = 0x4020
+KEY_DUP     = 0x401a
 #endif
 #endif
 
@@ -106,6 +114,7 @@ class Editor:
     b"\x06"   : KEY_FIND, ## Ctrl-F
     b"\x0e"   : KEY_FIND_AGAIN, ## Ctrl-N
     b"\x07"   : KEY_GOTO, ##  Ctrl-G
+    b"\x1b[M" : KEY_MOUSE,
 #ifndef BASIC
     b"\x01"   : KEY_TOGGLE, ## Ctrl-A
     b"\x14"   : KEY_FIRST, ## Ctrl-T
@@ -207,7 +216,14 @@ class Editor:
                     if self.k_buffer == k:
                         c = self.KEYMAP[self.k_buffer]
                         self.k_buffer = b""
-                        return c ## found a function key
+                        if c == KEY_MOUSE: ## special
+                            mf = ord((Editor.rd())) & 0xe3 ## read 3 more chars
+                            self.mouse_x = ord(Editor.rd()) - 33
+                            self.mouse_y = ord(Editor.rd()) - 33
+                            if   mf == 0x61: return KEY_SCRLDN
+                            elif mf == 0x60: return KEY_SCRLUP
+                            else: return KEY_MOUSE ## do nothing but set the cursor
+                        else: return c ## found a function key
                     else:  ## start matches, but there must be more: get another char
                         break
             else:   ## nothing matched, return first char from buffer
@@ -386,10 +402,23 @@ class Editor:
                     self.cur_line = min(self.total_lines - 1, max(target - 1, 0))
                 except:
                     pass
+        elif key == KEY_MOUSE: ## Set Cursor
+            if self.mouse_y < self.height:
+                self.col = self.mouse_x + self.margin
+                self.cur_line = self.mouse_y + self.top_line
+        elif key == KEY_SCRLUP: ## 
+            if self.top_line > 2:
+                self.top_line -= 3
+                if self.cur_line > self.top_line + self.height -1:
+                    self.cur_line = self.top_line + self.height - 1
+        elif key == KEY_SCRLDN: ## 
+            if self.cur_line + 3 < self.total_lines:
+                self.top_line += 3
+                if self.top_line > self.cur_line:
+                    self.cur_line = self.top_line
 #ifndef BASIC
         elif key == KEY_TOGGLE: ## Toggle Autoindent/Statusline/Search case
-            pat = "%c, %c, %c" % (self.case, self.status, self.autoindent)
-            pat = self.line_edit("Case Sensitive Search, Statusline, Autoindent (y/n): ", pat)
+            pat = self.line_edit("Case Sensitive %c, Statusline %c, Autoindent %c: " % (self.case, self.status, self.autoindent), "")
             try:
                 res =  [i.strip().lower() for i in pat.split(",")]
                 if res[0]: self.case = res[0][0]
@@ -417,7 +446,7 @@ class Editor:
 #ifndef BASIC
             elif self.autoindent == "y": ## Autoindent
                 ni = min(self.spaces(l, 0), self.col)  ## query indentation
-                r = self.content[self.cur_line].partition("\x23")[0].rstrip() # \x23 == #
+                r = self.content[self.cur_line].partition("\x23")[0].rstrip() ## \x23 == #
                 if r and r[-1] == ':' and self.col >= len(r): ## look for : as the last non-space before comment
                     ni += self.tab_size
 #endif
@@ -616,11 +645,13 @@ class Editor:
                 pos += char
         (self.height, self.width) = [int(i, 10) for i in pos.split(b';')]
         self.height -= 1
+        self.wr(b'\x1b[?9h') ## enable mouse reporting
 
     def deinit_tty(self):
         ## Do not leave cursor in the middle of screen
         self.goto(self.height, 0)
         self.clear_to_eol()
+        self.wr(b'\x1b[?9l') ## disable mouse reporting
 #ifdef PYBOARD
         if sys.platform == "pyboard" and not Editor.sdev:
             Editor.serialcomm.setinterrupt(3)
@@ -630,14 +661,20 @@ class Editor:
             import termios
             termios.tcsetattr(0, termios.TCSANOW, self.org_termios)
 #endif
+
 ## expandtabs: hopefully sometimes replaced by the built-in function
     def expandtabs(self, s):
         if '\t' in s:
-            r = ''
+            sb = _io.StringIO()
+            pos = 0
             for c in s:
-                if c == '\t': r += ' ' * ( 8 - len(r) % 8)
-                else: r += c
-            return r
+                if c == '\t': ## tab is seen
+                    sb.write(" " * (8 - pos % 8)) ## replace by space
+                    pos += 8 - pos % 8
+                else:
+                    sb.write(c)
+                    pos += 1
+            return sb.getvalue()
         else:
             return s
 
@@ -730,4 +767,3 @@ if __name__ == "__main__":
             self.message = ' ' ## force status once
             return True
 #endif
-

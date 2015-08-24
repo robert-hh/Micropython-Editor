@@ -1,5 +1,6 @@
 import sys
 import gc
+import _io
 if sys.platform == "pyboard":
     import pyb
 class Editor:
@@ -27,6 +28,7 @@ class Editor:
     b"\x06" : 0x4010, 
     b"\x0e" : 0x4014, 
     b"\x07" : 0x4011, 
+    b"\x1b[M" : 0x401b,
     }
     def __init__(self, tab_size):
         self.top_line = 0
@@ -90,7 +92,14 @@ class Editor:
                     if self.k_buffer == k:
                         c = self.KEYMAP[self.k_buffer]
                         self.k_buffer = b""
-                        return c 
+                        if c == 0x401b: 
+                            mf = ord((Editor.rd())) & 0xe3 
+                            self.mouse_x = ord(Editor.rd()) - 33
+                            self.mouse_y = ord(Editor.rd()) - 33
+                            if mf == 0x61: return 0x401d
+                            elif mf == 0x60: return 0x401c
+                            else: return 0x401b 
+                        else: return c 
                     else: 
                         break
             else: 
@@ -244,6 +253,20 @@ class Editor:
                     self.cur_line = min(self.total_lines - 1, max(target - 1, 0))
                 except:
                     pass
+        elif key == 0x401b: 
+            if self.mouse_y < self.height:
+                self.col = self.mouse_x + self.margin
+                self.cur_line = self.mouse_y + self.top_line
+        elif key == 0x401c: 
+            if self.top_line > 2:
+                self.top_line -= 3
+                if self.cur_line > self.top_line + self.height -1:
+                    self.cur_line = self.top_line + self.height - 1
+        elif key == 0x401d: 
+            if self.cur_line + 3 < self.total_lines:
+                self.top_line += 3
+                if self.top_line > self.cur_line:
+                    self.cur_line = self.top_line
         else:
             return False
         return True
@@ -339,19 +362,26 @@ class Editor:
                 pos += char
         (self.height, self.width) = [int(i, 10) for i in pos.split(b';')]
         self.height -= 1
+        self.wr(b'\x1b[?9h') 
     def deinit_tty(self):
         
         self.goto(self.height, 0)
         self.clear_to_eol()
+        self.wr(b'\x1b[?9l') 
         if sys.platform == "pyboard" and not Editor.sdev:
             Editor.serialcomm.setinterrupt(3)
     def expandtabs(self, s):
         if '\t' in s:
-            r = ''
+            sb = _io.StringIO()
+            pos = 0
             for c in s:
-                if c == '\t': r += ' ' * ( 8 - len(r) % 8)
-                else: r += c
-            return r
+                if c == '\t': 
+                    sb.write(" " * (8 - pos % 8)) 
+                    pos += 8 - pos % 8
+                else:
+                    sb.write(c)
+                    pos += 1
+            return sb.getvalue()
         else:
             return s
 def pye(content = None, tab_size = 4, device = 0, baud = 115200):
