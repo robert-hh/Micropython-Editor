@@ -96,10 +96,14 @@ class Editor:
                             mf = ord((Editor.rd())) & 0xe3 
                             self.mouse_x = ord(Editor.rd()) - 33
                             self.mouse_y = ord(Editor.rd()) - 33
-                            if mf == 0x61: return 0x401d
-                            elif mf == 0x60: return 0x401c
-                            else: return 0x401b 
-                        else: return c 
+                            if mf == 0x61:
+                                return 0x401d
+                            elif mf == 0x60:
+                                return 0x401c
+                            else:
+                                return 0x401b 
+                        else:
+                            return c 
                     else: 
                         break
             else: 
@@ -117,22 +121,19 @@ class Editor:
                         self.k_buffer = self.k_buffer[1:]
             self.k_buffer += Editor.rd() 
     def display_window(self):
-        self.col = min(self.col, len(self.content[self.cur_line]))
+        self.cur_line = min(self.total_lines - 1, max(self.cur_line, 0))
+        self.col = max(0, min(self.col, len(self.content[self.cur_line])))
         if self.col >= self.width + self.margin:
             self.margin = self.col - self.width + int(self.width / 4)
         elif self.col < self.margin:
             self.margin = max(self.col - int(self.width / 4), 0)
-        if self.top_line <= self.cur_line < self.top_line + self.height: 
-            self.row = self.cur_line - self.top_line
-        else: 
-            self.top_line = self.cur_line - self.row
-            if self.top_line < 0:
-                self.top_line = 0
-                self.row = self.cur_line
+        if not (self.top_line <= self.cur_line < self.top_line + self.height): 
+            self.top_line = max(self.cur_line - self.row, 0)
+        self.row = self.cur_line - self.top_line
         self.cursor(False)
         i = self.top_line
         for c in range(self.height):
-            if i == self.total_lines:
+            if i == self.total_lines: 
                 if self.scrbuf[c]:
                     self.goto(c, 0)
                     self.clear_to_eol()
@@ -186,8 +187,9 @@ class Editor:
                     res = res[:len(res)-1]
                     self.wr('\b \b')
             elif 0x20 <= key < 0x100: 
-                res += chr(key)
-                self.wr(chr(key))
+                if len(prompt) + len(res) < self.width - 1:
+                    res += chr(key)
+                    self.wr(chr(key))
             else: 
                 pass
     def find_in_file(self, pattern, pos):
@@ -212,14 +214,11 @@ class Editor:
         return True
     def handle_cursor_keys(self, key): 
         if key == 0x4002:
-            if self.cur_line + 1 < self.total_lines:
-                self.cur_line += 1
+            self.cur_line += 1
         elif key == 0x4001:
-            if self.cur_line > 0:
-                self.cur_line -= 1
+            self.cur_line -= 1
         elif key == 0x4003:
-            if self.col > 0:
-                self.col -= 1
+            self.col -= 1
         elif key == 0x4004:
             self.col += 1
         elif key == 0x4005:
@@ -232,12 +231,8 @@ class Editor:
             self.col = len(self.content[self.cur_line])
         elif key == 0x4007:
             self.cur_line -= self.height
-            if self.cur_line < 0:
-                self.cur_line = 0
         elif key == 0x4008:
             self.cur_line += self.height
-            if self.cur_line >= self.total_lines:
-                self.cur_line = self.total_lines - 1
         elif key == 0x4010:
             pat = self.line_edit("Find: ", self.find_pattern)
             if pat:
@@ -249,8 +244,7 @@ class Editor:
             line = self.line_edit("Goto Line: ", "")
             if line:
                 try:
-                    target = int(line)
-                    self.cur_line = min(self.total_lines - 1, max(target - 1, 0))
+                    self.cur_line = int(line) - 1
                 except:
                     pass
         elif key == 0x401b: 
@@ -258,15 +252,11 @@ class Editor:
                 self.col = self.mouse_x + self.margin
                 self.cur_line = self.mouse_y + self.top_line
         elif key == 0x401c: 
-            if self.top_line > 2:
-                self.top_line -= 3
-                if self.cur_line > self.top_line + self.height -1:
-                    self.cur_line = self.top_line + self.height - 1
+            self.top_line = max(self.top_line - 3, 0)
+            self.cur_line = min(self.cur_line, self.top_line + self.height - 1)
         elif key == 0x401d: 
-            if self.cur_line + 3 < self.total_lines:
-                self.top_line += 3
-                if self.top_line > self.cur_line:
-                    self.cur_line = self.top_line
+            self.top_line = min(self.top_line + 3, self.total_lines - 1)
+            self.cur_line = max(self.cur_line, self.top_line)
         else:
             return False
         return True
@@ -276,9 +266,7 @@ class Editor:
         self.changed = '*'
         if key == 0x400a:
             self.content[self.cur_line] = l[:self.col]
-            if False: pass
-            else:
-                ni = 0
+            ni = 0
             self.cur_line += 1
             self.content[self.cur_line:self.cur_line] = [' ' * ni + l[self.col:]]
             self.total_lines += 1
@@ -294,7 +282,8 @@ class Editor:
                 l = l[:self.col] + l[self.col + 1:]
                 self.content[self.cur_line] = l
             elif (self.cur_line + 1) < self.total_lines: 
-                self.content[self.cur_line] = l + self.content.pop(self.cur_line + 1)
+                ni = 0
+                self.content[self.cur_line] = l + self.content.pop(self.cur_line + 1)[ni:]
                 self.total_lines -= 1
             else:
                 self.changed = sc
@@ -352,7 +341,7 @@ class Editor:
                 self.status = "y"
             Editor.sdev = device
         
-        self.wr(b'\x1b[2J\x1b7\x1b[r\x1b[999;999H\x1b[6n')
+        self.wr(b'\x1b[999;999H\x1b[6n')
         pos = b''
         while True:
             char = self.rd()

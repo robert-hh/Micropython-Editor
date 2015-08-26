@@ -220,10 +220,14 @@ class Editor:
                             mf = ord((Editor.rd())) & 0xe3 ## read 3 more chars
                             self.mouse_x = ord(Editor.rd()) - 33
                             self.mouse_y = ord(Editor.rd()) - 33
-                            if   mf == 0x61: return KEY_SCRLDN
-                            elif mf == 0x60: return KEY_SCRLUP
-                            else: return KEY_MOUSE ## do nothing but set the cursor
-                        else: return c ## found a function key
+                            if mf == 0x61:
+                                return KEY_SCRLDN
+                            elif mf == 0x60:
+                                return KEY_SCRLUP
+                            else:
+                                return KEY_MOUSE ## do nothing but set the cursor
+                        else:
+                            return c ## found a function key
                     else:  ## start matches, but there must be more: get another char
                         break
             else:   ## nothing matched, return first char from buffer
@@ -242,31 +246,31 @@ class Editor:
 ## something matched, get more
             self.k_buffer += Editor.rd()   ## get one more char
 
-## check, if cursor beyond EOL, and correct.
-## Update margin and top_line if col and cur_line are out of view.
-## Display changed parts of the screen
+## a) (defferred) sanity checks for cur_line and col first
+## b) Update margin and top_line if col and cur_line are out of view.
+## c) Display changed parts of the screen
+## d) Update status line
 
     def display_window(self):
-## Check if cursor is beyond EOL
-        self.col = min(self.col, len(self.content[self.cur_line]))
+## Force cur_line to be in the existing line range
+        self.cur_line = min(self.total_lines - 1, max(self.cur_line, 0))
+## Force col to be in its line range
+        self.col = max(0, min(self.col, len(self.content[self.cur_line])))
 ## Check if Column is out of view
         if self.col >= self.width + self.margin:
             self.margin = self.col - self.width + int(self.width / 4)
         elif self.col < self.margin:
             self.margin = max(self.col - int(self.width / 4), 0)
-## check if row is out of view
-        if self.top_line <= self.cur_line < self.top_line + self.height: # Visible?
-            self.row = self.cur_line - self.top_line
-        else: ## not visible
-            self.top_line = self.cur_line - self.row
-            if self.top_line < 0:
-                self.top_line = 0
-                self.row = self.cur_line
+## if cur_line is out of view
+        if not (self.top_line <= self.cur_line < self.top_line + self.height): # Visible?
+## align top_line to row
+            self.top_line = max(self.cur_line - self.row, 0)
+        self.row = self.cur_line - self.top_line
 ## update_screen
         self.cursor(False)
         i = self.top_line
         for c in range(self.height):
-            if i == self.total_lines:
+            if i == self.total_lines: ## at empty bottom screen part
                 if self.scrbuf[c]:
                     self.goto(c, 0)
                     self.clear_to_eol()
@@ -333,8 +337,9 @@ class Editor:
                     res = res[:len(res)-1]
                     self.wr('\b \b')
             elif 0x20 <= key < 0x100: ## char to be added at the end
-                res += chr(key)
-                self.wr(chr(key))
+                if len(prompt) + len(res) < self.width - 1:
+                    res += chr(key)
+                    self.wr(chr(key))
             else:  ## ignore everything else
                 pass
 
@@ -359,16 +364,13 @@ class Editor:
         self.message = ' ' ## force status once
         return True
 
-    def handle_cursor_keys(self, key): ## keys which move
+    def handle_cursor_keys(self, key): ## keys which move, sanity checks later
         if key == KEY_DOWN:
-            if self.cur_line + 1 < self.total_lines:
-                self.cur_line += 1
+            self.cur_line += 1
         elif key == KEY_UP:
-            if self.cur_line > 0:
-                self.cur_line -= 1
+            self.cur_line -= 1
         elif key == KEY_LEFT:
-            if self.col > 0:
-                self.col -= 1
+            self.col -= 1
         elif key == KEY_RIGHT:
             self.col += 1
         elif key == KEY_HOME:
@@ -381,12 +383,8 @@ class Editor:
             self.col = len(self.content[self.cur_line])
         elif key == KEY_PGUP:
             self.cur_line -= self.height
-            if self.cur_line < 0:
-                self.cur_line = 0
         elif key == KEY_PGDN:
             self.cur_line += self.height
-            if self.cur_line >= self.total_lines:
-                self.cur_line = self.total_lines - 1
         elif key == KEY_FIND:
             pat = self.line_edit("Find: ", self.find_pattern)
             if pat:
@@ -398,24 +396,19 @@ class Editor:
             line = self.line_edit("Goto Line: ", "")
             if line:
                 try:
-                    target = int(line)
-                    self.cur_line = min(self.total_lines - 1, max(target - 1, 0))
+                    self.cur_line = int(line) - 1
                 except:
                     pass
         elif key == KEY_MOUSE: ## Set Cursor
             if self.mouse_y < self.height:
                 self.col = self.mouse_x + self.margin
                 self.cur_line = self.mouse_y + self.top_line
-        elif key == KEY_SCRLUP: ## 
-            if self.top_line > 2:
-                self.top_line -= 3
-                if self.cur_line > self.top_line + self.height -1:
-                    self.cur_line = self.top_line + self.height - 1
-        elif key == KEY_SCRLDN: ## 
-            if self.cur_line + 3 < self.total_lines:
-                self.top_line += 3
-                if self.top_line > self.cur_line:
-                    self.cur_line = self.top_line
+        elif key == KEY_SCRLUP: ##
+            self.top_line = max(self.top_line - 3, 0)
+            self.cur_line = min(self.cur_line, self.top_line + self.height - 1)
+        elif key == KEY_SCRLDN: ##
+            self.top_line = min(self.top_line + 3, self.total_lines - 1)
+            self.cur_line = max(self.cur_line, self.top_line)
 #ifndef BASIC
         elif key == KEY_TOGGLE: ## Toggle Autoindent/Statusline/Search case
             pat = self.line_edit("Case Sensitive %c, Statusline %c, Autoindent %c: " % (self.case, self.status, self.autoindent), "")
@@ -442,16 +435,14 @@ class Editor:
         self.changed = '*'
         if key == KEY_ENTER:
             self.content[self.cur_line] = l[:self.col]
-            if False: pass
+            ni = 0
 #ifndef BASIC
-            elif self.autoindent == "y": ## Autoindent
+            if self.autoindent == "y": ## Autoindent
                 ni = min(self.spaces(l, 0), self.col)  ## query indentation
                 r = self.content[self.cur_line].partition("\x23")[0].rstrip() ## \x23 == #
                 if r and r[-1] == ':' and self.col >= len(r): ## look for : as the last non-space before comment
                     ni += self.tab_size
 #endif
-            else:
-                ni = 0
             self.cur_line += 1
             self.content[self.cur_line:self.cur_line] = [' ' * ni + l[self.col:]]
             self.total_lines += 1
@@ -475,7 +466,12 @@ class Editor:
                 l = l[:self.col] + l[self.col + 1:]
                 self.content[self.cur_line] = l
             elif (self.cur_line + 1) < self.total_lines: ## test for last line
-                self.content[self.cur_line] = l + self.content.pop(self.cur_line + 1)
+                ni = 0
+#ifndef BASIC
+                if self.autoindent == "y": ## Autoindent reversed
+                    ni = self.spaces(self.content[self.cur_line + 1])
+#endif
+                self.content[self.cur_line] = l + self.content.pop(self.cur_line + 1)[ni:]
                 self.total_lines -= 1
             else:
                 self.changed = sc
@@ -634,8 +630,8 @@ class Editor:
             tty.setraw(0)
             self.status = "y"
 #endif
-        ## Print out a sequence of ANSI escape code which will report back the size of the window.
-        self.wr(b'\x1b[2J\x1b7\x1b[r\x1b[999;999H\x1b[6n')
+        ## Set cursor far off and ask for reporting its position = size of the window.
+        self.wr(b'\x1b[999;999H\x1b[6n')
         pos = b''
         while True:
             char = self.rd()
