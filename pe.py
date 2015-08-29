@@ -223,11 +223,11 @@ class Editor:
             spos = 0
         else:
             self.message = pattern + " not found"
-            return False
+            return 0
         self.col = match + spos
         self.cur_line = line
         self.message = ' ' 
-        return True
+        return len(pattern)
     def handle_cursor_keys(self, key): 
         if key == 0x4002:
             self.cur_line += 1
@@ -253,14 +253,17 @@ class Editor:
             pat = self.line_edit("Find: ", self.find_pattern)
             if pat:
                 self.find_in_file(pat, self.col)
+                self.row = int(self.height / 2)
         elif key == 0x4014:
             if self.find_pattern:
                 self.find_in_file(self.find_pattern, self.col + 1)
+                self.row = int(self.height / 2)
         elif key == 0x4011: 
             line = self.line_edit("Goto Line: ", "")
             if line:
                 try:
                     self.cur_line = int(line) - 1
+                    self.row = int(self.height / 2)
                 except:
                     pass
         elif key == 0x401b: 
@@ -286,6 +289,7 @@ class Editor:
             self.cur_line = 0
         elif key == 0x4013: 
             self.cur_line = self.total_lines - 1
+            self.row = int(self.height / 2)
             self.message = ' ' 
         else:
             return False
@@ -390,7 +394,8 @@ class Editor:
                     self.replc_pattern = rpat
                     q = ''
                     while True:
-                        if self.find_in_file(pat, self.col):
+                        ni = self.find_in_file(pat, self.col)
+                        if ni:
                             found = True
                             if q != 'a':
                                 self.display_window()
@@ -402,7 +407,7 @@ class Editor:
                             if q == 'q' or key == 0x4009:
                                 break
                             elif q in ('a','y'):
-                                self.content[self.cur_line] = self.content[self.cur_line][:self.col] + rpat + self.content[self.cur_line][self.col + len(pat):]
+                                self.content[self.cur_line] = self.content[self.cur_line][:self.col] + rpat + self.content[self.cur_line][self.col + ni:]
                                 self.col += len(rpat)
                                 count += 1
                             else: 
@@ -469,13 +474,11 @@ class Editor:
         
         self.wr(b'\x1b[999;999H\x1b[6n')
         pos = b''
-        while True:
+        char = self.rd() 
+        while char != b'R':
+            pos += char
             char = self.rd()
-            if char == b'R':
-                break
-            if char != b'\x1b' and char != b'[':
-                pos += char
-        (self.height, self.width) = [int(i, 10) for i in pos.split(b';')]
+        (self.height, self.width) = [int(i, 10) for i in pos[2:].split(b';')]
         self.height -= 1
         self.wr(b'\x1b[?9h') 
     def deinit_tty(self):

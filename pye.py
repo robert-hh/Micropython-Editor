@@ -1,4 +1,5 @@
 ##
+## Small python text editor based on the:
 ## Very simple VT100 terminal text editor widget
 ## Copyright (c) 2015 Paul Sokolovsky
 ## Distributed under MIT License
@@ -14,9 +15,6 @@
 import sys
 import gc
 import _io
-
-## import re  ## if rex-search is used
-
 ##
 #ifdef LINUX
 if sys.platform in ("linux", "darwin"):
@@ -358,11 +356,11 @@ class Editor:
             spos = 0
         else:
             self.message = pattern + " not found"
-            return False
+            return 0
         self.col = match + spos
         self.cur_line = line
         self.message = ' ' ## force status once
-        return True
+        return len(pattern)
 
     def handle_cursor_keys(self, key): ## keys which move, sanity checks later
         if key == KEY_DOWN:
@@ -389,14 +387,17 @@ class Editor:
             pat = self.line_edit("Find: ", self.find_pattern)
             if pat:
                 self.find_in_file(pat, self.col)
+                self.row = int(self.height / 2)
         elif key == KEY_FIND_AGAIN:
             if self.find_pattern:
                 self.find_in_file(self.find_pattern, self.col + 1)
+                self.row = int(self.height / 2)
         elif key == KEY_GOTO: ## goto line
             line = self.line_edit("Goto Line: ", "")
             if line:
                 try:
                     self.cur_line = int(line) - 1
+                    self.row = int(self.height / 2)
                 except:
                     pass
         elif key == KEY_MOUSE: ## Set Cursor
@@ -423,6 +424,7 @@ class Editor:
             self.cur_line = 0
         elif key == KEY_LAST: ## last line
             self.cur_line = self.total_lines - 1
+            self.row = int(self.height / 2)
             self.message = ' ' ## force status once
 #endif
         else:
@@ -536,7 +538,8 @@ class Editor:
                     self.replc_pattern = rpat
                     q = ''
                     while True:
-                        if self.find_in_file(pat, self.col):
+                        ni = self.find_in_file(pat, self.col)
+                        if ni:
                             found = True
                             if q != 'a':
                                 self.display_window()
@@ -548,7 +551,7 @@ class Editor:
                             if q == 'q' or key == KEY_QUIT:
                                 break
                             elif q in ('a','y'):
-                                self.content[self.cur_line] = self.content[self.cur_line][:self.col] + rpat + self.content[self.cur_line][self.col + len(pat):]
+                                self.content[self.cur_line] = self.content[self.cur_line][:self.col] + rpat + self.content[self.cur_line][self.col + ni:]
                                 self.col += len(rpat)
                                 count += 1
                             else: ## everything else is no
@@ -633,13 +636,11 @@ class Editor:
         ## Set cursor far off and ask for reporting its position = size of the window.
         self.wr(b'\x1b[999;999H\x1b[6n')
         pos = b''
-        while True:
+        char = self.rd() ## expect ESC[yyy;xxxR
+        while char != b'R':
+            pos += char
             char = self.rd()
-            if char == b'R':
-                break
-            if char != b'\x1b' and char != b'[':
-                pos += char
-        (self.height, self.width) = [int(i, 10) for i in pos.split(b';')]
+        (self.height, self.width) = [int(i, 10) for i in pos[2:].split(b';')]
         self.height -= 1
         self.wr(b'\x1b[?9h') ## enable mouse reporting
 
@@ -734,6 +735,7 @@ if __name__ == "__main__":
 ##
 ## This is the regex version of find. Standard search is up north
         def find_in_file(self, pattern, pos):
+            import re
             self.find_pattern = pattern ## remember it
             if self.case != "y":
                 pattern = pattern.lower()
@@ -753,7 +755,7 @@ if __name__ == "__main__":
                 spos = 0
             else:
                 self.message = pattern + " not found"
-                return False
+                return 0
 ## micropython does not support span(), therefore a second simple find on the target line
             if self.case == "y":
                 self.col = max(self.content[line][spos:].find(match.group(0)), 0) + spos
@@ -761,5 +763,5 @@ if __name__ == "__main__":
                 self.col = max(self.content[line][spos:].lower().find(match.group(0)), 0) + spos
             self.cur_line = line
             self.message = ' ' ## force status once
-            return True
+            return len(match.group(0))
 #endif
