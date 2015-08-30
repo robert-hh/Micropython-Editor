@@ -24,5 +24,9 @@ The editor works also well in a Linux or MAC terminal environment, with both pyt
 - README.md: This one
 - pe.py: Editor Python file with all functions in a stripped down version for PyBoard only without comments
 - pemin.py: Editor Python file with a reduced function set in a stripped down version for PyBoard only without comments
+- tuning_pye.py: A file with some improved replacements for functions of pye: 
+a) find_in_file() supporting regular expressions, 
+b) line_edit() supporting cursor keys, and
+c) expandtabs() with a second argument for tabsize (not for pye, but maybe useful)
 - strip.sh: sample Shell script which creates the different variants out of pye.py using cpp
 
