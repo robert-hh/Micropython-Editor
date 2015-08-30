@@ -11,6 +11,7 @@
 ## - Goto Line, Yank (delete line into buffer), Zap (insert buffer)
 ## - moved main into a function with some optional parameters
 ## - Added a status line and single line prompts for Quit, Save, Find and Goto
+## - Added mouse support for pointing and scrolling
 ##
 import sys
 import gc
@@ -340,6 +341,7 @@ class Editor:
                     self.wr(chr(key))
             else:  ## ignore everything else
                 pass
+ 
 
     def find_in_file(self, pattern, pos):
         self.find_pattern = pattern # remember it
@@ -531,6 +533,7 @@ class Editor:
         elif key == KEY_REPLC:
             count = 0
             found = False
+            self.changed = sc
             pat = self.line_edit("Find: ", self.find_pattern)
             if pat:
                 rpat = self.line_edit("Replace with: ", self.replc_pattern)
@@ -542,10 +545,8 @@ class Editor:
                         if ni:
                             found = True
                             if q != 'a':
+                                self.message = "Replace (yes/No/all/quit) ? "
                                 self.display_window()
-                                self.goto(self.height, 0)
-                                self.wr("Replace (yes/No/all/quit) ? ")
-                                self.goto(self.row, self.col - self.margin)
                                 key = self.get_input()  ## Get Char of Fct.
                                 q = chr(key).lower()
                             if q == 'q' or key == KEY_QUIT:
@@ -560,8 +561,8 @@ class Editor:
                             break
                     if found:
                         self.message = "Replaced %d times" % count
-            if count == 0:
-                self.changed = sc
+            if count > 0:
+                self.changed = '*'
 #endif
         elif key == KEY_WRITE:
             fname = self.fname
@@ -728,40 +729,3 @@ if __name__ == "__main__":
         pye(name, tab_size = tsize)
 #endif
 
-#ifdef JUNK
-## this is still syntactically correct python code, even if it is never executed.
-##
-    if False:
-##
-## This is the regex version of find. Standard search is up north
-        def find_in_file(self, pattern, pos):
-            import re
-            self.find_pattern = pattern ## remember it
-            if self.case != "y":
-                pattern = pattern.lower()
-            try:
-                rex = re.compile(pattern)
-            except:
-                self.message = "Invalid pattern: " + pattern
-                return False
-            spos = pos
-            for line in range(self.cur_line, self.total_lines):
-                if self.case == "y":
-                    match = rex.search(self.content[line][spos:])
-                else:
-                    match = rex.search(self.content[line][spos:].lower())
-                if match:
-                    break
-                spos = 0
-            else:
-                self.message = pattern + " not found"
-                return 0
-## micropython does not support span(), therefore a second simple find on the target line
-            if self.case == "y":
-                self.col = max(self.content[line][spos:].find(match.group(0)), 0) + spos
-            else:
-                self.col = max(self.content[line][spos:].lower().find(match.group(0)), 0) + spos
-            self.cur_line = line
-            self.message = ' ' ## force status once
-            return len(match.group(0))
-#endif

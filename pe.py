@@ -387,6 +387,7 @@ class Editor:
         elif key == 0x4019:
             count = 0
             found = False
+            self.changed = sc
             pat = self.line_edit("Find: ", self.find_pattern)
             if pat:
                 rpat = self.line_edit("Replace with: ", self.replc_pattern)
@@ -398,10 +399,8 @@ class Editor:
                         if ni:
                             found = True
                             if q != 'a':
+                                self.message = "Replace (yes/No/all/quit) ? "
                                 self.display_window()
-                                self.goto(self.height, 0)
-                                self.wr("Replace (yes/No/all/quit) ? ")
-                                self.goto(self.row, self.col - self.margin)
                                 key = self.get_input() 
                                 q = chr(key).lower()
                             if q == 'q' or key == 0x4009:
@@ -416,8 +415,8 @@ class Editor:
                             break
                     if found:
                         self.message = "Replaced %d times" % count
-            if count == 0:
-                self.changed = sc
+            if count > 0:
+                self.changed = '*'
         elif key == 0x400d:
             fname = self.fname
             if fname == None:
