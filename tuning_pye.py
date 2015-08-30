@@ -34,15 +34,20 @@
         self.message = ' ' ## force status once
         return len(match.group(0))
 
-   def line_edit(self, prompt, default):  ## better one: added cursor keys and backsp, delete
+    def push_msg(self, msg): ## Write a message and place cursor back
+        self.wr("\x1b[s")  ## Push curseo
+        self.wr(msg)
+        self.wr("\x1b[u")  ## Pop Cursor
+
+    def line_edit(self, prompt, default):  ## better one: added cursor keys and backsp, delete
         self.goto(self.height, 0)
         self.hilite(True)
         self.wr(prompt)
         self.clear_to_eol()
         res = default
         self.message = ' ' # Shows status after lineedit
-        pos = len(res)
-        self.wr(res) 
+        pos = 0
+        self.push_msg(res) 
         while True:
             key = self.get_input()  ## Get Char of Fct.
             if key in (KEY_ENTER, KEY_TAB): ## Finis
@@ -70,16 +75,17 @@
                     res = res[:pos-1] + res[pos:]
                     self.wr("\b")
                     pos -= 1
-                    self.wr("\x1b[s" + res[pos:] + " " + "\x1b[u") ## Push + pop cursor
+                    self.push_msg(res[pos:] + ' ') ## Push + pop cursor
             elif key == KEY_DELETE: ## Delete
                 if pos < len(res):
                     res = res[:pos] + res[pos+1:]
-                    self.wr("\x1b[s" + res[pos:] + " " + "\x1b[u") ## Push + pop cursor
+                    self.push_msg(res[pos:] + ' ') ## Push + pop cursor
             elif 0x20 <= key < 0x100: ## char to be inserted
                 if len(prompt) + len(res) < self.width - 2:
                     res = res[:pos] + chr(key) + res[pos:]
-                    self.wr(res[pos] + "\x1b[s" + res[pos+1:] + " " + "\x1b[u") ## Push + pop cursor
+                    self.wr(res[pos])
                     pos += 1
+                    self.push_msg(res[pos:]) ## Push + pop cursor
             else:  ## ignore everything else
                 pass
 
