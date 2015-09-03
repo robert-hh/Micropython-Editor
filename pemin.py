@@ -5,38 +5,44 @@ if sys.platform == "pyboard":
     import pyb
 class Editor:
     KEYMAP = { 
-    b"\x1b[A" : 0x4001,
-    b"\x1b[B" : 0x4002,
-    b"\x1b[D" : 0x4003,
-    b"\x1b[C" : 0x4004,
-    b"\x1b[H" : 0x4005, 
-    b"\x1bOH" : 0x4005, 
-    b"\x1b[1~": 0x4005, 
-    b"\x1b[F" : 0x4006, 
-    b"\x1bOF" : 0x4006, 
-    b"\x1b[4~": 0x4006, 
-    b"\x1b[5~": 0x4007,
-    b"\x1b[6~": 0x4008,
-    b"\x11" : 0x4009, 
-    b"\x03" : 0x4009, 
-    b"\r" : 0x400a,
-    b"\n" : 0x400a,
-    b"\x7f" : 0x400b, 
-    b"\x08" : 0x400b,
-    b"\x1b[3~": 0x400c,
-    b"\x13" : 0x400d, 
-    b"\x06" : 0x4010, 
-    b"\x0e" : 0x4014, 
-    b"\x07" : 0x4011, 
-    b"\x1b[M" : 0x401b,
+    b"\x1b[A" : 0x05,
+    b"\x1b[B" : 0x0b,
+    b"\x1b[D" : 0x0c,
+    b"\x1b[C" : 0x0f,
+    b"\x1b[H" : 0x10, 
+    b"\x1bOH" : 0x10, 
+    b"\x1b[1~": 0x10, 
+    b"\x1b[F" : 0x11, 
+    b"\x1bOF" : 0x11, 
+    b"\x1b[4~": 0x11, 
+    b"\x1b[5~": 0x17,
+    b"\x1b[6~": 0x19,
+    b"\x11" : 0x03, 
+    b"\x03" : 0x03, 
+    b"\r" : 0x0a,
+    b"\n" : 0x0a,
+    b"\x7f" : 0x08, 
+    b"\x08" : 0x08,
+    b"\x1b[3~": 0x1f,
+    b"\x13" : 0x13, 
+    b"\x06" : 0x06, 
+    b"\x0e" : 0x0e, 
+    b"\x07" : 0x07, 
+    b"\x1b[M" : 0x1b,
     }
-    def __init__(self, tab_size):
+    def __init__(self, tab_size, lnum):
         self.top_line = 0
         self.cur_line = 0
         self.row = 0
         self.col = 0
+        if lnum:
+            self.col_width = 5 
+        else:
+            self.col_width = 0
+        self.col_fmt = "%4d "
+        self.col_spc = "     "
         self.margin = 0
-        self.k_buffer = b""
+        self.scrolling = 0
         self.tab_size = tab_size
         self.changed = ' '
         self.message = ""
@@ -66,7 +72,6 @@ class Editor:
         Editor.wr(b"\x1b[2J")
     @staticmethod
     def goto(row, col):
-        
         Editor.wr("\x1b[%d;%dH" % (row + 1, col + 1))
     @staticmethod
     def clear_to_eol():
@@ -78,49 +83,50 @@ class Editor:
         else:
             Editor.wr(b"\x1b[?25l")
     @staticmethod
-    def hilite(onoff):
-        if onoff:
+    def hilite(mode):
+        if mode == 1:
             Editor.wr(b"\x1b[1m")
+        elif mode == 2:
+            Editor.wr(b"\x1b[2;7m")
         else:
             Editor.wr(b"\x1b[0m")
+    def print_no(self, row, line):
+        self.goto(row, 0)
+        if self.col_width > 1:
+            self.hilite(2)
+            if line:
+                self.wr(line)
+            else:
+                self.wr(self.col_spc)
+            self.hilite(0)
     def get_input(self): 
-        if len(self.k_buffer) == 0:
-            self.k_buffer = Editor.rd() 
         while True:
-            for k in self.KEYMAP.keys():
-                if k.startswith(self.k_buffer): 
-                    if self.k_buffer == k:
-                        c = self.KEYMAP[self.k_buffer]
-                        self.k_buffer = b""
-                        if c == 0x401b: 
-                            mf = ord((Editor.rd())) & 0xe3 
-                            self.mouse_x = ord(Editor.rd()) - 33
-                            self.mouse_y = ord(Editor.rd()) - 33
-                            if mf == 0x61:
-                                return 0x401d
-                            elif mf == 0x60:
-                                return 0x401c
-                            else:
-                                return 0x401b 
-                        else:
-                            return c 
-                    else: 
+            input = Editor.rd()
+            if input == b'\x1b': 
+                while True:
+                    input += Editor.rd()
+                    c = chr(input[-1])
+                    if c == '~' or (c.isalpha() and c != 'O'):
                         break
-            else: 
-                c = self.k_buffer[0]
-                if c >= ord(' '): 
-                    self.k_buffer = self.k_buffer[1:]
+            if input in self.KEYMAP:
+                c = self.KEYMAP[input]
+                if c == 0x1b: 
+                    mf = ord((Editor.rd())) & 0xe3 
+                    self.mouse_x = ord(Editor.rd()) - 33
+                    self.mouse_y = ord(Editor.rd()) - 33
+                    if mf == 0x61:
+                        return 0x1d
+                    elif mf == 0x60:
+                        return 0x1c
+                    else:
+                        return 0x1b 
+                else:
                     return c
-                else: 
-                    if c == ord('\x1b'): 
-                        c = chr(self.k_buffer[-1])
-                        self.k_buffer = b""
-                        while c != '~' and not c.isalpha():
-                            c = Editor.rd().decode()
-                    else: 
-                        self.k_buffer = self.k_buffer[1:]
-            self.k_buffer += Editor.rd() 
-    def display_window(self):
+            elif input[0] >= 0x20: 
+                return input[0]
+            else:
+                self.message = repl(input)
+    def display_window(self): 
         self.cur_line = min(self.total_lines - 1, max(self.cur_line, 0))
         self.col = max(0, min(self.col, len(self.content[self.cur_line])))
         if self.col >= self.width + self.margin:
@@ -134,28 +140,30 @@ class Editor:
         i = self.top_line
         for c in range(self.height):
             if i == self.total_lines: 
-                if self.scrbuf[c]:
-                    self.goto(c, 0)
+                if self.scrbuf[c] != '\x04':
+                    self.print_no(c, None)
                     self.clear_to_eol()
-                    self.scrbuf[c] = ""
+                    self.scrbuf[c] = '\x04'
             else:
-                l = self.content[i]
-                l = l[self.margin:self.margin + self.width]
-                if l != self.scrbuf[c]: 
-                    self.goto(c, 0)
+                l = self.content[i][self.margin:self.margin + self.width]
+                lnum = self.col_fmt % (i + 1)
+                if (lnum + l) != self.scrbuf[c]: 
+                    self.print_no(c, lnum) 
                     self.wr(l)
                     if len(l) < self.width:
                         self.clear_to_eol()
-                    self.scrbuf[c] = l
+                    self.scrbuf[c] = lnum + l
                 i += 1
         if self.status == "y" or self.message:
             self.goto(self.height, 0)
-            self.hilite(True)
+            self.clear_to_eol() 
+            self.hilite(1)
+            if self.col_width > 0:
+                self.wr(self.col_fmt % self.total_lines)
             self.wr("%c Ln: %d Col: %d  %s" % (self.changed, self.cur_line + 1, self.col + 1, self.message))
-            self.clear_to_eol()
-            self.hilite(False)
+            self.hilite(0)
         self.cursor(True)
-        self.goto(self.row, self.col - self.margin)
+        self.goto(self.row, self.col - self.margin + self.col_width)
     def clear_status(self):
         if (self.status != "y") and self.message:
             self.goto(self.height, 0)
@@ -168,7 +176,7 @@ class Editor:
             return len(line) - len(line.lstrip(" "))
     def line_edit(self, prompt, default): 
         self.goto(self.height, 0)
-        self.hilite(True)
+        self.hilite(1)
         self.wr(prompt)
         self.wr(default)
         self.clear_to_eol()
@@ -176,17 +184,17 @@ class Editor:
         self.message = ' ' 
         while True:
             key = self.get_input() 
-            if key in (0x400a, 0x400e): 
-                self.hilite(False)
+            if key in (0x0a, 0x09): 
+                self.hilite(0)
                 return res
-            elif key == 0x4009: 
-                self.hilite(False)
+            elif key == 0x03: 
+                self.hilite(0)
                 return None
-            elif key in (0x400b, 0x400c): 
+            elif key in (0x08, 0x1f): 
                 if (len(res) > 0):
                     res = res[:len(res)-1]
                     self.wr('\b \b')
-            elif 0x20 <= key < 0x100: 
+            elif key >= 0x20: 
                 if len(prompt) + len(res) < self.width - 1:
                     res += chr(key)
                     self.wr(chr(key))
@@ -213,36 +221,40 @@ class Editor:
         self.message = ' ' 
         return len(pattern)
     def handle_cursor_keys(self, key): 
-        if key == 0x4002:
-            self.cur_line += 1
-        elif key == 0x4001:
-            self.cur_line -= 1
-        elif key == 0x4003:
+        if key == 0x0b:
+            if self.cur_line < self.total_lines - 1:
+                self.cur_line += 1
+                if self.cur_line == self.top_line + self.height: self.scrolling = 1
+        elif key == 0x05:
+            if self.cur_line > 0:
+                if self.cur_line == self.top_line: self.scrolling = -1
+                self.cur_line -= 1
+        elif key == 0x0c:
             self.col -= 1
-        elif key == 0x4004:
+        elif key == 0x0f:
             self.col += 1
-        elif key == 0x4005:
+        elif key == 0x10:
             ns = self.spaces(self.content[self.cur_line])
             if self.col > ns:
                 self.col = ns
             else:
                 self.col = 0
-        elif key == 0x4006:
+        elif key == 0x11:
             self.col = len(self.content[self.cur_line])
-        elif key == 0x4007:
+        elif key == 0x17:
             self.cur_line -= self.height
-        elif key == 0x4008:
+        elif key == 0x19:
             self.cur_line += self.height
-        elif key == 0x4010:
+        elif key == 0x06:
             pat = self.line_edit("Find: ", self.find_pattern)
             if pat:
                 self.find_in_file(pat, self.col)
                 self.row = int(self.height / 2)
-        elif key == 0x4014:
+        elif key == 0x0e:
             if self.find_pattern:
                 self.find_in_file(self.find_pattern, self.col + 1)
                 self.row = int(self.height / 2)
-        elif key == 0x4011: 
+        elif key == 0x07: 
             line = self.line_edit("Goto Line: ", "")
             if line:
                 try:
@@ -250,16 +262,20 @@ class Editor:
                     self.row = int(self.height / 2)
                 except:
                     pass
-        elif key == 0x401b: 
+        elif key == 0x1b: 
             if self.mouse_y < self.height:
-                self.col = self.mouse_x + self.margin
+                self.col = self.mouse_x + self.margin - self.col_width
                 self.cur_line = self.mouse_y + self.top_line
-        elif key == 0x401c: 
-            self.top_line = max(self.top_line - 3, 0)
-            self.cur_line = min(self.cur_line, self.top_line + self.height - 1)
-        elif key == 0x401d: 
-            self.top_line = min(self.top_line + 3, self.total_lines - 1)
-            self.cur_line = max(self.cur_line, self.top_line)
+        elif key == 0x1c: 
+            if self.top_line > 0:
+                self.top_line = max(self.top_line - 3, 0)
+                self.cur_line = min(self.cur_line, self.top_line + self.height - 1)
+                self.scrolling = -3
+        elif key == 0x1d: 
+            if self.top_line + self.height < self.total_lines:
+                self.top_line = min(self.top_line + 3, self.total_lines - 1)
+                self.cur_line = max(self.cur_line, self.top_line)
+                self.scrolling = 3
         else:
             return False
         return True
@@ -267,20 +283,20 @@ class Editor:
         l = self.content[self.cur_line]
         sc = self.changed
         self.changed = '*'
-        if key == 0x400a:
+        if key == 0x0a:
             self.content[self.cur_line] = l[:self.col]
             ni = 0
             self.cur_line += 1
             self.content[self.cur_line:self.cur_line] = [' ' * ni + l[self.col:]]
             self.total_lines += 1
             self.col = ni
-        elif key == 0x400b:
+        elif key == 0x08:
             if self.col > 0:
                 self.content[self.cur_line] = l[:self.col - 1] + l[self.col:]
                 self.col -= 1
             else:
                 self.changed = sc
-        elif key == 0x400c:
+        elif key == 0x1f:
             if self.col < len(l):
                 l = l[:self.col] + l[self.col + 1:]
                 self.content[self.cur_line] = l
@@ -290,7 +306,7 @@ class Editor:
                 self.total_lines -= 1
             else:
                 self.changed = sc
-        elif key == 0x400d:
+        elif key == 0x13:
             fname = self.fname
             if fname == None:
                 fname = ""
@@ -306,24 +322,22 @@ class Editor:
                     pass
             else:
                 self.changed = sc
-        elif 32 <= key < 0x4000:
+        elif key >= 0x20:
             self.content[self.cur_line] = l[:self.col] + chr(key) + l[self.col:]
             self.col += 1
         else: 
             self.changed = sc
     def edit_loop(self): 
         self.scrbuf = [""] * self.height
-        self.cls()
         self.total_lines = len(self.content)
         
         for i in range(self.total_lines):
-            if sys.implementation.name == 'micropython':
-                self.content[i] = self.expandtabs(self.content[i].rstrip('\r\n\t '))
+            self.content[i] = self.expandtabs(self.content[i].rstrip('\r\n\t '))
         while True:
             self.display_window() 
             key = self.get_input() 
             self.clear_status() 
-            if key == 0x4009:
+            if key == 0x03:
                 if self.changed != ' ' and self.fname != None:
                     res = self.line_edit("Content changed! Quit without saving (y/N)? ", "N")
                     if not res or res[0].upper() != 'Y':
@@ -344,7 +358,7 @@ class Editor:
                 self.status = "y"
             Editor.sdev = device
         
-        self.wr(b'\x1b[999;999H\x1b[6n')
+        self.wr('\x1b[999;999H\x1b[6n')
         pos = b''
         char = self.rd() 
         while char != b'R':
@@ -352,12 +366,14 @@ class Editor:
             char = self.rd()
         (self.height, self.width) = [int(i, 10) for i in pos[2:].split(b';')]
         self.height -= 1
-        self.wr(b'\x1b[?9h') 
+        self.width -= self.col_width
+        self.wr('\x1b[?9h') 
+        self.wr('\x1b[1;%dr' % self.height) 
     def deinit_tty(self):
         
+        self.wr('\x1b[?9l\x1b[r') 
         self.goto(self.height, 0)
         self.clear_to_eol()
-        self.wr(b'\x1b[?9l') 
         if sys.platform == "pyboard" and not Editor.sdev:
             Editor.serialcomm.setinterrupt(3)
     def expandtabs(self, s):
@@ -374,8 +390,8 @@ class Editor:
             return sb.getvalue()
         else:
             return s
-def pye(content = None, tab_size = 4, device = 0, baud = 115200):
-    e = Editor(tab_size)
+def pye(content = None, tab_size = 4, lnum = 1, device = 0, baud = 115200):
+    e = Editor(tab_size, lnum)
     if type(content) == str: 
         e.fname = content
         if e.fname: 

@@ -26,64 +26,64 @@ if sys.platform == "pyboard":
     import pyb
 #endif
 #ifdef DEFINES
-#define KEY_UP      0x4001
-#define KEY_DOWN    0x4002
-#define KEY_LEFT    0x4003
-#define KEY_RIGHT   0x4004
-#define KEY_HOME    0x4005
-#define KEY_END     0x4006
-#define KEY_PGUP    0x4007
-#define KEY_PGDN    0x4008
-#define KEY_QUIT    0x4009
-#define KEY_ENTER   0x400a
-#define KEY_BACKSPACE 0x400b
-#define KEY_DELETE  0x400c
-#define KEY_WRITE   0x400d
-#define KEY_TAB     0x400e
-#define KEY_BACKTAB 0x400f
-#define KEY_FIND    0x4010
-#define KEY_GOTO    0x4011
-#define KEY_FIRST   0x4012
-#define KEY_LAST    0x4013
-#define KEY_FIND_AGAIN 0x4014
-#define KEY_YANK    0x4015
-#define KEY_ZAP     0x4017
-#define KEY_TOGGLE  0x4018
-#define KEY_REPLC   0x4019
-#define KEY_DUP     0x401a
-#define KEY_MOUSE   0x401b
-#define KEY_SCRLUP  0x401c
-#define KEY_SCRLDN  0x401d
+#define KEY_UP          0x05
+#define KEY_DOWN        0x0b
+#define KEY_LEFT        0x0c
+#define KEY_RIGHT       0x0f
+#define KEY_HOME        0x10
+#define KEY_END         0x11
+#define KEY_PGUP        0x17
+#define KEY_PGDN        0x19
+#define KEY_QUIT        0x03
+#define KEY_ENTER       0x0a
+#define KEY_BACKSPACE   0x08
+#define KEY_DELETE      0x1f
+#define KEY_WRITE       0x13
+#define KEY_TAB         0x09
+#define KEY_BACKTAB     0x15
+#define KEY_FIND        0x06
+#define KEY_GOTO        0x07
+#define KEY_FIRST       0x02
+#define KEY_LAST        0x14
+#define KEY_FIND_AGAIN  0x0e
+#define KEY_YANK        0x18
+#define KEY_ZAP         0x16
+#define KEY_TOGGLE      0x01
+#define KEY_REPLC       0x12
+#define KEY_DUP         0x04
+#define KEY_MOUSE       0x1b
+#define KEY_SCRLUP      0x1c
+#define KEY_SCRLDN      0x1d
 #else
-KEY_UP      = 0x4001
-KEY_DOWN    = 0x4002
-KEY_LEFT    = 0x4003
-KEY_RIGHT   = 0x4004
-KEY_HOME    = 0x4005
-KEY_END     = 0x4006
-KEY_PGUP    = 0x4007
-KEY_PGDN    = 0x4008
-KEY_QUIT    = 0x4009
-KEY_ENTER   = 0x400a
-KEY_BACKSPACE = 0x400b
-KEY_DELETE  = 0x400c
-KEY_WRITE   = 0x400d
-KEY_FIND    = 0x4010
-KEY_FIND_AGAIN = 0x4014
-KEY_GOTO    = 0x4011
-KEY_TAB     = 0x400e
-KEY_MOUSE   = 0x401b
-KEY_SCRLUP  = 0x401c
-KEY_SCRLDN  = 0x401d
+KEY_UP        = 0x05
+KEY_DOWN      = 0x0b
+KEY_LEFT      = 0x0c
+KEY_RIGHT     = 0x0f
+KEY_HOME      = 0x10
+KEY_END       = 0x11
+KEY_PGUP      = 0x17
+KEY_PGDN      = 0x19
+KEY_QUIT      = 0x03
+KEY_ENTER     = 0x0a
+KEY_BACKSPACE = 0x08
+KEY_DELETE    = 0x1f
+KEY_WRITE     = 0x13
+KEY_TAB       = 0x09
+KEY_FIND      = 0x06
+KEY_GOTO      = 0x07
+KEY_MOUSE     = 0x1b
+KEY_SCRLUP    = 0x1c
+KEY_SCRLDN    = 0x1d
+KEY_FIND_AGAIN= 0x0e
 #ifndef BASIC
-KEY_FIRST   = 0x4012
-KEY_LAST    = 0x4013
-KEY_YANK    = 0x4015
-KEY_BACKTAB = 0x400f
-KEY_ZAP     = 0x4017
-KEY_TOGGLE  = 0x4018
-KEY_REPLC   = 0x4019
-KEY_DUP     = 0x401a
+KEY_FIRST     = 0x02
+KEY_LAST      = 0x14
+KEY_YANK      = 0x18
+KEY_ZAP       = 0x16
+KEY_BACKTAB   = 0x15
+KEY_TOGGLE    = 0x01
+KEY_REPLC     = 0x12
+KEY_DUP       = 0x04
 #endif
 #endif
 
@@ -131,13 +131,19 @@ class Editor:
 #endif
     }
 
-    def __init__(self, tab_size):
+    def __init__(self, tab_size, lnum):
         self.top_line = 0
         self.cur_line = 0
         self.row = 0
         self.col = 0
+        if lnum:
+            self.col_width = 5 ## width of line no. col
+        else:
+            self.col_width = 0
+        self.col_fmt = "%4d "
+        self.col_spc = "     "
         self.margin = 0
-        self.k_buffer = b""
+        self.scrolling = 0
         self.tab_size = tab_size
         self.changed = ' '
         self.message = ""
@@ -153,7 +159,6 @@ class Editor:
     if sys.platform in ("linux", "darwin"):
         @staticmethod
         def wr(s):
-            ## TODO: When Python is 3.5, update this to use only bytes
             if isinstance(s, str):
                 s = bytes(s, "utf-8")
             os.write(1, s)
@@ -178,14 +183,12 @@ class Editor:
                 pass
             return Editor.serialcomm.read(1)
 #endif
-
     @staticmethod
     def cls():
         Editor.wr(b"\x1b[2J")
 
     @staticmethod
     def goto(row, col):
-        ## TODO: When Python is 3.5, update this to use bytes
         Editor.wr("\x1b[%d;%dH" % (row + 1, col + 1))
 
     @staticmethod
@@ -200,108 +203,108 @@ class Editor:
             Editor.wr(b"\x1b[?25l")
 
     @staticmethod
-    def hilite(onoff):
-        if onoff:
+    def hilite(mode):
+        if mode == 1:
             Editor.wr(b"\x1b[1m")
+        elif mode == 2:
+            Editor.wr(b"\x1b[2;7m")
         else:
             Editor.wr(b"\x1b[0m")
 
+    def print_no(self, row, line):
+        self.goto(row, 0)
+        if self.col_width > 1:
+            self.hilite(2)
+            if line:
+                self.wr(line)
+            else:
+                self.wr(self.col_spc)
+            self.hilite(0)
+
     def get_input(self):  ## read from interface/keyboard one byte each and match against function keys
-        if len(self.k_buffer) == 0:
-            self.k_buffer = Editor.rd()  ## get one char to start with
         while True:
-            for k in self.KEYMAP.keys():
-                if k.startswith(self.k_buffer):  ## content of buffer matches start of code sequence
-                    if self.k_buffer == k:
-                        c = self.KEYMAP[self.k_buffer]
-                        self.k_buffer = b""
-                        if c == KEY_MOUSE: ## special
-                            mf = ord((Editor.rd())) & 0xe3 ## read 3 more chars
-                            self.mouse_x = ord(Editor.rd()) - 33
-                            self.mouse_y = ord(Editor.rd()) - 33
-                            if mf == 0x61:
-                                return KEY_SCRLDN
-                            elif mf == 0x60:
-                                return KEY_SCRLUP
-                            else:
-                                return KEY_MOUSE ## do nothing but set the cursor
-                        else:
-                            return c ## found a function key
-                    else:  ## start matches, but there must be more: get another char
+            input = Editor.rd()
+            if input == b'\x1b': ## starting with ESC, must be fct
+                while True:
+                    input += Editor.rd()
+                    c = chr(input[-1])
+                    if c == '~' or (c.isalpha() and c != 'O'):
                         break
-            else:   ## nothing matched, return first char from buffer
-                c = self.k_buffer[0]
-                if c >= ord(' '): ## but only if no Ctrl-Char
-                    self.k_buffer = self.k_buffer[1:]
+            if input in self.KEYMAP:
+                c = self.KEYMAP[input]
+                if c == KEY_MOUSE: ## special for mice
+                    mf = ord((Editor.rd())) & 0xe3 ## read 3 more chars
+                    self.mouse_x = ord(Editor.rd()) - 33
+                    self.mouse_y = ord(Editor.rd()) - 33
+                    if mf == 0x61:
+                        return KEY_SCRLDN
+                    elif mf == 0x60:
+                        return KEY_SCRLUP
+                    else:
+                        return KEY_MOUSE ## do nothing but set the cursor
+                else:
                     return c
-                else: ## try to suppress function keys
-                    if c == ord('\x1b'): ## starting with ESC
-                        c = chr(self.k_buffer[-1])
-                        self.k_buffer = b""
-                        while c != '~' and not c.isalpha():
-                            c = Editor.rd().decode()
-                    else: ## Drop anything else
-                        self.k_buffer = self.k_buffer[1:]
-## something matched, get more
-            self.k_buffer += Editor.rd()   ## get one more char
+            elif input[0] >= 0x20: ## but only if no Ctrl-Char
+                return input[0]
+            else:
+                self.message = repl(input)
 
-## a) (defferred) sanity checks for cur_line and col first
-## b) Update margin and top_line if col and cur_line are out of view.
-## c) Display changed parts of the screen
-## d) Update status line
-
-    def display_window(self):
-## Force cur_line to be in the existing line range
+    def display_window(self): ## Update window and status line
+## Force cur_line and col to be in the reasonable limits
         self.cur_line = min(self.total_lines - 1, max(self.cur_line, 0))
-## Force col to be in its line range
         self.col = max(0, min(self.col, len(self.content[self.cur_line])))
-## Check if Column is out of view
+## Check if Column is out of view, and align margin if needed
         if self.col >= self.width + self.margin:
             self.margin = self.col - self.width + int(self.width / 4)
         elif self.col < self.margin:
             self.margin = max(self.col - int(self.width / 4), 0)
-## if cur_line is out of view
+## if cur_line is out of view, align top_line to given row
         if not (self.top_line <= self.cur_line < self.top_line + self.height): # Visible?
-## align top_line to row
             self.top_line = max(self.cur_line - self.row, 0)
         self.row = self.cur_line - self.top_line
 ## update_screen
         self.cursor(False)
+#ifndef BASIC
+        if self.scrolling < 0:  ## scroll down by n lines
+            self.scrbuf[-self.scrolling:] = self.scrbuf[:self.scrolling]
+            self.scrbuf[:-self.scrolling] = ['\x01'] * -self.scrolling
+            self.goto(0, 0)
+            self.wr("\x1bM" * -self.scrolling)
+        elif self.scrolling  > 0:  ## scroll up by n lines
+            self.scrbuf[:-self.scrolling] = self.scrbuf[self.scrolling:]
+            self.scrbuf[-self.scrolling:] = ['\x01'] * self.scrolling
+            self.goto(self.height - 1, 0)
+            self.wr("\x1bD " * self.scrolling)
+        self.scrolling = 0
+#endif
         i = self.top_line
         for c in range(self.height):
             if i == self.total_lines: ## at empty bottom screen part
-                if self.scrbuf[c]:
-                    self.goto(c, 0)
+                if self.scrbuf[c] != '\x04':
+                    self.print_no(c, None)
                     self.clear_to_eol()
-                    self.scrbuf[c] = ""
+                    self.scrbuf[c] = '\x04'
             else:
-                l = self.content[i]
-#ifndef BASIC
-                match = ("def " in l or "class " in l) and '\x3a' in l
-#endif
-                l = l[self.margin:self.margin + self.width]
-                if l != self.scrbuf[c]: ## line changed, print it
-                    self.goto(c, 0)
-#ifndef BASIC
-                    if match: self.hilite(True)
-#endif
+                l = self.content[i][self.margin:self.margin + self.width]
+                lnum = self.col_fmt % (i + 1)
+                if (lnum + l) != self.scrbuf[c]: ## line changed, print it
+                    self.print_no(c, lnum) ## print line no
                     self.wr(l)
-#ifndef BASIC
-                    if match: self.hilite(False)
-#endif
                     if len(l) < self.width:
                         self.clear_to_eol()
-                    self.scrbuf[c] = l
+                    self.scrbuf[c] = lnum + l
                 i += 1
 ## display Status-Line
         if self.status == "y" or self.message:
             self.goto(self.height, 0)
-            self.hilite(True)
+            self.clear_to_eol() ## moved up for mate/xfce4-terminal
+            self.hilite(1)
+            if self.col_width > 0:
+                self.wr(self.col_fmt % self.total_lines)
             self.wr("%c Ln: %d Col: %d  %s" % (self.changed, self.cur_line + 1, self.col + 1, self.message))
-            self.clear_to_eol()
-            self.hilite(False)
+            self.hilite(0)
         self.cursor(True)
-        self.goto(self.row, self.col - self.margin)
+        self.goto(self.row, self.col - self.margin + self.col_width)
 
     def clear_status(self):
         if (self.status != "y") and self.message:
@@ -317,7 +320,7 @@ class Editor:
 
     def line_edit(self, prompt, default):  ## simple one: only 3 fcts
         self.goto(self.height, 0)
-        self.hilite(True)
+        self.hilite(1)
         self.wr(prompt)
         self.wr(default)
         self.clear_to_eol()
@@ -326,22 +329,21 @@ class Editor:
         while True:
             key = self.get_input()  ## Get Char of Fct.
             if key in (KEY_ENTER, KEY_TAB): ## Finis
-                self.hilite(False)
+                self.hilite(0)
                 return res
             elif key == KEY_QUIT: ## Abort
-                self.hilite(False)
+                self.hilite(0)
                 return None
             elif key in (KEY_BACKSPACE, KEY_DELETE): ## Backspace
                 if (len(res) > 0):
                     res = res[:len(res)-1]
                     self.wr('\b \b')
-            elif 0x20 <= key < 0x100: ## char to be added at the end
+            elif key >= 0x20: ## char to be added at the end
                 if len(prompt) + len(res) < self.width - 1:
                     res += chr(key)
                     self.wr(chr(key))
             else:  ## ignore everything else
                 pass
- 
 
     def find_in_file(self, pattern, pos):
         self.find_pattern = pattern # remember it
@@ -366,9 +368,13 @@ class Editor:
 
     def handle_cursor_keys(self, key): ## keys which move, sanity checks later
         if key == KEY_DOWN:
-            self.cur_line += 1
+            if self.cur_line < self.total_lines - 1:
+                self.cur_line += 1
+                if self.cur_line == self.top_line + self.height: self.scrolling = 1
         elif key == KEY_UP:
-            self.cur_line -= 1
+            if self.cur_line > 0:
+                if self.cur_line == self.top_line: self.scrolling = -1
+                self.cur_line -= 1
         elif key == KEY_LEFT:
             self.col -= 1
         elif key == KEY_RIGHT:
@@ -404,17 +410,21 @@ class Editor:
                     pass
         elif key == KEY_MOUSE: ## Set Cursor
             if self.mouse_y < self.height:
-                self.col = self.mouse_x + self.margin
+                self.col = self.mouse_x + self.margin - self.col_width
                 self.cur_line = self.mouse_y + self.top_line
         elif key == KEY_SCRLUP: ##
-            self.top_line = max(self.top_line - 3, 0)
-            self.cur_line = min(self.cur_line, self.top_line + self.height - 1)
+            if self.top_line > 0: 
+                self.top_line = max(self.top_line - 3, 0)
+                self.cur_line = min(self.cur_line, self.top_line + self.height - 1)
+                self.scrolling = -3
         elif key == KEY_SCRLDN: ##
-            self.top_line = min(self.top_line + 3, self.total_lines - 1)
-            self.cur_line = max(self.cur_line, self.top_line)
+            if self.top_line + self.height < self.total_lines: 
+                self.top_line = min(self.top_line + 3, self.total_lines - 1)
+                self.cur_line = max(self.cur_line, self.top_line)
+                self.scrolling = 3
 #ifndef BASIC
         elif key == KEY_TOGGLE: ## Toggle Autoindent/Statusline/Search case
-            pat = self.line_edit("Case Sensitive %c, Statusline %c, Autoindent %c: " % (self.case, self.status, self.autoindent), "")
+            pat = self.line_edit("Case Sensitive Search %c, Statusline %c, Autoindent %c: " % (self.case, self.status, self.autoindent), "")
             try:
                 res =  [i.strip().lower() for i in pat.split(",")]
                 if res[0]: self.case = res[0][0]
@@ -426,7 +436,7 @@ class Editor:
             self.cur_line = 0
         elif key == KEY_LAST: ## last line
             self.cur_line = self.total_lines - 1
-            self.row = int(self.height / 2)
+            self.row = self.height - 1
             self.message = ' ' ## force status once
 #endif
         else:
@@ -532,7 +542,6 @@ class Editor:
                 self.changed = sc
         elif key == KEY_REPLC:
             count = 0
-            found = False
             self.changed = sc
             pat = self.line_edit("Find: ", self.find_pattern)
             if pat:
@@ -543,7 +552,6 @@ class Editor:
                     while True:
                         ni = self.find_in_file(pat, self.col)
                         if ni:
-                            found = True
                             if q != 'a':
                                 self.message = "Replace (yes/No/all/quit) ? "
                                 self.display_window()
@@ -555,14 +563,13 @@ class Editor:
                                 self.content[self.cur_line] = self.content[self.cur_line][:self.col] + rpat + self.content[self.cur_line][self.col + ni:]
                                 self.col += len(rpat)
                                 count += 1
+                                self.changed = '*'
                             else: ## everything else is no
                                 self.col += 1
                         else:
                             break
-                    if found:
-                        self.message = "Replaced %d times" % count
-            if count > 0:
-                self.changed = '*'
+                    if count:
+                        self.message = "'%s' replaced %d times" % (pat, count)
 #endif
         elif key == KEY_WRITE:
             fname = self.fname
@@ -580,7 +587,7 @@ class Editor:
                     pass
             else:
                 self.changed = sc
-        elif 32 <= key < 0x4000:
+        elif key >= 0x20:
             self.content[self.cur_line] = l[:self.col] + chr(key) + l[self.col:]
             self.col += 1
         else: # Ctrl key or not supported function, ignore
@@ -588,16 +595,11 @@ class Editor:
 
     def edit_loop(self): ## main editing loop
         self.scrbuf = [""] * self.height
-        self.cls()
         self.total_lines = len(self.content)
         ## strip trailing whitespace and expand tabs
         for i in range(self.total_lines):
-            if sys.implementation.name == 'micropython':
-                self.content[i] = self.expandtabs(self.content[i].rstrip('\r\n\t '))
-#ifdef LINUX
-            else:
-                self.content[i] = self.content[i].rstrip('\r\n\t ').expandtabs()
-#endif
+            self.content[i] = self.expandtabs(self.content[i].rstrip('\r\n\t '))
+
         while True:
             self.display_window()  ## Update & display window
             key = self.get_input()  ## Get Char of Fct-key code
@@ -635,7 +637,7 @@ class Editor:
             self.status = "y"
 #endif
         ## Set cursor far off and ask for reporting its position = size of the window.
-        self.wr(b'\x1b[999;999H\x1b[6n')
+        self.wr('\x1b[999;999H\x1b[6n')
         pos = b''
         char = self.rd() ## expect ESC[yyy;xxxR
         while char != b'R':
@@ -643,13 +645,15 @@ class Editor:
             char = self.rd()
         (self.height, self.width) = [int(i, 10) for i in pos[2:].split(b';')]
         self.height -= 1
-        self.wr(b'\x1b[?9h') ## enable mouse reporting
+        self.width -= self.col_width
+        self.wr('\x1b[?9h') ## enable mouse reporting
+        self.wr('\x1b[1;%dr' % self.height) ## enable partial scrolling, Buggy?
 
     def deinit_tty(self):
         ## Do not leave cursor in the middle of screen
+        self.wr('\x1b[?9l\x1b[r') ## disable mouse reporting, enable scrolling
         self.goto(self.height, 0)
         self.clear_to_eol()
-        self.wr(b'\x1b[?9l') ## disable mouse reporting
 #ifdef PYBOARD
         if sys.platform == "pyboard" and not Editor.sdev:
             Editor.serialcomm.setinterrupt(3)
@@ -659,7 +663,6 @@ class Editor:
             import termios
             termios.tcsetattr(0, termios.TCSANOW, self.org_termios)
 #endif
-
 ## expandtabs: hopefully sometimes replaced by the built-in function
     def expandtabs(self, s):
         if '\t' in s:
@@ -676,9 +679,9 @@ class Editor:
         else:
             return s
 
-def pye(content = None, tab_size = 4, device = 0, baud = 115200):
+def pye(content = None, tab_size = 4, lnum = 1, device = 0, baud = 115200):
 ## prepare content
-    e = Editor(tab_size)
+    e = Editor(tab_size, lnum)
     if type(content) == str: ## String = Filename
         e.fname = content
         if e.fname:  ## non-empty String -> read it
@@ -711,13 +714,20 @@ def pye(content = None, tab_size = 4, device = 0, baud = 115200):
 if __name__ == "__main__":
     if sys.platform in ("linux", "darwin"):
         import getopt
-        args_dict = {'-t' : '4'}
+        args_dict = {'-t' : '4', '-l' : "None", '-h' : "None"}
+        usage = ("Usage: python3 pye.py [-t tabsize] [-l] [filename]\n"
+                 "         -t x set tabsize\n"
+                 "         -l   suppress line number column")
         try:
-            options, args = getopt.getopt(sys.argv[1:],"t:") ## get the options -t x
+            options, args = getopt.getopt(sys.argv[1:],"t:lh") ## get the options -t x -l -h
         except:
             print ("Undefined option in: " + ' '.join(sys.argv[1:]))
+            print (usage)
             sys.exit()
         args_dict.update( options ) ## Sort the input into the default parameters
+        if args_dict["-h"] != "None":
+            print(usage)
+            sys.exit()
         if len(args) > 0:
             name = args[0]
         else:
@@ -726,6 +736,10 @@ if __name__ == "__main__":
             tsize = int(args_dict["-t"])
         except:
             tsize = 4
-        pye(name, tab_size = tsize)
+        if args_dict["-l"] != "None":
+            lnum = 0
+        else:
+            lnum = 1
+        pye(name, tsize, lnum)
 #endif
 
