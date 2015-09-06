@@ -30,17 +30,13 @@ class Editor:
     b"\x07" : 0x07, 
     b"\x1b[M" : 0x1b,
     }
-    def __init__(self, tab_size, lnum):
+    def __init__(self, tab_size):
         self.top_line = 0
         self.cur_line = 0
         self.row = 0
         self.col = 0
-        if lnum:
-            self.col_width = 5 
-        else:
-            self.col_width = 0
-        self.col_fmt = "%4d "
-        self.col_spc = "     "
+        self.col_width = 0
+        self.col_fmt = "%d\t" 
         self.margin = 0
         self.scrolling = 0
         self.tab_size = tab_size
@@ -124,15 +120,13 @@ class Editor:
                     return c
             elif input[0] >= 0x20: 
                 return input[0]
-            else:
-                self.message = repl(input)
     def display_window(self): 
         self.cur_line = min(self.total_lines - 1, max(self.cur_line, 0))
         self.col = max(0, min(self.col, len(self.content[self.cur_line])))
         if self.col >= self.width + self.margin:
-            self.margin = self.col - self.width + int(self.width / 4)
+            self.margin = self.col - self.width + (self.width >> 2)
         elif self.col < self.margin:
-            self.margin = max(self.col - int(self.width / 4), 0)
+            self.margin = max(self.col - (self.width >> 2), 0)
         if not (self.top_line <= self.cur_line < self.top_line + self.height): 
             self.top_line = max(self.cur_line - self.row, 0)
         self.row = self.cur_line - self.top_line
@@ -249,23 +243,24 @@ class Editor:
             pat = self.line_edit("Find: ", self.find_pattern)
             if pat:
                 self.find_in_file(pat, self.col)
-                self.row = int(self.height / 2)
+                self.row = self.height >> 1
         elif key == 0x0e:
             if self.find_pattern:
                 self.find_in_file(self.find_pattern, self.col + 1)
-                self.row = int(self.height / 2)
+                self.row = self.row = self.height >> 1
         elif key == 0x07: 
             line = self.line_edit("Goto Line: ", "")
             if line:
                 try:
                     self.cur_line = int(line) - 1
-                    self.row = int(self.height / 2)
+                    self.row = self.height >> 1
                 except:
                     pass
         elif key == 0x1b: 
             if self.mouse_y < self.height:
                 self.col = self.mouse_x + self.margin - self.col_width
                 self.cur_line = self.mouse_y + self.top_line
+            self.message = ' '
         elif key == 0x1c: 
             if self.top_line > 0:
                 self.top_line = max(self.top_line - 3, 0)
@@ -327,9 +322,17 @@ class Editor:
             self.col += 1
         else: 
             self.changed = sc
-    def edit_loop(self): 
+    def edit_loop(self, lnum): 
         self.scrbuf = [""] * self.height
         self.total_lines = len(self.content)
+        if lnum: 
+            lnum = 3
+            if self.total_lines > 900: lnum = 4
+            if self.total_lines > 9000: lnum = 5
+            self.col_width = lnum + 1 
+            self.col_fmt = "%%%dd " % lnum
+            self.col_spc = " " * self.col_width
+            self.width -= self.col_width
         
         for i in range(self.total_lines):
             self.content[i] = self.expandtabs(self.content[i].rstrip('\r\n\t '))
@@ -347,7 +350,7 @@ class Editor:
                 pass
             else: self.handle_edit_key(key)
             self.lastkey = key
-    def init_tty(self, device, baud):
+    def init_tty(self, device, baud, fd_tty):
         if sys.platform == "pyboard":
             if (device):
                 Editor.serialcomm = pyb.UART(device, baud)
@@ -360,13 +363,12 @@ class Editor:
         
         self.wr('\x1b[999;999H\x1b[6n')
         pos = b''
-        char = self.rd() 
+        char = Editor.rd() 
         while char != b'R':
             pos += char
-            char = self.rd()
+            char = Editor.rd()
         (self.height, self.width) = [int(i, 10) for i in pos[2:].split(b';')]
         self.height -= 1
-        self.width -= self.col_width
         self.wr('\x1b[?9h') 
         self.wr('\x1b[1;%dr' % self.height) 
     def deinit_tty(self):
@@ -390,25 +392,27 @@ class Editor:
             return sb.getvalue()
         else:
             return s
-def pye(content = None, tab_size = 4, lnum = 1, device = 0, baud = 115200):
-    e = Editor(tab_size, lnum)
+def pye(content = None, tab_size = 4, lnum = 4, device = 0, baud = 115200, fd_tty = 0):
+    e = Editor(tab_size)
     if type(content) == str: 
         e.fname = content
         if e.fname: 
             try:
-                with open(e.fname) as f:
-                    e.content = f.readlines()
-                if not e.content: 
-                    e.content = [""]
+                    with open(e.fname) as f:
+                        e.content = f.readlines()
             except Exception as err:
                 print ('Could not load %s, Reason: "%s"' % (e.fname, err))
                 del e
                 return
+            else:
+                if not e.content: 
+                    e.content = [""]
     elif type(content) == list and len(content) > 0 and type(content[0]) == str:
         
         e.content = content
-    e.init_tty(device, baud)
-    e.edit_loop()
+        if fd_tty: e.fname = ""
+    e.init_tty(device, baud, fd_tty)
+    e.edit_loop(lnum)
     e.deinit_tty()
     if e.fname == None:
         content = e.content

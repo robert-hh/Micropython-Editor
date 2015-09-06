@@ -1,16 +1,17 @@
 ##
-## Small python text editor based on the:
+## Small python text editor based on the 
 ## Very simple VT100 terminal text editor widget
-## Copyright (c) 2015 Paul Sokolovsky
+## Copyright (c) 2015 Paul Sokolovsky (initial code)
+## Copyright (c) 2015 Robert Hammelrath (additional code)
 ## Distributed under MIT License
-## some code mangling by Robert Hammelrath, 2015, making it quite a little bit larger:
+## Changes:
 ## - Ported the code to pyboard (still runs on Linux Python3 and on Linux Micropython)
 ##   It uses VCP_USB on Pyboard, but that may easyly be changed to UART
 ## - changed read keyboard function to comply with char-by-char input (on serial lines)
 ## - added support for TAB, BACKTAB, SAVE, DEL at end joining lines, Find,
 ## - Goto Line, Yank (delete line into buffer), Zap (insert buffer)
 ## - moved main into a function with some optional parameters
-## - Added a status line and single line prompts for Quit, Save, Find and Goto
+## - Added a status line, line number column and single line prompts for Quit, Save, Find and Goto
 ## - Added mouse support for pointing and scrolling
 ##
 import sys
@@ -131,17 +132,13 @@ class Editor:
 #endif
     }
 
-    def __init__(self, tab_size, lnum):
+    def __init__(self, tab_size):
         self.top_line = 0
         self.cur_line = 0
         self.row = 0
         self.col = 0
-        if lnum:
-            self.col_width = 5 ## width of line no. col
-        else:
-            self.col_width = 0
-        self.col_fmt = "%4d "
-        self.col_spc = "     "
+        self.col_width = 0
+        self.col_fmt = "%d\t" ## preliminary
         self.margin = 0
         self.scrolling = 0
         self.tab_size = tab_size
@@ -157,6 +154,7 @@ class Editor:
         self.case = "n"
 #ifdef LINUX
     if sys.platform in ("linux", "darwin"):
+        
         @staticmethod
         def wr(s):
             if isinstance(s, str):
@@ -165,7 +163,7 @@ class Editor:
 
         @staticmethod
         def rd():
-           return os.read(0,1)
+           return os.read(Editor.sdev,1)
 #endif
 #ifdef PYBOARD
     if sys.platform == "pyboard":
@@ -246,8 +244,6 @@ class Editor:
                     return c
             elif input[0] >= 0x20: ## but only if no Ctrl-Char
                 return input[0]
-            else:
-                self.message = repl(input)
 
     def display_window(self): ## Update window and status line
 ## Force cur_line and col to be in the reasonable limits
@@ -255,24 +251,25 @@ class Editor:
         self.col = max(0, min(self.col, len(self.content[self.cur_line])))
 ## Check if Column is out of view, and align margin if needed
         if self.col >= self.width + self.margin:
-            self.margin = self.col - self.width + int(self.width / 4)
+            self.margin = self.col - self.width + (self.width >> 2)
         elif self.col < self.margin:
-            self.margin = max(self.col - int(self.width / 4), 0)
-## if cur_line is out of view, align top_line to given row
+            self.margin = max(self.col - (self.width >> 2), 0)
+## if cur_line is out of view, align top_line to the given row
         if not (self.top_line <= self.cur_line < self.top_line + self.height): # Visible?
             self.top_line = max(self.cur_line - self.row, 0)
+## in any case, align row to top_line and cur_line            
         self.row = self.cur_line - self.top_line
 ## update_screen
         self.cursor(False)
 #ifndef BASIC
         if self.scrolling < 0:  ## scroll down by n lines
             self.scrbuf[-self.scrolling:] = self.scrbuf[:self.scrolling]
-            self.scrbuf[:-self.scrolling] = ['\x01'] * -self.scrolling
+            self.scrbuf[:-self.scrolling] = [''] * -self.scrolling
             self.goto(0, 0)
             self.wr("\x1bM" * -self.scrolling)
         elif self.scrolling  > 0:  ## scroll up by n lines
             self.scrbuf[:-self.scrolling] = self.scrbuf[self.scrolling:]
-            self.scrbuf[-self.scrolling:] = ['\x01'] * self.scrolling
+            self.scrbuf[-self.scrolling:] = [''] * self.scrolling
             self.goto(self.height - 1, 0)
             self.wr("\x1bD " * self.scrolling)
         self.scrolling = 0
@@ -297,7 +294,7 @@ class Editor:
 ## display Status-Line
         if self.status == "y" or self.message:
             self.goto(self.height, 0)
-            self.clear_to_eol() ## moved up for mate/xfce4-terminal
+            self.clear_to_eol() ## moved up for mate/xfce4-terminal issue with scroll region
             self.hilite(1)
             if self.col_width > 0:
                 self.wr(self.col_fmt % self.total_lines)
@@ -395,30 +392,31 @@ class Editor:
             pat = self.line_edit("Find: ", self.find_pattern)
             if pat:
                 self.find_in_file(pat, self.col)
-                self.row = int(self.height / 2)
+                self.row = self.height >> 1
         elif key == KEY_FIND_AGAIN:
             if self.find_pattern:
                 self.find_in_file(self.find_pattern, self.col + 1)
-                self.row = int(self.height / 2)
+                self.row = self.row = self.height >> 1
         elif key == KEY_GOTO: ## goto line
             line = self.line_edit("Goto Line: ", "")
             if line:
                 try:
                     self.cur_line = int(line) - 1
-                    self.row = int(self.height / 2)
+                    self.row = self.height >> 1
                 except:
                     pass
         elif key == KEY_MOUSE: ## Set Cursor
             if self.mouse_y < self.height:
                 self.col = self.mouse_x + self.margin - self.col_width
                 self.cur_line = self.mouse_y + self.top_line
+            self.message = ' '
         elif key == KEY_SCRLUP: ##
-            if self.top_line > 0: 
+            if self.top_line > 0:
                 self.top_line = max(self.top_line - 3, 0)
                 self.cur_line = min(self.cur_line, self.top_line + self.height - 1)
                 self.scrolling = -3
         elif key == KEY_SCRLDN: ##
-            if self.top_line + self.height < self.total_lines: 
+            if self.top_line + self.height < self.total_lines:
                 self.top_line = min(self.top_line + 3, self.total_lines - 1)
                 self.cur_line = max(self.cur_line, self.top_line)
                 self.scrolling = 3
@@ -593,9 +591,18 @@ class Editor:
         else: # Ctrl key or not supported function, ignore
             self.changed = sc
 
-    def edit_loop(self): ## main editing loop
+    def edit_loop(self, lnum): ## main editing loop
         self.scrbuf = [""] * self.height
         self.total_lines = len(self.content)
+        if lnum: ## prepare for line number column
+            lnum = 3
+            if self.total_lines > 900:  lnum = 4
+            if self.total_lines > 9000: lnum = 5
+            self.col_width = lnum + 1 ## width of line no. col
+            self.col_fmt = "%%%dd " % lnum
+            self.col_spc = " " * self.col_width
+            self.width -= self.col_width
+
         ## strip trailing whitespace and expand tabs
         for i in range(self.total_lines):
             self.content[i] = self.expandtabs(self.content[i].rstrip('\r\n\t '))
@@ -616,7 +623,7 @@ class Editor:
             else: self.handle_edit_key(key)
             self.lastkey = key
 
-    def init_tty(self, device, baud):
+    def init_tty(self, device, baud, fd_tty):
 #ifdef PYBOARD
         if sys.platform == "pyboard":
             if (device):
@@ -632,20 +639,20 @@ class Editor:
 #ifdef LINUX
         if sys.platform in ("linux", "darwin"):
             import tty, termios
-            self.org_termios = termios.tcgetattr(0)
-            tty.setraw(0)
+            self.org_termios = termios.tcgetattr(fd_tty)
+            tty.setraw(fd_tty)
+            Editor.sdev = fd_tty
             self.status = "y"
 #endif
         ## Set cursor far off and ask for reporting its position = size of the window.
         self.wr('\x1b[999;999H\x1b[6n')
         pos = b''
-        char = self.rd() ## expect ESC[yyy;xxxR
+        char = Editor.rd() ## expect ESC[yyy;xxxR
         while char != b'R':
             pos += char
-            char = self.rd()
+            char = Editor.rd()
         (self.height, self.width) = [int(i, 10) for i in pos[2:].split(b';')]
         self.height -= 1
-        self.width -= self.col_width
         self.wr('\x1b[?9h') ## enable mouse reporting
         self.wr('\x1b[1;%dr' % self.height) ## enable partial scrolling, Buggy?
 
@@ -661,7 +668,7 @@ class Editor:
 #ifdef LINUX
         if sys.platform in ("linux", "darwin"):
             import termios
-            termios.tcsetattr(0, termios.TCSANOW, self.org_termios)
+            termios.tcsetattr(Editor.sdev, termios.TCSANOW, self.org_termios)
 #endif
 ## expandtabs: hopefully sometimes replaced by the built-in function
     def expandtabs(self, s):
@@ -679,27 +686,35 @@ class Editor:
         else:
             return s
 
-def pye(content = None, tab_size = 4, lnum = 1, device = 0, baud = 115200):
+def pye(content = None, tab_size = 4, lnum = 4, device = 0, baud = 115200, fd_tty = 0):
 ## prepare content
-    e = Editor(tab_size, lnum)
+    e = Editor(tab_size)
     if type(content) == str: ## String = Filename
         e.fname = content
         if e.fname:  ## non-empty String -> read it
             try:
-                with open(e.fname) as f:
-                    e.content = f.readlines()
-                if not e.content: ## empty file
-                    e.content = [""]
+#ifdef LINUX
+                if sys.implementation.name == "cpython":
+                    with open(e.fname, errors="ignore") as f:
+                        e.content = f.readlines()
+                else:
+#endif
+                    with open(e.fname) as f:
+                        e.content = f.readlines()
             except Exception as err:
                 print ('Could not load %s, Reason: "%s"' % (e.fname, err))
                 del e
                 return
+            else:
+                if not e.content: ## empty file
+                    e.content = [""]
     elif type(content) == list and len(content) > 0 and type(content[0]) == str:
         ## non-empty list of strings -> edit
         e.content = content
+        if fd_tty: e.fname = ""
 ## edit
-    e.init_tty(device, baud)
-    e.edit_loop()
+    e.init_tty(device, baud, fd_tty)
+    e.edit_loop(lnum)
     e.deinit_tty()
 ## clean-up
     if e.fname == None:
@@ -714,10 +729,12 @@ def pye(content = None, tab_size = 4, lnum = 1, device = 0, baud = 115200):
 if __name__ == "__main__":
     if sys.platform in ("linux", "darwin"):
         import getopt
+        import os, stat
         args_dict = {'-t' : '4', '-l' : "None", '-h' : "None"}
         usage = ("Usage: python3 pye.py [-t tabsize] [-l] [filename]\n"
-                 "         -t x set tabsize\n"
-                 "         -l   suppress line number column")
+                 "Flags: -t x set tabsize\n"
+                 "       -l   suppress line number column")
+        fd_tty = 0
         try:
             options, args = getopt.getopt(sys.argv[1:],"t:lh") ## get the options -t x -l -h
         except:
@@ -731,7 +748,13 @@ if __name__ == "__main__":
         if len(args) > 0:
             name = args[0]
         else:
-            name = ""
+            mode = os.fstat(0).st_mode
+            if stat.S_ISFIFO(mode) or stat.S_ISREG(mode):
+                 name = sys.stdin.readlines()
+                 fd_tty = os.open("/dev/tty", os.O_RDONLY) ## tty gets another fd
+                 os.close(0)
+            else:
+                 name = ""
         try:
             tsize = int(args_dict["-t"])
         except:
@@ -739,7 +762,7 @@ if __name__ == "__main__":
         if args_dict["-l"] != "None":
             lnum = 0
         else:
-            lnum = 1
-        pye(name, tsize, lnum)
+            lnum = 5
+        pye(name, tsize, lnum, fd_tty=fd_tty)
 #endif
 
