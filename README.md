@@ -13,9 +13,9 @@ A small text editor written in Python running on PYBoard, allowing to edit files
   The status line can be turned (almost) off for slow connections.
 - Support of the basic mouse functions scrolling up/down and setting the cursor.
 
-The editor assumes a VT100 terminal. It works in Insert mode. Cursor Keys, Home, End, PgUp, PgDn, Del and Backspace work as you would expect. The additional functions like FIND etc. are available with Ctrl-Keys. On reading files, tab characters are expanded to spaces with a tab size of 8, and trailing white space on a line will be discarded. It will not restored when the file is written.
+The editor assumes a VT100 terminal. It works in Insert mode. Cursor Keys, Home, End, PgUp, PgDn, Del and Backspace work as you would expect. The additional functions like FIND etc. are available with Ctrl-Keys. On reading files, tab characters are expanded to spaces with a tab size of 8, and trailing white space on a line will be discarded. It will not restored when the file is written. The screen size is determined, when the editor is started or when the Redraw-key (Ctrl-E) is hit.
 
-The editor works also well in a Linux or MAC terminal environment, with both python3 and micropython. For that purpose, a small main() section is available, which also accepts data from a pipe or redirection.
+The editor works also well in a Linux or MAC terminal environment, with both python3 and micropython. For that purpose, a small main() section is embedded, which also accepts data from a pipe or redirection.
 
 **Files:**
 

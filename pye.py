@@ -27,7 +27,7 @@ if sys.platform == "pyboard":
     import pyb
 #endif
 #ifdef DEFINES
-#define KEY_UP          0x05
+#define KEY_UP          0x1a
 #define KEY_DOWN        0x0b
 #define KEY_LEFT        0x0c
 #define KEY_RIGHT       0x0f
@@ -55,8 +55,9 @@ if sys.platform == "pyboard":
 #define KEY_MOUSE       0x1b
 #define KEY_SCRLUP      0x1c
 #define KEY_SCRLDN      0x1d
+#define KEY_REDRAW      0x05
 #else
-KEY_UP        = 0x05
+KEY_UP        = 0x1a
 KEY_DOWN      = 0x0b
 KEY_LEFT      = 0x0c
 KEY_RIGHT     = 0x0f
@@ -76,6 +77,7 @@ KEY_MOUSE     = 0x1b
 KEY_SCRLUP    = 0x1c
 KEY_SCRLDN    = 0x1d
 KEY_FIND_AGAIN= 0x0e
+KEY_REDRAW    = 0x05
 #ifndef BASIC
 KEY_FIRST     = 0x02
 KEY_LAST      = 0x14
@@ -115,6 +117,7 @@ class Editor:
     b"\x0e"   : KEY_FIND_AGAIN, ## Ctrl-N
     b"\x07"   : KEY_GOTO, ##  Ctrl-G
     b"\x1b[M" : KEY_MOUSE,
+    b"\x05"   : KEY_REDRAW, ## Ctrl-E
 #ifndef BASIC
     b"\x01"   : KEY_TOGGLE, ## Ctrl-A
     b"\x14"   : KEY_FIRST, ## Ctrl-T
@@ -209,6 +212,52 @@ class Editor:
         else:
             Editor.wr(b"\x1b[0m")
 
+    @staticmethod
+    def get_screen_size():
+    ## Set cursor far off and ask for reporting its position = size of the window.
+        Editor.wr('\x1b[999;999H\x1b[6n')
+        pos = b''
+        char = Editor.rd() ## expect ESC[yyy;xxxR
+        while char != b'R':
+            pos += char
+            char = Editor.rd()
+        (height, width) = [int(i, 10) for i in pos[2:].split(b';')]
+        return (height-1, width)
+
+    @staticmethod
+    def mouse_reporting(onoff):
+        if onoff:
+            Editor.wr('\x1b[?9h') ## enable mouse reporting
+        else:
+            Editor.wr('\x1b[?9l') ## enable mouse reporting
+
+    @staticmethod
+    def scroll_region(stop):
+        if stop:
+            Editor.wr('\x1b[1;%dr' % stop) ## enable partial scrolling
+        else:
+            Editor.wr('\x1b[r') ## enable partial scrolling
+#ifndef BASIC
+    @staticmethod
+    def scroll_lines(updown, lines):
+        if updown:
+            Editor.wr("\x1bM" * lines) ## Scroll up
+        else:
+            Editor.wr("\x1bD " * lines) ## Scroll down
+#endif
+    def set_screen_parms(self, lines, lnum):
+        (self.height, self.width) = self.get_screen_size()
+        self.scroll_region(self.height)
+        self.scrbuf = [""] * self.height
+        if lnum: ## prepare for line number column
+            lnum = 3
+            if self.total_lines > 900:  lnum = 4
+            if self.total_lines > 9000: lnum = 5
+            self.col_width = lnum + 1 ## width of line no. col
+            self.col_fmt = "%%%dd " % lnum
+            self.col_spc = " " * self.col_width
+            self.width -= self.col_width
+
     def print_no(self, row, line):
         self.goto(row, 0)
         if self.col_width > 1:
@@ -266,12 +315,12 @@ class Editor:
             self.scrbuf[-self.scrolling:] = self.scrbuf[:self.scrolling]
             self.scrbuf[:-self.scrolling] = [''] * -self.scrolling
             self.goto(0, 0)
-            self.wr("\x1bM" * -self.scrolling)
+            self.scroll_lines(True, -self.scrolling)
         elif self.scrolling  > 0:  ## scroll up by n lines
             self.scrbuf[:-self.scrolling] = self.scrbuf[self.scrolling:]
             self.scrbuf[-self.scrolling:] = [''] * self.scrolling
             self.goto(self.height - 1, 0)
-            self.wr("\x1bD " * self.scrolling)
+            self.scroll_lines(False, self.scrolling)
         self.scrolling = 0
 #endif
         i = self.top_line
@@ -315,7 +364,7 @@ class Editor:
         else: ## at line start
             return len(line) - len(line.lstrip(" "))
 
-    def line_edit(self, prompt, default):  ## simple one: only 3 fcts
+    def line_edit(self, prompt, default):  ## simple one: only 4 fcts
         self.goto(self.height, 0)
         self.hilite(1)
         self.wr(prompt)
@@ -331,10 +380,13 @@ class Editor:
             elif key == KEY_QUIT: ## Abort
                 self.hilite(0)
                 return None
-            elif key in (KEY_BACKSPACE, KEY_DELETE): ## Backspace
+            elif key == KEY_BACKSPACE: ## Backspace
                 if (len(res) > 0):
                     res = res[:len(res)-1]
                     self.wr('\b \b')
+            elif key == KEY_DELETE: ## Delete prev. Entry
+                self.wr('\b \b' * len(res)) 
+                res = ''
             elif key >= 0x20: ## char to be added at the end
                 if len(prompt) + len(res) < self.width - 1:
                     res += chr(key)
@@ -590,22 +642,13 @@ class Editor:
             self.col += 1
         else: # Ctrl key or not supported function, ignore
             self.changed = sc
-
+            
     def edit_loop(self, lnum): ## main editing loop
-        self.scrbuf = [""] * self.height
         self.total_lines = len(self.content)
-        if lnum: ## prepare for line number column
-            lnum = 3
-            if self.total_lines > 900:  lnum = 4
-            if self.total_lines > 9000: lnum = 5
-            self.col_width = lnum + 1 ## width of line no. col
-            self.col_fmt = "%%%dd " % lnum
-            self.col_spc = " " * self.col_width
-            self.width -= self.col_width
-
         ## strip trailing whitespace and expand tabs
         for i in range(self.total_lines):
             self.content[i] = self.expandtabs(self.content[i].rstrip('\r\n\t '))
+        self.set_screen_parms(self.total_lines, lnum)
 
         while True:
             self.display_window()  ## Update & display window
@@ -618,6 +661,10 @@ class Editor:
                     if not res or res[0].upper() != 'Y':
                         continue
                 return None
+            elif key == KEY_REDRAW:
+                del self.scrbuf
+                self.set_screen_parms(self.total_lines, lnum)
+                self.row = max(self.height - 1, min(self.row, 0))
             elif  self.handle_cursor_keys(key):
                 pass
             else: self.handle_edit_key(key)
@@ -644,21 +691,12 @@ class Editor:
             Editor.sdev = fd_tty
             self.status = "y"
 #endif
-        ## Set cursor far off and ask for reporting its position = size of the window.
-        self.wr('\x1b[999;999H\x1b[6n')
-        pos = b''
-        char = Editor.rd() ## expect ESC[yyy;xxxR
-        while char != b'R':
-            pos += char
-            char = Editor.rd()
-        (self.height, self.width) = [int(i, 10) for i in pos[2:].split(b';')]
-        self.height -= 1
-        self.wr('\x1b[?9h') ## enable mouse reporting
-        self.wr('\x1b[1;%dr' % self.height) ## enable partial scrolling, Buggy?
+        self.mouse_reporting(True) ## disable mouse reporting, enable scrolling
 
     def deinit_tty(self):
         ## Do not leave cursor in the middle of screen
-        self.wr('\x1b[?9l\x1b[r') ## disable mouse reporting, enable scrolling
+        self.mouse_reporting(False) ## disable mouse reporting, enable scrolling
+        self.scroll_region(0)
         self.goto(self.height, 0)
         self.clear_to_eol()
 #ifdef PYBOARD
@@ -748,13 +786,13 @@ if __name__ == "__main__":
         if len(args) > 0:
             name = args[0]
         else:
-            mode = os.fstat(0).st_mode
-            if stat.S_ISFIFO(mode) or stat.S_ISREG(mode):
-                 name = sys.stdin.readlines()
-                 fd_tty = os.open("/dev/tty", os.O_RDONLY) ## tty gets another fd
-                 os.close(0)
-            else:
-                 name = ""
+            name = ""
+            if sys.implementation.name == "cpython":
+                mode = os.fstat(0).st_mode
+                if stat.S_ISFIFO(mode) or stat.S_ISREG(mode):
+                     name = sys.stdin.readlines()
+                     fd_tty = os.open("/dev/tty", os.O_RDONLY) ## tty gets another fd
+                     os.close(0) ## now we can close 0
         try:
             tsize = int(args_dict["-t"])
         except:
@@ -765,4 +803,3 @@ if __name__ == "__main__":
             lnum = 5
         pye(name, tsize, lnum, fd_tty=fd_tty)
 #endif
-

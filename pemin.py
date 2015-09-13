@@ -5,7 +5,7 @@ if sys.platform == "pyboard":
     import pyb
 class Editor:
     KEYMAP = { 
-    b"\x1b[A" : 0x05,
+    b"\x1b[A" : 0x1a,
     b"\x1b[B" : 0x0b,
     b"\x1b[D" : 0x0c,
     b"\x1b[C" : 0x0f,
@@ -29,6 +29,7 @@ class Editor:
     b"\x0e" : 0x0e, 
     b"\x07" : 0x07, 
     b"\x1b[M" : 0x1b,
+    b"\x05" : 0x05, 
     }
     def __init__(self, tab_size):
         self.top_line = 0
@@ -86,6 +87,41 @@ class Editor:
             Editor.wr(b"\x1b[2;7m")
         else:
             Editor.wr(b"\x1b[0m")
+    @staticmethod
+    def get_screen_size():
+    
+        Editor.wr('\x1b[999;999H\x1b[6n')
+        pos = b''
+        char = Editor.rd() 
+        while char != b'R':
+            pos += char
+            char = Editor.rd()
+        (height, width) = [int(i, 10) for i in pos[2:].split(b';')]
+        return (height-1, width)
+    @staticmethod
+    def mouse_reporting(onoff):
+        if onoff:
+            Editor.wr('\x1b[?9h') 
+        else:
+            Editor.wr('\x1b[?9l') 
+    @staticmethod
+    def scroll_region(stop):
+        if stop:
+            Editor.wr('\x1b[1;%dr' % stop) 
+        else:
+            Editor.wr('\x1b[r') 
+    def set_screen_parms(self, lines, lnum):
+        (self.height, self.width) = self.get_screen_size()
+        self.scroll_region(self.height)
+        self.scrbuf = [""] * self.height
+        if lnum: 
+            lnum = 3
+            if self.total_lines > 900: lnum = 4
+            if self.total_lines > 9000: lnum = 5
+            self.col_width = lnum + 1 
+            self.col_fmt = "%%%dd " % lnum
+            self.col_spc = " " * self.col_width
+            self.width -= self.col_width
     def print_no(self, row, line):
         self.goto(row, 0)
         if self.col_width > 1:
@@ -184,10 +220,13 @@ class Editor:
             elif key == 0x03: 
                 self.hilite(0)
                 return None
-            elif key in (0x08, 0x1f): 
+            elif key == 0x08: 
                 if (len(res) > 0):
                     res = res[:len(res)-1]
                     self.wr('\b \b')
+            elif key == 0x1f: 
+                self.wr('\b \b' * len(res))
+                res = ''
             elif key >= 0x20: 
                 if len(prompt) + len(res) < self.width - 1:
                     res += chr(key)
@@ -219,7 +258,7 @@ class Editor:
             if self.cur_line < self.total_lines - 1:
                 self.cur_line += 1
                 if self.cur_line == self.top_line + self.height: self.scrolling = 1
-        elif key == 0x05:
+        elif key == 0x1a:
             if self.cur_line > 0:
                 if self.cur_line == self.top_line: self.scrolling = -1
                 self.cur_line -= 1
@@ -323,19 +362,11 @@ class Editor:
         else: 
             self.changed = sc
     def edit_loop(self, lnum): 
-        self.scrbuf = [""] * self.height
         self.total_lines = len(self.content)
-        if lnum: 
-            lnum = 3
-            if self.total_lines > 900: lnum = 4
-            if self.total_lines > 9000: lnum = 5
-            self.col_width = lnum + 1 
-            self.col_fmt = "%%%dd " % lnum
-            self.col_spc = " " * self.col_width
-            self.width -= self.col_width
         
         for i in range(self.total_lines):
             self.content[i] = self.expandtabs(self.content[i].rstrip('\r\n\t '))
+        self.set_screen_parms(self.total_lines, lnum)
         while True:
             self.display_window() 
             key = self.get_input() 
@@ -346,6 +377,10 @@ class Editor:
                     if not res or res[0].upper() != 'Y':
                         continue
                 return None
+            elif key == 0x05:
+                del self.scrbuf
+                self.set_screen_parms(self.total_lines, lnum)
+                self.row = max(self.height - 1, min(self.row, 0))
             elif self.handle_cursor_keys(key):
                 pass
             else: self.handle_edit_key(key)
@@ -360,20 +395,11 @@ class Editor:
                 Editor.serialcomm.setinterrupt(-1)
                 self.status = "y"
             Editor.sdev = device
-        
-        self.wr('\x1b[999;999H\x1b[6n')
-        pos = b''
-        char = Editor.rd() 
-        while char != b'R':
-            pos += char
-            char = Editor.rd()
-        (self.height, self.width) = [int(i, 10) for i in pos[2:].split(b';')]
-        self.height -= 1
-        self.wr('\x1b[?9h') 
-        self.wr('\x1b[1;%dr' % self.height) 
+        self.mouse_reporting(True) 
     def deinit_tty(self):
         
-        self.wr('\x1b[?9l\x1b[r') 
+        self.mouse_reporting(False) 
+        self.scroll_region(0)
         self.goto(self.height, 0)
         self.clear_to_eol()
         if sys.platform == "pyboard" and not Editor.sdev:
