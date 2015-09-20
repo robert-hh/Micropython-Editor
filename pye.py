@@ -1,5 +1,5 @@
 ##
-## Small python text editor based on the 
+## Small python text editor based on the
 ## Very simple VT100 terminal text editor widget
 ## Copyright (c) 2015 Paul Sokolovsky (initial code)
 ## Copyright (c) 2015 Robert Hammelrath (additional code)
@@ -81,9 +81,9 @@ KEY_REDRAW    = 0x05
 #ifndef BASIC
 KEY_FIRST     = 0x02
 KEY_LAST      = 0x14
+KEY_BACKTAB   = 0x15
 KEY_YANK      = 0x18
 KEY_ZAP       = 0x16
-KEY_BACKTAB   = 0x15
 KEY_TOGGLE    = 0x01
 KEY_REPLC     = 0x12
 KEY_DUP       = 0x04
@@ -118,17 +118,17 @@ class Editor:
     b"\x07"   : KEY_GOTO, ##  Ctrl-G
     b"\x1b[M" : KEY_MOUSE,
     b"\x05"   : KEY_REDRAW, ## Ctrl-E
+    b"\x09"   : KEY_TAB,
 #ifndef BASIC
     b"\x01"   : KEY_TOGGLE, ## Ctrl-A
     b"\x14"   : KEY_FIRST, ## Ctrl-T
     b"\x1b[1;5H": KEY_FIRST,
     b"\x02"   : KEY_LAST,  ## Ctrl-B
     b"\x1b[1;5F": KEY_LAST,
-    b"\x1b[3;5~": KEY_YANK,
-    b"\x18"   : KEY_YANK, ## Ctrl-X
-    b"\x09"   : KEY_TAB,
     b"\x1b[Z" : KEY_BACKTAB, ## Shift Tab
     b"\x15"   : KEY_BACKTAB, ## Ctrl-U
+    b"\x1b[3;5~": KEY_YANK,
+    b"\x18"   : KEY_YANK, ## Ctrl-X
     b"\x16"   : KEY_ZAP, ## Ctrl-V
     b"\x12"   : KEY_REPLC, ## Ctrl-R
     b"\x04"   : KEY_DUP, ## Ctrl-D
@@ -157,7 +157,7 @@ class Editor:
         self.case = "n"
 #ifdef LINUX
     if sys.platform in ("linux", "darwin"):
-        
+
         @staticmethod
         def wr(s):
             if isinstance(s, str):
@@ -258,14 +258,11 @@ class Editor:
             self.col_spc = " " * self.col_width
             self.width -= self.col_width
 
-    def print_no(self, row, line):
+    def print_no(self, row, lnum):
         self.goto(row, 0)
         if self.col_width > 1:
             self.hilite(2)
-            if line:
-                self.wr(line)
-            else:
-                self.wr(self.col_spc)
+            self.wr(lnum)
             self.hilite(0)
 
     def get_input(self):  ## read from interface/keyboard one byte each and match against function keys
@@ -295,7 +292,7 @@ class Editor:
                 return input[0]
 
     def display_window(self): ## Update window and status line
-## Force cur_line and col to be in the reasonable limits
+## Force cur_line and col to be in the reasonable bounds
         self.cur_line = min(self.total_lines - 1, max(self.cur_line, 0))
         self.col = max(0, min(self.col, len(self.content[self.cur_line])))
 ## Check if Column is out of view, and align margin if needed
@@ -306,7 +303,7 @@ class Editor:
 ## if cur_line is out of view, align top_line to the given row
         if not (self.top_line <= self.cur_line < self.top_line + self.height): # Visible?
             self.top_line = max(self.cur_line - self.row, 0)
-## in any case, align row to top_line and cur_line            
+## in any case, align row to top_line and cur_line
         self.row = self.cur_line - self.top_line
 ## update_screen
         self.cursor(False)
@@ -327,7 +324,7 @@ class Editor:
         for c in range(self.height):
             if i == self.total_lines: ## at empty bottom screen part
                 if self.scrbuf[c] != '\x04':
-                    self.print_no(c, None)
+                    self.print_no(c, self.col_spc)
                     self.clear_to_eol()
                     self.scrbuf[c] = '\x04'
             else:
@@ -358,7 +355,8 @@ class Editor:
             self.clear_to_eol()
         self.message = ''
 
-    def spaces(self, line, pos = 0): ## count spaces
+    @staticmethod
+    def spaces(line, pos = 0): ## count spaces
         if pos: ## left to the cursor
             return len(line[:pos]) - len(line[:pos].rstrip(" "))
         else: ## at line start
@@ -385,7 +383,7 @@ class Editor:
                     res = res[:len(res)-1]
                     self.wr('\b \b')
             elif key == KEY_DELETE: ## Delete prev. Entry
-                self.wr('\b \b' * len(res)) 
+                self.wr('\b \b' * len(res))
                 res = ''
             elif key >= 0x20: ## char to be added at the end
                 if len(prompt) + len(res) < self.width - 1:
@@ -400,10 +398,12 @@ class Editor:
             pattern = pattern.lower()
         spos = pos
         for line in range(self.cur_line, self.total_lines):
-            if self.case == "y":
-                match = self.content[line][spos:].find(pattern)
-            else:
+            if self.case != "y":
                 match = self.content[line][spos:].lower().find(pattern)
+#ifndef BASIC
+            else:
+                match = self.content[line][spos:].find(pattern)
+#endif
             if match >= 0:
                 break
             spos = 0
@@ -513,8 +513,13 @@ class Editor:
             self.col = ni
         elif key == KEY_BACKSPACE:
             if self.col > 0:
-                self.content[self.cur_line] = l[:self.col - 1] + l[self.col:]
-                self.col -= 1
+                ni = 1
+#ifndef BASIC
+                if self.autoindent == "y" and self.spaces(l, 0) == self.col: ## Autoindent, Backspace does Backtab
+                    ni = (self.col - 1) % self.tab_size + 1
+#endif
+                self.content[self.cur_line] = l[:self.col - ni] + l[self.col:]
+                self.col -= ni
 #ifndef BASIC
             elif self.cur_line: # at the start of a line, but not the first
                 self.col = len(self.content[self.cur_line - 1])
@@ -642,7 +647,7 @@ class Editor:
             self.col += 1
         else: # Ctrl key or not supported function, ignore
             self.changed = sc
-            
+
     def edit_loop(self, lnum): ## main editing loop
         self.total_lines = len(self.content)
         ## strip trailing whitespace and expand tabs
@@ -709,7 +714,8 @@ class Editor:
             termios.tcsetattr(Editor.sdev, termios.TCSANOW, self.org_termios)
 #endif
 ## expandtabs: hopefully sometimes replaced by the built-in function
-    def expandtabs(self, s):
+    @staticmethod
+    def expandtabs(s):
         if '\t' in s:
             sb = _io.StringIO()
             pos = 0

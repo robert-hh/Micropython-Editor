@@ -30,6 +30,7 @@ class Editor:
     b"\x07" : 0x07, 
     b"\x1b[M" : 0x1b,
     b"\x05" : 0x05, 
+    b"\x09" : 0x09,
     }
     def __init__(self, tab_size):
         self.top_line = 0
@@ -122,14 +123,11 @@ class Editor:
             self.col_fmt = "%%%dd " % lnum
             self.col_spc = " " * self.col_width
             self.width -= self.col_width
-    def print_no(self, row, line):
+    def print_no(self, row, lnum):
         self.goto(row, 0)
         if self.col_width > 1:
             self.hilite(2)
-            if line:
-                self.wr(line)
-            else:
-                self.wr(self.col_spc)
+            self.wr(lnum)
             self.hilite(0)
     def get_input(self): 
         while True:
@@ -171,7 +169,7 @@ class Editor:
         for c in range(self.height):
             if i == self.total_lines: 
                 if self.scrbuf[c] != '\x04':
-                    self.print_no(c, None)
+                    self.print_no(c, self.col_spc)
                     self.clear_to_eol()
                     self.scrbuf[c] = '\x04'
             else:
@@ -199,7 +197,8 @@ class Editor:
             self.goto(self.height, 0)
             self.clear_to_eol()
         self.message = ''
-    def spaces(self, line, pos = 0): 
+    @staticmethod
+    def spaces(line, pos = 0): 
         if pos: 
             return len(line[:pos]) - len(line[:pos].rstrip(" "))
         else: 
@@ -239,9 +238,7 @@ class Editor:
             pattern = pattern.lower()
         spos = pos
         for line in range(self.cur_line, self.total_lines):
-            if self.case == "y":
-                match = self.content[line][spos:].find(pattern)
-            else:
+            if self.case != "y":
                 match = self.content[line][spos:].lower().find(pattern)
             if match >= 0:
                 break
@@ -326,8 +323,9 @@ class Editor:
             self.col = ni
         elif key == 0x08:
             if self.col > 0:
-                self.content[self.cur_line] = l[:self.col - 1] + l[self.col:]
-                self.col -= 1
+                ni = 1
+                self.content[self.cur_line] = l[:self.col - ni] + l[self.col:]
+                self.col -= ni
             else:
                 self.changed = sc
         elif key == 0x1f:
@@ -404,7 +402,8 @@ class Editor:
         self.clear_to_eol()
         if sys.platform == "pyboard" and not Editor.sdev:
             Editor.serialcomm.setinterrupt(3)
-    def expandtabs(self, s):
+    @staticmethod
+    def expandtabs(s):
         if '\t' in s:
             sb = _io.StringIO()
             pos = 0
