@@ -141,7 +141,7 @@ class Editor:
         self.row = 0
         self.col = 0
         self.col_width = 0
-        self.col_fmt = "%d\t" ## preliminary
+        self.col_spc = ''
         self.margin = 0
         self.scrolling = 0
         self.tab_size = tab_size
@@ -184,10 +184,6 @@ class Editor:
                 pass
             return Editor.serialcomm.read(1)
 #endif
-    @staticmethod
-    def cls():
-        Editor.wr(b"\x1b[2J")
-
     @staticmethod
     def goto(row, col):
         Editor.wr("\x1b[%d;%dH" % (row + 1, col + 1))
@@ -248,7 +244,7 @@ class Editor:
     def set_screen_parms(self, lines, lnum):
         (self.height, self.width) = self.get_screen_size()
         self.scroll_region(self.height)
-        self.scrbuf = [""] * self.height
+        self.scrbuf = ["\x04"] * self.height ## force delete
         if lnum: ## prepare for line number column
             lnum = 3
             if self.total_lines > 900:  lnum = 4
@@ -258,12 +254,13 @@ class Editor:
             self.col_spc = " " * self.col_width
             self.width -= self.col_width
 
-    def print_no(self, row, lnum):
-        self.goto(row, 0)
-        if self.col_width > 1:
-            self.hilite(2)
-            self.wr(lnum)
-            self.hilite(0)
+    @staticmethod
+    def print_no(row, lnum):
+        Editor.goto(row, 0)
+        if lnum:
+            Editor.hilite(2)
+            Editor.wr(lnum)
+            Editor.hilite(0)
 
     def get_input(self):  ## read from interface/keyboard one byte each and match against function keys
         while True:
@@ -323,13 +320,16 @@ class Editor:
         i = self.top_line
         for c in range(self.height):
             if i == self.total_lines: ## at empty bottom screen part
-                if self.scrbuf[c] != '\x04':
+                if self.scrbuf[c] != '':
                     self.print_no(c, self.col_spc)
                     self.clear_to_eol()
-                    self.scrbuf[c] = '\x04'
+                    self.scrbuf[c] = ''
             else:
                 l = self.content[i][self.margin:self.margin + self.width]
-                lnum = self.col_fmt % (i + 1)
+                if self.col_width > 1:
+                    lnum = self.col_fmt % (i + 1)
+                else:
+                    lnum = ''
                 if (lnum + l) != self.scrbuf[c]: ## line changed, print it
                     self.print_no(c, lnum) ## print line no
                     self.wr(l)
@@ -389,8 +389,6 @@ class Editor:
                 if len(prompt) + len(res) < self.width - 1:
                     res += chr(key)
                     self.wr(chr(key))
-            else:  ## ignore everything else
-                pass
 
     def find_in_file(self, pattern, pos):
         self.find_pattern = pattern # remember it
@@ -495,8 +493,6 @@ class Editor:
 
     def handle_edit_key(self, key): ## keys which change content
         l = self.content[self.cur_line]
-        sc = self.changed
-        self.changed = '*'
         if key == KEY_ENTER:
             self.content[self.cur_line] = l[:self.col]
             ni = 0
@@ -511,6 +507,7 @@ class Editor:
             self.content[self.cur_line:self.cur_line] = [' ' * ni + l[self.col:]]
             self.total_lines += 1
             self.col = ni
+            self.changed = '*'
         elif key == KEY_BACKSPACE:
             if self.col > 0:
                 ni = 1
@@ -520,6 +517,7 @@ class Editor:
 #endif
                 self.content[self.cur_line] = l[:self.col - ni] + l[self.col:]
                 self.col -= ni
+                self.changed = '*'
 #ifndef BASIC
             elif self.cur_line: # at the start of a line, but not the first
                 self.col = len(self.content[self.cur_line - 1])
@@ -527,13 +525,13 @@ class Editor:
                 del self.content[self.cur_line]
                 self.cur_line -= 1
                 self.total_lines -= 1
+                self.changed = '*'
 #endif
-            else:
-                self.changed = sc
         elif key == KEY_DELETE:
             if self.col < len(l):
                 l = l[:self.col] + l[self.col + 1:]
                 self.content[self.cur_line] = l
+                self.changed = '*'
             elif (self.cur_line + 1) < self.total_lines: ## test for last line
                 ni = 0
 #ifndef BASIC
@@ -542,8 +540,7 @@ class Editor:
 #endif
                 self.content[self.cur_line] = l + self.content.pop(self.cur_line + 1)[ni:]
                 self.total_lines -= 1
-            else:
-                self.changed = sc
+                self.changed = '*'
 #ifndef BASIC
         elif key == KEY_TAB: ## TABify line
             ns = self.spaces(l, 0)
@@ -554,19 +551,20 @@ class Editor:
             self.content[self.cur_line] = l[:self.col] + ' ' * ni + l[self.col:]
             if ns == len(l) or self.col >= ns: # lines of spaces or in text
                 self.col += ni # move cursor
+            self.changed = '*'
         elif key == KEY_BACKTAB: ## unTABify line
             ns = self.spaces(l, 0)
             if ns and self.col < ns: # at BOL
                 ni = (ns - 1) % self.tab_size + 1
                 self.content[self.cur_line] = l[ni:]
+                self.changed = '*'
             else: # left to cursor & move
                 ns = self.spaces(l, self.col)
                 ni = (self.col - 1) % self.tab_size + 1
                 if (ns >= ni):
                     self.content[self.cur_line] = l[:self.col - ni] + l[self.col:]
                     self.col -= ni
-                else:
-                    self.changed = sc
+                    self.changed = '*'
         elif key == KEY_YANK:  # delete line into buffer
             if key == self.lastkey: # yank series?
                 self.y_buffer.append(l) # add line
@@ -580,6 +578,7 @@ class Editor:
                     self.cur_line -= 1
             else: ## line is kept but wiped
                 self.content[self.cur_line] = ''
+            self.changed = '*'
         elif key == KEY_DUP:  # copy line into buffer and go down one line
             if key == self.lastkey: # dup series?
                 self.y_buffer.append(l) # add line
@@ -588,16 +587,13 @@ class Editor:
                 self.y_buffer = [l]
             if self.cur_line + 1 < self.total_lines:
                 self.cur_line += 1
-            self.changed = sc
         elif key == KEY_ZAP: ## insert buffer
             if self.y_buffer:
                 self.content[self.cur_line:self.cur_line] = self.y_buffer # insert lines
                 self.total_lines += len(self.y_buffer)
-            else:
-                self.changed = sc
+                self.changed = '*'
         elif key == KEY_REPLC:
             count = 0
-            self.changed = sc
             pat = self.line_edit("Find: ", self.find_pattern)
             if pat:
                 rpat = self.line_edit("Replace with: ", self.replc_pattern)
@@ -623,8 +619,7 @@ class Editor:
                                 self.col += 1
                         else:
                             break
-                    if count:
-                        self.message = "'%s' replaced %d times" % (pat, count)
+                    self.message = "'%s' replaced %d times" % (pat, count)
 #endif
         elif key == KEY_WRITE:
             fname = self.fname
@@ -640,13 +635,10 @@ class Editor:
                     self.fname = fname
                 except:
                     pass
-            else:
-                self.changed = sc
-        elif key >= 0x20:
+        elif key >= 0x20: ## character to be added
             self.content[self.cur_line] = l[:self.col] + chr(key) + l[self.col:]
             self.col += 1
-        else: # Ctrl key or not supported function, ignore
-            self.changed = sc
+            self.changed = '*'
 
     def edit_loop(self, lnum): ## main editing loop
         self.total_lines = len(self.content)
@@ -669,7 +661,7 @@ class Editor:
             elif key == KEY_REDRAW:
                 del self.scrbuf
                 self.set_screen_parms(self.total_lines, lnum)
-                self.row = max(self.height - 1, min(self.row, 0))
+                self.row = min(self.height - 1, self.row)
             elif  self.handle_cursor_keys(key):
                 pass
             else: self.handle_edit_key(key)
