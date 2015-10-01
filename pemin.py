@@ -5,7 +5,7 @@ if sys.platform == "pyboard":
     import pyb
 class Editor:
     KEYMAP = { 
-    b"\x1b[A" : 0x1a,
+    b"\x1b[A" : 0x1e,
     b"\x1b[B" : 0x0b,
     b"\x1b[D" : 0x0c,
     b"\x1b[C" : 0x0f,
@@ -32,17 +32,16 @@ class Editor:
     b"\x05" : 0x05, 
     b"\x09" : 0x09,
     }
-    def __init__(self, tab_size):
+    def __init__(self, tab_size, undo_limit):
         self.top_line = 0
         self.cur_line = 0
         self.row = 0
         self.col = 0
-        self.col_width = 0
-        self.col_spc = ''
         self.margin = 0
         self.scrolling = 0
         self.tab_size = tab_size
         self.changed = ' '
+        self.sticky_c = " "
         self.message = ""
         self.find_pattern = ""
         self.replc_pattern = ""
@@ -52,6 +51,8 @@ class Editor:
         self.lastkey = 0
         self.autoindent = "y"
         self.case = "n"
+        self.undo = []
+        self.undo_limit = max(undo_limit, 0)
     if sys.platform == "pyboard":
         @staticmethod
         def wr(s):
@@ -108,6 +109,12 @@ class Editor:
             Editor.wr('\x1b[1;%dr' % stop) 
         else:
             Editor.wr('\x1b[r') 
+    def print_no(self, row, lnum):
+        Editor.goto(row, 0)
+        if self.col_width > 0:
+            Editor.hilite(2)
+            Editor.wr(lnum)
+            Editor.hilite(0)
     def set_screen_parms(self, lines, lnum):
         (self.height, self.width) = self.get_screen_size()
         self.scroll_region(self.height)
@@ -120,13 +127,10 @@ class Editor:
             self.col_fmt = "%%%dd " % lnum
             self.col_spc = " " * self.col_width
             self.width -= self.col_width
-    @staticmethod
-    def print_no(row, lnum):
-        Editor.goto(row, 0)
-        if lnum:
-            Editor.hilite(2)
-            Editor.wr(lnum)
-            Editor.hilite(0)
+        else:
+            self.col_width = 0
+            self.col_fmt = "[%d]"
+            self.col_spc = ''
     def get_input(self): 
         while True:
             input = Editor.rd()
@@ -172,10 +176,7 @@ class Editor:
                     self.scrbuf[c] = ''
             else:
                 l = self.content[i][self.margin:self.margin + self.width]
-                if self.col_width > 1:
-                    lnum = self.col_fmt % (i + 1)
-                else:
-                    lnum = ''
+                lnum = self.col_fmt % (i + 1)
                 if (lnum + l) != self.scrbuf[c]: 
                     self.print_no(c, lnum) 
                     self.wr(l)
@@ -187,9 +188,8 @@ class Editor:
             self.goto(self.height, 0)
             self.clear_to_eol() 
             self.hilite(1)
-            if self.col_width > 0:
-                self.wr(self.col_fmt % self.total_lines)
-            self.wr("%c Ln: %d Col: %d  %s" % (self.changed, self.cur_line + 1, self.col + 1, self.message))
+            self.wr(self.col_fmt % self.total_lines)
+            self.wr("%c Row: %d Col: %d  %s" % (self.changed, self.cur_line + 1, self.col + 1, self.message))
             self.hilite(0)
         self.cursor(True)
         self.goto(self.row, self.col - self.margin + self.col_width)
@@ -250,11 +250,12 @@ class Editor:
         self.message = ' ' 
         return len(pattern)
     def handle_cursor_keys(self, key): 
+        act_line = self.cur_line
         if key == 0x0b:
             if self.cur_line < self.total_lines - 1:
                 self.cur_line += 1
                 if self.cur_line == self.top_line + self.height: self.scrolling = 1
-        elif key == 0x1a:
+        elif key == 0x1e:
             if self.cur_line > 0:
                 if self.cur_line == self.top_line: self.scrolling = -1
                 self.cur_line -= 1
@@ -309,9 +310,16 @@ class Editor:
         else:
             return False
         return True
+    def undo_add(self, lnum, text, key, range = 1):
+        if self.undo_limit > 0 and (len(self.undo) == 0 or not key or self.undo[-1][3] != key):
+            if len(self.undo) >= self.undo_limit: 
+                del self.undo[0]
+                self.sticky_c = "*"
+            self.undo.append((lnum, range, text, key))
     def handle_edit_key(self, key): 
         l = self.content[self.cur_line]
         if key == 0x0a:
+            self.undo_add(self.cur_line, [l], 0, 2)
             self.content[self.cur_line] = l[:self.col]
             ni = 0
             self.cur_line += 1
@@ -322,19 +330,36 @@ class Editor:
         elif key == 0x08:
             if self.col > 0:
                 ni = 1
+                self.undo_add(self.cur_line, [l], key)
                 self.content[self.cur_line] = l[:self.col - ni] + l[self.col:]
                 self.col -= ni
                 self.changed = '*'
         elif key == 0x1f:
             if self.col < len(l):
+                self.undo_add(self.cur_line, [l], key)
                 l = l[:self.col] + l[self.col + 1:]
                 self.content[self.cur_line] = l
                 self.changed = '*'
             elif (self.cur_line + 1) < self.total_lines: 
                 ni = 0
+                self.undo_add(self.cur_line, [l, self.content[self.cur_line + 1]], 0)
                 self.content[self.cur_line] = l + self.content.pop(self.cur_line + 1)[ni:]
                 self.total_lines -= 1
                 self.changed = '*'
+        elif key == 0x1a:
+            if len(self.undo) > 0:
+                action = self.undo.pop(-1) 
+                self.cur_line = action[0]
+                if action[1] >= 0: 
+                    if action[0] < self.total_lines:
+                        self.content[self.cur_line:self.cur_line + action[1]] = action[2] 
+                    else:
+                        self.content += action[2]
+                else: 
+                    del self.content[self.cur_line : self.cur_line - action[1]]
+                self.total_lines = len(self.content) 
+                if len(self.undo) == 0: 
+                    self.changed = self.sticky_c
         elif key == 0x13:
             fname = self.fname
             if fname == None:
@@ -345,11 +370,17 @@ class Editor:
                     with open(fname, "w") as f:
                         for l in self.content:
                             f.write(l + '\n')
-                    self.changed = " "
-                    self.fname = fname
+                    self.changed = " " 
+                    self.sticky_c = " " 
+                    del self.undo[:]
+                    self.fname = fname 
                 except:
                     pass
         elif key >= 0x20: 
+            if key == 0x20:
+                self.undo_add(self.cur_line, [l], 0x20)
+            else: 
+                self.undo_add(self.cur_line, [l], 0x40)
             self.content[self.cur_line] = l[:self.col] + chr(key) + l[self.col:]
             self.col += 1
             self.changed = '*'
@@ -411,8 +442,8 @@ class Editor:
             return sb.getvalue()
         else:
             return s
-def pye(content = None, tab_size = 4, lnum = 4, device = 0, baud = 115200, fd_tty = 0):
-    e = Editor(tab_size)
+def pye(content = None, tab_size = 4, lnum = 4, undo = 100, device = 0, baud = 115200, fd_tty = 0):
+    e = Editor(tab_size, undo)
     if type(content) == str: 
         e.fname = content
         if e.fname: 
@@ -429,7 +460,8 @@ def pye(content = None, tab_size = 4, lnum = 4, device = 0, baud = 115200, fd_tt
     elif type(content) == list and len(content) > 0 and type(content[0]) == str:
         
         e.content = content
-        if fd_tty: e.fname = ""
+        if fd_tty:
+            e.fname = ""
     e.init_tty(device, baud, fd_tty)
     e.edit_loop(lnum)
     e.deinit_tty()
