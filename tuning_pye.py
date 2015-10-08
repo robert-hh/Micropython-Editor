@@ -89,7 +89,7 @@
     @staticmethod
     def expandtabs(s, tabsize = 8):
         import _io
-        if '\t' in s:
+        if '\t' in s and tabsize > 0:
             sb = _io.StringIO()
             pos = 0
             for c in s:
@@ -99,6 +99,21 @@
                 else:
                     sb.write(c)
                     pos += 1
+            return sb.getvalue()
+        else:
+            return s
+
+    @staticmethod
+    def packtabs(s, tabsize = 8):
+        if tabsize > 0:
+            sb = _io.StringIO()
+            for i in range(0, len(s), tabsize):
+                c = s[i:i + tabsize]
+                cr = c.rstrip(" ")
+                if c != cr: ## Spaces at the end of a section
+                    sb.write(cr + "\t") ## replace by tab
+                else:
+                    sb.write(c)
             return sb.getvalue()
         else:
             return s
