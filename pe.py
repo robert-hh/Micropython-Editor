@@ -5,8 +5,8 @@ if sys.platform == "pyboard":
     import pyb
 class Editor:
     KEYMAP = { 
-    b"\x1b[A" : 0x1e,
-    b"\x1b[B" : 0x0b,
+    b"\x1b[A" : 0x0b,
+    b"\x1b[B" : 0x0d,
     b"\x1b[D" : 0x0c,
     b"\x1b[C" : 0x0f,
     b"\x1b[H" : 0x10, 
@@ -44,6 +44,7 @@ class Editor:
     b"\x12" : 0x12, 
     b"\x04" : 0x04, 
     b"\x1a" : 0x1a, 
+    b"\x0f" : 0x1e, 
     }
     def __init__(self, tab_size, undo_limit):
         self.top_line = 0
@@ -63,6 +64,7 @@ class Editor:
         self.fname = None
         self.lastkey = 0
         self.autoindent = "y"
+        self.write_tabs = "n"
         self.case = "n"
         self.undo = []
         self.undo_limit = max(undo_limit, 0)
@@ -283,11 +285,11 @@ class Editor:
         return len(pattern)
     def handle_cursor_keys(self, key): 
         act_line = self.cur_line
-        if key == 0x0b:
+        if key == 0x0d:
             if self.cur_line < self.total_lines - 1:
                 self.cur_line += 1
                 if self.cur_line == self.top_line + self.height: self.scrolling = 1
-        elif key == 0x1e:
+        elif key == 0x0b:
             if self.cur_line > 0:
                 if self.cur_line == self.top_line: self.scrolling = -1
                 self.cur_line -= 1
@@ -297,7 +299,7 @@ class Editor:
             self.col += 1
         elif key == 0x10:
             ns = self.spaces(self.content[self.cur_line])
-            if self.col > ns:
+            if self.col != ns: 
                 self.col = ns
             else:
                 self.col = 0
@@ -340,12 +342,14 @@ class Editor:
                 self.cur_line = max(self.cur_line, self.top_line)
                 self.scrolling = 3
         elif key == 0x01: 
-            pat = self.line_edit("Case Sensitive Search %c, Statusline %c, Autoindent %c: " % (self.case, self.status, self.autoindent), "")
+            pat = self.line_edit("Case Sensitive Search %c, Autoindent %c, Statusline %c, Write Tabs %c: " %
+                  (self.case, self.autoindent, self.status, self.write_tabs), "")
             try:
                 res = [i.strip().lower() for i in pat.split(",")]
                 if res[0]: self.case = res[0][0]
-                if res[1]: self.status = res[1][0]
-                if res[2]: self.autoindent = res[2][0]
+                if res[1]: self.autoindent = res[1][0]
+                if res[2]: self.status = res[2][0]
+                if res[3]: self.write_tabs = res[3][0]
             except:
                 pass
         elif key == 0x02: 
@@ -358,7 +362,7 @@ class Editor:
             return False
         return True
     def undo_add(self, lnum, text, key, range = 1):
-        if self.undo_limit > 0 and (len(self.undo) == 0 or not key or self.undo[-1][3] != key):
+        if self.undo_limit > 0 and (len(self.undo) == 0 or key == 0 or self.undo[-1][3] != key):
             if len(self.undo) >= self.undo_limit: 
                 del self.undo[0]
                 self.sticky_c = "*"
@@ -493,6 +497,38 @@ class Editor:
                         else:
                             break
                     self.message = "'%s' replaced %d times" % (pat, count)
+        elif key == 0x1e:
+            fname = self.line_edit("Insert File: ", "")
+            if fname:
+                (content, self.message) = self.get_file(fname)
+                if content:
+                    self.undo_add(self.cur_line, None, 0, -len(content))
+                    if self.total_lines == 1 and self.content[0].strip() == "": 
+                        self.content[self.cur_line:self.cur_line + 1] = content
+                    else: 
+                        self.content[self.cur_line:self.cur_line] = content
+                    self.total_lines = len(self.content)
+                    del content
+                    self.changed = "*"
+        elif key == 0x13:
+            fname = self.fname
+            if fname == None:
+                fname = ""
+            fname = self.line_edit("File Name: ", fname)
+            if fname:
+                try:
+                    with open(fname, "w") as f:
+                        for l in self.content:
+                            if self.write_tabs == 'y':
+                                f.write(self.packtabs(l) + '\n')
+                            else:
+                                f.write(l + '\n')
+                    self.changed = " " 
+                    self.sticky_c = " " 
+                    del self.undo[:]
+                    self.fname = fname 
+                except:
+                    pass
         elif key == 0x1a:
             if len(self.undo) > 0:
                 action = self.undo.pop(-1) 
@@ -503,39 +539,21 @@ class Editor:
                     else:
                         self.content += action[2]
                 else: 
-                    del self.content[self.cur_line : self.cur_line - action[1]]
+                    if self.total_lines <= -action[1]: 
+                        del self.content
+                        self.content = [""]
+                    else: 
+                        del self.content[self.cur_line : self.cur_line - action[1]]
                 self.total_lines = len(self.content) 
                 if len(self.undo) == 0: 
                     self.changed = self.sticky_c
-        elif key == 0x13:
-            fname = self.fname
-            if fname == None:
-                fname = ""
-            fname = self.line_edit("File Name: ", fname)
-            if fname:
-                try:
-                    with open(fname, "w") as f:
-                        for l in self.content:
-                            f.write(l + '\n')
-                    self.changed = " " 
-                    self.sticky_c = " " 
-                    del self.undo[:]
-                    self.fname = fname 
-                except:
-                    pass
         elif key >= 0x20: 
-            if key == 0x20:
-                self.undo_add(self.cur_line, [l], 0x20)
-            else: 
-                self.undo_add(self.cur_line, [l], 0x40)
+            self.undo_add(self.cur_line, [l], (key != 0x20) + 0x40)
             self.content[self.cur_line] = l[:self.col] + chr(key) + l[self.col:]
             self.col += 1
             self.changed = '*'
     def edit_loop(self, lnum): 
         self.total_lines = len(self.content)
-        
-        for i in range(self.total_lines):
-            self.content[i] = self.expandtabs(self.content[i].rstrip('\r\n\t '))
         self.set_screen_parms(self.total_lines, lnum)
         while True:
             self.display_window() 
@@ -589,21 +607,40 @@ class Editor:
             return sb.getvalue()
         else:
             return s
-def pye(content = None, tab_size = 4, lnum = 4, undo = 100, device = 0, baud = 115200, fd_tty = 0):
-    e = Editor(tab_size, undo)
-    if type(content) == str: 
-        e.fname = content
-        if e.fname: 
-            try:
-                    with open(e.fname) as f:
-                        e.content = f.readlines()
-            except Exception as err:
-                print ('Could not load %s, Reason: "%s"' % (e.fname, err))
-                del e
-                return
+    @staticmethod
+    def packtabs(s):
+        sb = _io.StringIO()
+        for i in range(0, len(s), 8):
+            c = s[i:i + 8]
+            cr = c.rstrip(" ")
+            if c != cr: 
+                sb.write(cr + "\t") 
             else:
-                if not e.content: 
-                    e.content = [""]
+                sb.write(c)
+        return sb.getvalue()
+    @staticmethod
+    def get_file(fname):
+        try:
+                with open(fname) as f:
+                    content = f.readlines()
+        except Exception as err:
+            message = 'Could not load %s, Reason: "%s"' % (fname, err)
+            return (None, message)
+        else:
+            if not content: 
+                content = [""]
+        for i in range(len(content)): 
+            content[i] = Editor.expandtabs(content[i].rstrip('\r\n\t '))
+        return (content, "")
+def pye(content = None, tab_size = 4, lnum = 4, undo = 50, device = 0, baud = 115200, fd_tty = 0):
+    e = Editor(tab_size, undo)
+    if type(content) == str and content: 
+        e.fname = content
+        (e.content, e.message) = e.get_file(e.fname)
+        if not e.content: 
+            print (e.message)
+            del e
+            return
     elif type(content) == list and len(content) > 0 and type(content[0]) == str:
         
         e.content = content
