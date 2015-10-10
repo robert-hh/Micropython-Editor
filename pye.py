@@ -420,7 +420,6 @@ class Editor:
         return len(pattern)
 
     def handle_cursor_keys(self, key): ## keys which move, sanity checks later
-        act_line = self.cur_line
         if key == KEY_DOWN:
             if self.cur_line < self.total_lines - 1:
                 self.cur_line += 1
@@ -435,12 +434,10 @@ class Editor:
             self.col += 1
         elif key == KEY_HOME:
             ns = self.spaces(self.content[self.cur_line])
-            if self.col != ns: ## was >
-                self.col = ns
-            else:
-                self.col = 0
+            self.col = ns if (self.col > ns) else 0
         elif key == KEY_END:
-            self.col = len(self.content[self.cur_line])
+            ns = self.spaces(self.content[self.cur_line])
+            self.col = ns if (self.col < ns) else len(self.content[self.cur_line])
         elif key == KEY_PGUP:
             self.cur_line -= self.height
         elif key == KEY_PGDN:
@@ -500,12 +497,13 @@ class Editor:
             return False
         return True
 
-    def undo_add(self, lnum, text, key, range = 1):
-        if self.undo_limit > 0 and (len(self.undo) == 0 or key == 0 or self.undo[-1][3] != key):
+    def undo_add(self, lnum, text, key, span = 1):
+        if self.undo_limit > 0 and (
+           len(self.undo) == 0 or key == 0 or self.undo[-1][3] != key or self.undo[-1][0] != lnum):
             if len(self.undo) >= self.undo_limit: ## drop oldest undo
                 del self.undo[0]
                 self.sticky_c = "*"
-            self.undo.append((lnum, range, text, key))
+            self.undo.append((lnum, span, text, key))
 
     def handle_edit_key(self, key): ## keys which change content
         l = self.content[self.cur_line]
@@ -652,10 +650,7 @@ class Editor:
                 (content, self.message) = self.get_file(fname)
                 if content:
                     self.undo_add(self.cur_line, None, 0, -len(content))
-                    if self.total_lines == 1 and self.content[0].strip() == "": ## replace single empty lines
-                        self.content[self.cur_line:self.cur_line + 1] = content
-                    else: ## insert content
-                        self.content[self.cur_line:self.cur_line] = content
+                    self.content[self.cur_line:self.cur_line] = content
                     self.total_lines = len(self.content)
                     del content
                     self.changed = "*"
@@ -669,10 +664,7 @@ class Editor:
                 try:
                     with open(fname, "w") as f:
                         for l in self.content:
-                            if self.write_tabs == 'y':
-                                f.write(self.packtabs(l) + '\n')
-                            else:
-                                f.write(l + '\n')
+                            f.write(self.packtabs(l) + '\n' if self.write_tabs == 'y' else l + '\n')
                     self.changed = " " ## clear change flag
                     self.sticky_c = " " ## clear undo
                     del self.undo[:]
@@ -689,16 +681,12 @@ class Editor:
                     else:
                         self.content += action[2]
                 else: ## delete lines
-                    if self.total_lines <= -action[1]: ## delete all
-                        del self.content
-                        self.content = [""]
-                    else: ## delete partial
-                        del self.content[self.cur_line : self.cur_line - action[1]]
+                    del self.content[self.cur_line : self.cur_line - action[1]]
                 self.total_lines = len(self.content) ## brute force
                 if len(self.undo) == 0: ## test changed flag
                     self.changed = self.sticky_c
         elif key >= 0x20: ## character to be added
-            self.undo_add(self.cur_line, [l], (key != 0x20) + 0x40)
+            self.undo_add(self.cur_line, [l], 0x20 if key == 0x20 else 0x41)
             self.content[self.cur_line] = l[:self.col] + chr(key) + l[self.col:]
             self.col += 1
             self.changed = '*'
@@ -836,10 +824,7 @@ def pye(content = None, tab_size = 4, lnum = 4, undo = 50, device = 0, baud = 11
     e.edit_loop(lnum)
     e.deinit_tty()
 ## clean-up
-    if e.fname == None:
-        content = e.content
-    else:
-        content = e.fname
+    content = e.content if (e.fname == None) else e.fname
     del e
     gc.collect()
     return content
@@ -880,10 +865,7 @@ if __name__ == "__main__":
             tsize = int(args_dict["-t"])
         except:
             tsize = 4
-        if args_dict["-l"] != "None":
-            lnum = 0
-        else:
-            lnum = 5
+        lnum = 0 if (args_dict["-l"] != "None") else 1
         pye(name, tsize, lnum, undo = 500, fd_tty=fd_tty)
     else:
         print ("\nSorry, this OS is not supported (yet)")

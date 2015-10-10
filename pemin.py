@@ -251,7 +251,6 @@ class Editor:
         self.message = ' ' 
         return len(pattern)
     def handle_cursor_keys(self, key): 
-        act_line = self.cur_line
         if key == 0x0d:
             if self.cur_line < self.total_lines - 1:
                 self.cur_line += 1
@@ -266,12 +265,10 @@ class Editor:
             self.col += 1
         elif key == 0x10:
             ns = self.spaces(self.content[self.cur_line])
-            if self.col != ns: 
-                self.col = ns
-            else:
-                self.col = 0
+            self.col = ns if (self.col > ns) else 0
         elif key == 0x11:
-            self.col = len(self.content[self.cur_line])
+            ns = self.spaces(self.content[self.cur_line])
+            self.col = ns if (self.col < ns) else len(self.content[self.cur_line])
         elif key == 0x17:
             self.cur_line -= self.height
         elif key == 0x19:
@@ -311,12 +308,13 @@ class Editor:
         else:
             return False
         return True
-    def undo_add(self, lnum, text, key, range = 1):
-        if self.undo_limit > 0 and (len(self.undo) == 0 or key == 0 or self.undo[-1][3] != key):
+    def undo_add(self, lnum, text, key, span = 1):
+        if self.undo_limit > 0 and (
+           len(self.undo) == 0 or key == 0 or self.undo[-1][3] != key or self.undo[-1][0] != lnum):
             if len(self.undo) >= self.undo_limit: 
                 del self.undo[0]
                 self.sticky_c = "*"
-            self.undo.append((lnum, range, text, key))
+            self.undo.append((lnum, span, text, key))
     def handle_edit_key(self, key): 
         l = self.content[self.cur_line]
         if key == 0x0a:
@@ -356,10 +354,7 @@ class Editor:
                 try:
                     with open(fname, "w") as f:
                         for l in self.content:
-                            if self.write_tabs == 'y':
-                                f.write(self.packtabs(l) + '\n')
-                            else:
-                                f.write(l + '\n')
+                            f.write(self.packtabs(l) + '\n' if self.write_tabs == 'y' else l + '\n')
                     self.changed = " " 
                     self.sticky_c = " " 
                     del self.undo[:]
@@ -376,16 +371,12 @@ class Editor:
                     else:
                         self.content += action[2]
                 else: 
-                    if self.total_lines <= -action[1]: 
-                        del self.content
-                        self.content = [""]
-                    else: 
-                        del self.content[self.cur_line : self.cur_line - action[1]]
+                    del self.content[self.cur_line : self.cur_line - action[1]]
                 self.total_lines = len(self.content) 
                 if len(self.undo) == 0: 
                     self.changed = self.sticky_c
         elif key >= 0x20: 
-            self.undo_add(self.cur_line, [l], (key != 0x20) + 0x40)
+            self.undo_add(self.cur_line, [l], 0x20 if key == 0x20 else 0x41)
             self.content[self.cur_line] = l[:self.col] + chr(key) + l[self.col:]
             self.col += 1
             self.changed = '*'
@@ -486,10 +477,7 @@ def pye(content = None, tab_size = 4, lnum = 4, undo = 50, device = 0, baud = 11
     e.init_tty(device, baud, fd_tty)
     e.edit_loop(lnum)
     e.deinit_tty()
-    if e.fname == None:
-        content = e.content
-    else:
-        content = e.fname
+    content = e.content if (e.fname == None) else e.fname
     del e
     gc.collect()
     return content
