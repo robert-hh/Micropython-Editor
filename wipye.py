@@ -51,30 +51,30 @@ class Editor:
         self.lastkey = 0
         self.case = "n"
         self.autoindent = "y"
-    if sys.platform == "pyboard":
+    if sys.platform == "WiPy":
         @staticmethod
         def wr(s):
-            ns = 0
-            while ns < len(s): 
-                res = Editor.serialcomm.write(s[ns:])
-                if res != None:
-                    ns += res
+            Editor.serialcomm.write(s)
         @staticmethod
         def rd():
-            while not Editor.serialcomm.any():
-                pass
-            return Editor.serialcomm.read(1)
-        def init_tty(self, device, baud, fd_tty):
-            import pyb
-            if device:
-                Editor.serialcomm = pyb.UART(device, baud)
+            if Editor.sdev:
+                while not Editor.serialcomm.any():
+                    pass
+                return Editor.serialcomm.read(1)
             else:
-                Editor.serialcomm = pyb.USB_VCP()
-                Editor.serialcomm.setinterrupt(-1)
+                while True:
+                    ch = sys.stdin.read(1)
+                    if ch != "\x00":
+                        return ch.encode()
+        def init_tty(self, device, baud, fd_tty):
+            import machine
+            if device:
+                Editor.serialcomm = machine.UART(device - 1, baud)
+            else:
+                Editor.serialcomm = sys.stdout
             Editor.sdev = device
         def deinit_tty(self):
-            if Editor.sdev:
-                Editor.serialcomm.setinterrupt(3)
+            pass
     @staticmethod
     def goto(row, col):
         Editor.wr("\x1b[%d;%dH" % (row + 1, col + 1))
