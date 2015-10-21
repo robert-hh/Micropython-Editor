@@ -329,7 +329,7 @@ class Editor:
                 res = [i.strip().lower() for i in pat.split(",")]
                 if res[0]: self.case = 'y' if res[0][0] == 'y' else 'n'
                 if res[1]: self.autoindent = 'y' if res[1][0] == 'y' else 'n'
-                if res[2]: self.write_tabs = 'y' if res[3][0] == 'y' else 'n'
+                if res[2]: self.write_tabs = 'y' if res[2][0] == 'y' else 'n'
             except:
                 pass
         elif key == 0x02: 
