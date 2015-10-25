@@ -14,7 +14,7 @@
 ## - Added a status line, line number column and single line prompts for Quit, Save, Find and Goto
 ## - Added mouse support for pointing and scrolling
 ##
-import sys, gc, _io
+import sys
 #ifdef LINUX
 if sys.platform in ("linux", "darwin"):
     import os, signal, tty, termios
@@ -106,6 +106,7 @@ class Editor:
     b"\x1b[5~": KEY_PGUP,
     b"\x1b[6~": KEY_PGDN,
     b"\x11"   : KEY_QUIT, ## Ctrl-Q
+    b"\x03"   : KEY_QUIT, ## Ctrl-C
     b"\r"     : KEY_ENTER,
     b"\n"     : KEY_ENTER,
     b"\x7f"   : KEY_BACKSPACE, ## Ctrl-? (127)
@@ -212,15 +213,15 @@ class Editor:
 
         def init_tty(self, device, baud, fd_tty):
             import pyb
-            if device:
+            Editor.sdev = device
+            if Editor.sdev:
                 Editor.serialcomm = pyb.UART(device, baud)
             else:
                 Editor.serialcomm = pyb.USB_VCP()
                 Editor.serialcomm.setinterrupt(-1)
-            Editor.sdev = device
 
         def deinit_tty(self):
-            if Editor.sdev:
+            if not Editor.sdev:
                 Editor.serialcomm.setinterrupt(3)
 #endif
 #ifdef WIPY
@@ -237,9 +238,11 @@ class Editor:
                 return Editor.serialcomm.read(1)
             else:
                 while True:
-                    ch = sys.stdin.read(1)
-                    if ch != "\x00":
-                        return ch.encode()
+                    try:
+                        ch = sys.stdin.read(1)
+                        if ch != "\x00":
+                            return ch.encode()
+                    except: pass
 
         def init_tty(self, device, baud, fd_tty):
             import machine
@@ -271,22 +274,8 @@ class Editor:
     def hilite(mode):
         if mode == 1:
             Editor.wr(b"\x1b[1m")
-        elif mode == 2:
-            Editor.wr(b"\x1b[2;7m")
         else:
             Editor.wr(b"\x1b[0m")
-
-    @staticmethod
-    def get_screen_size():
-## Set cursor far off and ask for reporting its position = size of the window.
-        Editor.wr('\x1b[999;999H\x1b[6n')
-        pos = b''
-        char = Editor.rd() ## expect ESC[yyy;xxxR
-        while char != b'R':
-            if char in b"0123456789;": pos += char
-            char = Editor.rd()
-        (height, width) = [int(i, 10) for i in pos.split(b';')]
-        return (height-1, width)
 
 #ifndef BASIC
     @staticmethod
@@ -316,7 +305,14 @@ class Editor:
         Editor.wr("\x1bD " * scrolling)
 
     def set_screen_parms(self):
-        (self.height, self.width) = self.get_screen_size()
+        Editor.wr('\x1b[999;999H\x1b[6n')
+        pos = b''
+        char = Editor.rd() ## expect ESC[yyy;xxxR
+        while char != b'R':
+            if char in b"0123456789;": pos += char
+            char = Editor.rd()
+        (self.height, self.width) = [int(i, 10) for i in pos.split(b';')]
+        self.height -= 1
         self.scrbuf = ["\x04"] * self.height ## force delete
         self.scroll_region(self.height)
 
@@ -382,8 +378,8 @@ class Editor:
                 i += 1
 ## display Status-Line
         self.goto(self.height, 0)
-        self.clear_to_eol() ## moved up for mate/xfce4-terminal issue with scroll region
         self.hilite(1)
+        self.clear_to_eol() ## moved up for mate/xfce4-terminal issue with scroll region
         self.wr("[%d] %c Row: %d Col: %d  %s" % (self.total_lines, self.changed, self.cur_line + 1, self.col + 1, self.message[:self.width - 25]))
         self.hilite(0)
         self.cursor(True)
@@ -416,11 +412,9 @@ class Editor:
                 if (len(res) > 0):
                     res = res[:len(res)-1]
                     self.wr('\b \b')
-#ifndef BASIC
             elif key == KEY_DELETE: ## Delete prev. Entry
                 self.wr('\b \b' * len(res))
                 res = ''
-#endif
             elif key >= 0x20: ## char to be added at the end
                 if len(prompt) + len(res) < self.width - 2:
                     res += chr(key)
@@ -449,35 +443,32 @@ class Editor:
         self.message = ' ' ## force status once
         return len(pattern)
 
-    def cursor_down(self, set_col = False):
+    def cursor_down(self):
         if self.cur_line < self.total_lines - 1:
             self.cur_line += 1
-            if set_col: self.col = 0
             if self.cur_line == self.top_line + self.height:
                 self.scroll_down(1)
-
-    def cursor_up(self, set_col = False):
-        if self.cur_line > 0:
-            self.cur_line -= 1
-            if set_col: self.col = len(self.content[self.cur_line])
-            if self.cur_line < self.top_line:
-                self.scroll_up(1)
 
     def handle_cursor_keys(self, key): ## keys which move, sanity checks later
         if key == KEY_DOWN:
             self.cursor_down()
         elif key == KEY_UP:
-            self.cursor_up()
+            if self.cur_line > 0:
+                self.cur_line -= 1
+                if self.cur_line < self.top_line:
+                    self.scroll_up(1)
         elif key == KEY_LEFT:
             if self.col > 0:
                 self.col -= 1
-            else:
-                self.cursor_up(True)
+            elif self.cur_line > 0:
+                self.cur_line -= 1
+                self.col = len(self.content[self.cur_line])
         elif key == KEY_RIGHT:
             if self.col < len(self.content[self.cur_line]):
                 self.col += 1
-            else:
-                self.cursor_down(True)
+            elif self.cur_line < self.total_lines - 1:
+                self.cur_line += 1
+                self.col = 0
         elif key == KEY_HOME:
             ns = self.spaces(self.content[self.cur_line])
             self.col = ns if self.col != ns else 0
@@ -521,13 +512,16 @@ class Editor:
                 self.cur_line = max(self.cur_line, self.top_line)
                 self.scroll_down(3)
         elif key == KEY_TOGGLE: ## Toggle Autoindent/Statusline/Search case
-            pat = self.line_edit("Case Sensitive Search %c, Autoindent %c, Write Tabs %c: " %
-                  (self.case, self.autoindent, self.write_tabs), "")
+            pat = self.line_edit("Case Sensitive Search %c, Autoindent %c, Tab Size %d, Write Tabs %c: " %
+                  (self.case, self.autoindent, self.tab_size, self.write_tabs), "")
             try:
                 res =  [i.strip().lower() for i in pat.split(",")]
                 if res[0]: self.case       = 'y' if res[0][0] == 'y' else 'n'
                 if res[1]: self.autoindent = 'y' if res[1][0] == 'y' else 'n'
-                if res[2]: self.write_tabs = 'y' if res[2][0] == 'y' else 'n'
+                if res[2]:
+                    try: self.tab_size = int(res[2])
+                    except: pass
+                if res[3]: self.write_tabs = 'y' if res[3][0] == 'y' else 'n'
             except:
                 pass
         elif key == KEY_FIRST: ## first line
@@ -547,13 +541,6 @@ class Editor:
                 del self.undo[0]
                 self.sticky_c = "*"
             self.undo.append((lnum, span, text, key, self.col))
-
-    def yank_add(self, key, l):
-            if key == self.lastkey: # yank series?
-                self.yank_buffer.append(l) # add line
-            else:
-                del self.yank_buffer # set line
-                self.yank_buffer = [l]
 
     def handle_edit_key(self, key): ## keys which change content
         l = self.content[self.cur_line]
@@ -581,8 +568,7 @@ class Editor:
             elif self.cur_line > 0: # at the start of a line, but not the first
                 self.undo_add(self.cur_line - 1, [self.content[self.cur_line - 1], l], 0)
                 self.col = len(self.content[self.cur_line - 1])
-                self.content[self.cur_line - 1] += l
-                del self.content[self.cur_line]
+                self.content[self.cur_line - 1] += self.content.pop(self.cur_line)
                 self.cur_line -= 1
                 self.total_lines -= 1
                 self.changed = '*'
@@ -653,17 +639,25 @@ class Editor:
 #endif
         elif key == KEY_YANK:  # delete line into buffer
             self.undo_add(self.cur_line, [l], 0, 0)
-            self.yank_add(key, l)
+            if key == self.lastkey: # yank series?
+                self.yank_buffer.append(l) # add line
+            else:
+                del self.yank_buffer # set line
+                self.yank_buffer = [l]
             if self.total_lines > 1: ## not a single line
                 del self.content[self.cur_line]
                 self.total_lines -= 1
                 if self.cur_line  >= self.total_lines: ## on last line move pointer
-                    self.cursor_up()
+                    self.cur_line -= 1
             else: ## line is kept but wiped
                 self.content[self.cur_line] = ''
             self.changed = '*'
         elif key == KEY_DUP:  # copy line into buffer and go down one line
-            self.yank_add(key, l)
+            if key == self.lastkey: # yank series?
+                self.yank_buffer.append(l) # add line
+            else:
+                del self.yank_buffer # set line
+                self.yank_buffer = [l]
             self.cursor_down()
         elif key == KEY_ZAP: ## insert buffer
             if self.yank_buffer:
@@ -691,7 +685,7 @@ class Editor:
                     del self.undo[:]
                     self.fname = fname ## remember (new) name
                 except Exception as err:
-                    self.message = 'Could not save %s, Reason: "%s"' % (fname, err)
+                    self.message = 'Could not save %s, Error: %s' % (fname, err)
         elif key == KEY_UNDO:
             if len(self.undo) > 0:
                 action = self.undo.pop(-1) ## get action from stack
@@ -727,7 +721,7 @@ class Editor:
             self.message = '' ## clear message
 
             if key == KEY_QUIT:
-                if self.changed != ' ' and self.fname != None:
+                if self.changed != ' ':
                     res = self.line_edit("Content changed! Quit without saving (y/N)? ", "N")
                     if not res or res[0].upper() != 'Y':
                         continue
@@ -754,8 +748,9 @@ class Editor:
 ## expandtabs: hopefully sometimes replaced by the built-in function
     @staticmethod
     def expandtabs(s):
+        from _io import StringIO
         if '\t' in s:
-            sb = _io.StringIO()
+            sb = StringIO()
             pos = 0
             for c in s:
                 if c == '\t': ## tab is seen
@@ -771,7 +766,8 @@ class Editor:
 #ifndef BASIC
     @staticmethod
     def packtabs(s):
-        sb = _io.StringIO()
+        from _io import StringIO
+        sb = StringIO()
         for i in range(0, len(s), 8):
             c = s[i:i + 8]
             cr = c.rstrip(" ")
@@ -793,7 +789,7 @@ class Editor:
                 with open(fname) as f:
                     content = f.readlines()
         except Exception as err:
-            message = 'Could not load %s, Reason: "%s"' % (fname, err)
+            message = 'Could not load %s, Error: %s' % (fname, err)
             return (None, message)
         else:
             if not content: ## empty file
@@ -824,29 +820,15 @@ def pye(content = None, tab_size = 4, undo = 50, device = 0, baud = 115200, fd_t
 ## clean-up
     content = e.content if (e.fname == None) else e.fname
     del e
-    gc.collect()
     return content
 
 #ifdef LINUX
 if __name__ == "__main__":
     if sys.platform in ("linux", "darwin"):
-        import getopt, stat
-        args_dict = {'-t' : '4', '-h' : "None"}
-        usage = ("Usage: python3 pye.py [-t tabsize] [-l] [filename]\n"
-                 "Flags: -t x set tabsize\n")
+        import stat
         fd_tty = 0
-        try:
-            options, args = getopt.getopt(sys.argv[1:],"t:h") ## get the options -t x -h
-        except:
-            print ("Undefined option in: " + ' '.join(sys.argv[1:]))
-            print (usage)
-            sys.exit()
-        args_dict.update( options ) ## Sort the input into the default parameters
-        if args_dict["-h"] != "None":
-            print(usage)
-            sys.exit()
-        if len(args) > 0:
-            name = args[0]
+        if len(sys.argv) > 1:
+            name = sys.argv[1]
         else:
             name = ""
             if sys.implementation.name == "cpython":
@@ -857,11 +839,7 @@ if __name__ == "__main__":
                     os.close(0) ## now we can close 0
                     for i in range(len(name)):  ## strip and convert
                         name[i] = Editor.expandtabs(name[i].rstrip('\r\n\t '))
-        try:
-            tsize = int(args_dict["-t"])
-        except:
-            tsize = 4
-        pye(name, tsize, undo = 500, fd_tty=fd_tty)
+        pye(name, undo = 500, fd_tty=fd_tty)
     else:
         print ("\nSorry, this OS is not supported (yet)")
 #endif

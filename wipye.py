@@ -1,4 +1,4 @@
-import sys, gc, _io
+import sys
 class Editor:
     KEYMAP = { 
     b"\x1b[A" : 0x0b,
@@ -14,6 +14,7 @@ class Editor:
     b"\x1b[5~": 0x17,
     b"\x1b[6~": 0x19,
     b"\x11" : 0x03, 
+    b"\x03" : 0x03, 
     b"\r" : 0x0a,
     b"\n" : 0x0a,
     b"\x7f" : 0x08, 
@@ -63,9 +64,11 @@ class Editor:
                 return Editor.serialcomm.read(1)
             else:
                 while True:
-                    ch = sys.stdin.read(1)
-                    if ch != "\x00":
-                        return ch.encode()
+                    try:
+                        ch = sys.stdin.read(1)
+                        if ch != "\x00":
+                            return ch.encode()
+                    except: pass
         def init_tty(self, device, baud, fd_tty):
             import machine
             if device:
@@ -91,20 +94,8 @@ class Editor:
     def hilite(mode):
         if mode == 1:
             Editor.wr(b"\x1b[1m")
-        elif mode == 2:
-            Editor.wr(b"\x1b[2;7m")
         else:
             Editor.wr(b"\x1b[0m")
-    @staticmethod
-    def get_screen_size():
-        Editor.wr('\x1b[999;999H\x1b[6n')
-        pos = b''
-        char = Editor.rd() 
-        while char != b'R':
-            if char in b"0123456789;": pos += char
-            char = Editor.rd()
-        (height, width) = [int(i, 10) for i in pos.split(b';')]
-        return (height-1, width)
     @staticmethod
     def scroll_region(stop):
         if stop:
@@ -122,7 +113,14 @@ class Editor:
         self.goto(self.height - 1, 0)
         Editor.wr("\x1bD " * scrolling)
     def set_screen_parms(self):
-        (self.height, self.width) = self.get_screen_size()
+        Editor.wr('\x1b[999;999H\x1b[6n')
+        pos = b''
+        char = Editor.rd() 
+        while char != b'R':
+            if char in b"0123456789;": pos += char
+            char = Editor.rd()
+        (self.height, self.width) = [int(i, 10) for i in pos.split(b';')]
+        self.height -= 1
         self.scrbuf = ["\x04"] * self.height 
         self.scroll_region(self.height)
     def get_input(self): 
@@ -168,8 +166,8 @@ class Editor:
                     self.scrbuf[c] = l
                 i += 1
         self.goto(self.height, 0)
-        self.clear_to_eol() 
         self.hilite(1)
+        self.clear_to_eol() 
         self.wr("[%d] %c Row: %d Col: %d  %s" % (self.total_lines, self.changed, self.cur_line + 1, self.col + 1, self.message[:self.width - 25]))
         self.hilite(0)
         self.cursor(True)
@@ -200,6 +198,9 @@ class Editor:
                 if (len(res) > 0):
                     res = res[:len(res)-1]
                     self.wr('\b \b')
+            elif key == 0x1f: 
+                self.wr('\b \b' * len(res))
+                res = ''
             elif key >= 0x20: 
                 if len(prompt) + len(res) < self.width - 2:
                     res += chr(key)
@@ -222,33 +223,31 @@ class Editor:
         self.cur_line = line
         self.message = ' ' 
         return len(pattern)
-    def cursor_down(self, set_col = False):
+    def cursor_down(self):
         if self.cur_line < self.total_lines - 1:
             self.cur_line += 1
-            if set_col: self.col = 0
             if self.cur_line == self.top_line + self.height:
                 self.scroll_down(1)
-    def cursor_up(self, set_col = False):
-        if self.cur_line > 0:
-            self.cur_line -= 1
-            if set_col: self.col = len(self.content[self.cur_line])
-            if self.cur_line < self.top_line:
-                self.scroll_up(1)
     def handle_cursor_keys(self, key): 
         if key == 0x0d:
             self.cursor_down()
         elif key == 0x0b:
-            self.cursor_up()
+            if self.cur_line > 0:
+                self.cur_line -= 1
+                if self.cur_line < self.top_line:
+                    self.scroll_up(1)
         elif key == 0x0c:
             if self.col > 0:
                 self.col -= 1
-            else:
-                self.cursor_up(True)
+            elif self.cur_line > 0:
+                self.cur_line -= 1
+                self.col = len(self.content[self.cur_line])
         elif key == 0x0f:
             if self.col < len(self.content[self.cur_line]):
                 self.col += 1
-            else:
-                self.cursor_down(True)
+            elif self.cur_line < self.total_lines - 1:
+                self.cur_line += 1
+                self.col = 0
         elif key == 0x10:
             ns = self.spaces(self.content[self.cur_line])
             self.col = ns if self.col != ns else 0
@@ -285,12 +284,6 @@ class Editor:
                 del self.undo[0]
                 self.sticky_c = "*"
             self.undo.append((lnum, span, text, key, self.col))
-    def yank_add(self, key, l):
-            if key == self.lastkey: 
-                self.yank_buffer.append(l) 
-            else:
-                del self.yank_buffer 
-                self.yank_buffer = [l]
     def handle_edit_key(self, key): 
         l = self.content[self.cur_line]
         if key == 0x0a:
@@ -338,17 +331,25 @@ class Editor:
             self.changed = '*'
         elif key == 0x18: 
             self.undo_add(self.cur_line, [l], 0, 0)
-            self.yank_add(key, l)
+            if key == self.lastkey: 
+                self.yank_buffer.append(l) 
+            else:
+                del self.yank_buffer 
+                self.yank_buffer = [l]
             if self.total_lines > 1: 
                 del self.content[self.cur_line]
                 self.total_lines -= 1
                 if self.cur_line >= self.total_lines: 
-                    self.cursor_up()
+                    self.cur_line -= 1
             else: 
                 self.content[self.cur_line] = ''
             self.changed = '*'
         elif key == 0x04: 
-            self.yank_add(key, l)
+            if key == self.lastkey: 
+                self.yank_buffer.append(l) 
+            else:
+                del self.yank_buffer 
+                self.yank_buffer = [l]
             self.cursor_down()
         elif key == 0x16: 
             if self.yank_buffer:
@@ -371,7 +372,7 @@ class Editor:
                     del self.undo[:]
                     self.fname = fname 
                 except Exception as err:
-                    self.message = 'Could not save %s, Reason: "%s"' % (fname, err)
+                    self.message = 'Could not save %s, Error: %s' % (fname, err)
         elif key == 0x1a:
             if len(self.undo) > 0:
                 action = self.undo.pop(-1) 
@@ -400,7 +401,7 @@ class Editor:
             key = self.get_input() 
             self.message = '' 
             if key == 0x03:
-                if self.changed != ' ' and self.fname != None:
+                if self.changed != ' ':
                     res = self.line_edit("Content changed! Quit without saving (y/N)? ", "N")
                     if not res or res[0].upper() != 'Y':
                         continue
@@ -418,8 +419,9 @@ class Editor:
             self.lastkey = key
     @staticmethod
     def expandtabs(s):
+        from _io import StringIO
         if '\t' in s:
-            sb = _io.StringIO()
+            sb = StringIO()
             pos = 0
             for c in s:
                 if c == '\t': 
@@ -437,7 +439,7 @@ class Editor:
                 with open(fname) as f:
                     content = f.readlines()
         except Exception as err:
-            message = 'Could not load %s, Reason: "%s"' % (fname, err)
+            message = 'Could not load %s, Error: %s' % (fname, err)
             return (None, message)
         else:
             if not content: 
@@ -464,5 +466,4 @@ def pye(content = None, tab_size = 4, undo = 50, device = 0, baud = 115200, fd_t
     e.deinit_tty()
     content = e.content if (e.fname == None) else e.fname
     del e
-    gc.collect()
     return content
