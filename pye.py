@@ -14,7 +14,7 @@
 ## - Added a status line, line number column and single line prompts for Quit, Save, Find and Goto
 ## - Added mouse support for pointing and scrolling
 ##
-import sys
+import sys, gc
 #ifdef LINUX
 if sys.platform in ("linux", "darwin"):
     import os, signal, tty, termios
@@ -75,19 +75,17 @@ KEY_SCRLDN    = 0x1d
 KEY_FIND_AGAIN= 0x0e
 KEY_REDRAW    = 0x05
 KEY_UNDO      = 0x1a
-#ifndef BASIC
-KEY_MOUSE     = 0x1b
-KEY_SCRLUP    = 0x1c
-KEY_SCRLDN    = 0x1d
-KEY_FIRST     = 0x02
-KEY_LAST      = 0x14
-KEY_TOGGLE    = 0x01
-KEY_REPLC     = 0x12
-KEY_GET       = 0x1e
-#endif
 KEY_YANK      = 0x18
 KEY_ZAP       = 0x16
 KEY_DUP       = 0x04
+KEY_FIRST     = 0x02
+KEY_LAST      = 0x14
+KEY_REPLC     = 0x12
+KEY_MOUSE     = 0x1b
+KEY_SCRLUP    = 0x1c
+KEY_SCRLDN    = 0x1d
+KEY_TOGGLE    = 0x01
+KEY_GET       = 0x1e
 #endif
 
 class Editor:
@@ -122,19 +120,17 @@ class Editor:
     b"\x15"   : KEY_BACKTAB, ## Ctrl-U
     b"\x1b[Z" : KEY_BACKTAB, ## Shift Tab
     b"\x18"   : KEY_YANK, ## Ctrl-X
+    b"\x1b[3;5~": KEY_YANK, ## Ctrl-Del
     b"\x16"   : KEY_ZAP, ## Ctrl-V
     b"\x04"   : KEY_DUP, ## Ctrl-D
-#ifndef BASIC
+    b"\x12"   : KEY_REPLC, ## Ctrl-R
     b"\x1b[M" : KEY_MOUSE,
     b"\x01"   : KEY_TOGGLE, ## Ctrl-A
     b"\x14"   : KEY_FIRST, ## Ctrl-T
-    b"\x1b[1;5H": KEY_FIRST,
     b"\x02"   : KEY_LAST,  ## Ctrl-B
+    b"\x1b[1;5H": KEY_FIRST,
     b"\x1b[1;5F": KEY_LAST,
-    b"\x12"   : KEY_REPLC, ## Ctrl-R
     b"\x0f"   : KEY_GET, ## Ctrl-O
-    b"\x1b[3;5~": KEY_YANK, ## Ctrl-Del
-#endif
     }
 
     def __init__(self, tab_size, undo_limit):
@@ -178,10 +174,10 @@ class Editor:
                         Editor.winch = False
                         return b'\x05'
 
-        def init_tty(self, device, baud, fd_tty):
-            self.org_termios = termios.tcgetattr(fd_tty)
-            tty.setraw(fd_tty)
-            Editor.sdev = fd_tty
+        def init_tty(self, device, baud):
+            self.org_termios = termios.tcgetattr(device)
+            tty.setraw(device)
+            Editor.sdev = device
             if sys.implementation.name == "cpython":
                 signal.signal(signal.SIGWINCH, Editor.signal_handler)
 
@@ -211,7 +207,7 @@ class Editor:
                 pass
             return Editor.serialcomm.read(1)
 
-        def init_tty(self, device, baud, fd_tty):
+        def init_tty(self, device, baud):
             import pyb
             Editor.sdev = device
             if Editor.sdev:
@@ -228,7 +224,11 @@ class Editor:
     if sys.platform == "WiPy":
         @staticmethod
         def wr(s):
-            Editor.serialcomm.write(s)
+            ns = 0
+            while ns < len(s): # trial, since Telnet sometimes lags
+                res = Editor.serialcomm.write(s[ns:])
+                if res != None:
+                    ns += res
 
         @staticmethod
         def rd():
@@ -244,7 +244,7 @@ class Editor:
                             return ch.encode()
                     except: pass
 
-        def init_tty(self, device, baud, fd_tty):
+        def init_tty(self, device, baud):
             import machine
             if device:
                 Editor.serialcomm = machine.UART(device - 1, baud)
@@ -305,6 +305,7 @@ class Editor:
         Editor.wr("\x1bD " * scrolling)
 
     def set_screen_parms(self):
+        self.cursor(False)
         Editor.wr('\x1b[999;999H\x1b[6n')
         pos = b''
         char = Editor.rd() ## expect ESC[yyy;xxxR
@@ -313,7 +314,7 @@ class Editor:
             char = Editor.rd()
         (self.height, self.width) = [int(i, 10) for i in pos.split(b';')]
         self.height -= 1
-        self.scrbuf = ["\x04"] * self.height ## force delete
+        self.scrbuf = ["\x01"] * self.height ## force delete
         self.scroll_region(self.height)
 
     def get_input(self):  ## read from interface/keyboard one byte each and match against function keys
@@ -462,12 +463,14 @@ class Editor:
                 self.col -= 1
             elif self.cur_line > 0:
                 self.cur_line -= 1
+                if self.cur_line < self.top_line:
+                    self.scroll_up(1)
                 self.col = len(self.content[self.cur_line])
         elif key == KEY_RIGHT:
             if self.col < len(self.content[self.cur_line]):
                 self.col += 1
             elif self.cur_line < self.total_lines - 1:
-                self.cur_line += 1
+                self.cursor_down()
                 self.col = 0
         elif key == KEY_HOME:
             ns = self.spaces(self.content[self.cur_line])
@@ -634,7 +637,6 @@ class Editor:
                     self.undo_add(self.cur_line, None, 0, -len(content))
                     self.content[self.cur_line:self.cur_line] = content
                     self.total_lines = len(self.content)
-                    del content
                     self.changed = "*"
 #endif
         elif key == KEY_YANK:  # delete line into buffer
@@ -642,7 +644,6 @@ class Editor:
             if key == self.lastkey: # yank series?
                 self.yank_buffer.append(l) # add line
             else:
-                del self.yank_buffer # set line
                 self.yank_buffer = [l]
             if self.total_lines > 1: ## not a single line
                 del self.content[self.cur_line]
@@ -656,7 +657,6 @@ class Editor:
             if key == self.lastkey: # yank series?
                 self.yank_buffer.append(l) # add line
             else:
-                del self.yank_buffer # set line
                 self.yank_buffer = [l]
             self.cursor_down()
         elif key == KEY_ZAP: ## insert buffer
@@ -701,6 +701,10 @@ class Editor:
                 self.total_lines = len(self.content) ## brute force
                 if len(self.undo) == 0: ## test changed flag
                     self.changed = self.sticky_c
+#ifdef BASIC                    
+        elif key < 0x20:
+            self.message = "Sorry, command not supported"
+#endif
         elif key >= 0x20: ## character to be added
             self.undo_add(self.cur_line, [l], 0x20 if key == 0x20 else 0x41)
             self.content[self.cur_line] = l[:self.col] + chr(key) + l[self.col:]
@@ -709,6 +713,8 @@ class Editor:
 
     def edit_loop(self): ## main editing loop
 
+        if len(self.content) == 0: ## check for empty content
+            self.content = [""]
         self.total_lines = len(self.content)
         self.set_screen_parms()
 #ifndef BASIC
@@ -734,13 +740,15 @@ class Editor:
                 self.clear_to_eol()
                 return None
             elif key == KEY_REDRAW:
-                del self.scrbuf
                 self.set_screen_parms()
                 self.row = min(self.height - 1, self.row)
 #ifdef LINUX
                 if sys.platform in ("linux", "darwin") and sys.implementation.name == "cpython":
                     signal.signal(signal.SIGWINCH, Editor.signal_handler)
 #endif
+                if sys.implementation.name == "micropython":
+                    gc.collect()
+                    self.message = "%d Bytes Memory available" % gc.mem_free()
             elif  self.handle_cursor_keys(key):
                 pass
             else: self.handle_edit_key(key)
@@ -791,35 +799,28 @@ class Editor:
         except Exception as err:
             message = 'Could not load %s, Error: %s' % (fname, err)
             return (None, message)
-        else:
-            if not content: ## empty file
-                content = [""]
         for i in range(len(content)):  ## strip and convert
             content[i] = Editor.expandtabs(content[i].rstrip('\r\n\t '))
         return (content, "")
 
-def pye(content = None, tab_size = 4, undo = 50, device = 0, baud = 115200, fd_tty = 0):
+def pye(content = None, tab_size = 4, undo = 50, device = 0, baud = 115200):
 ## prepare content
     e = Editor(tab_size, undo)
     if type(content) == str and content: ## String = non-empty Filename
         e.fname = content
         (e.content, e.message) = e.get_file(e.fname)
-        if not e.content:  ## Error reading file
+        if e.content == None:  ## Error reading file
             print (e.message)
-            del e
             return
     elif type(content) == list and len(content) > 0 and type(content[0]) == str:
         ## non-empty list of strings -> edit
         e.content = content
-        if fd_tty:
-            e.fname = ""
 ## edit
-    e.init_tty(device, baud, fd_tty)
+    e.init_tty(device, baud)
     e.edit_loop()
     e.deinit_tty()
 ## clean-up
     content = e.content if (e.fname == None) else e.fname
-    del e
     return content
 
 #ifdef LINUX
@@ -835,11 +836,11 @@ if __name__ == "__main__":
                 mode = os.fstat(0).st_mode
                 if stat.S_ISFIFO(mode) or stat.S_ISREG(mode):
                     name = sys.stdin.readlines()
-                    fd_tty = os.open("/dev/tty", os.O_RDONLY) ## tty gets another fd
-                    os.close(0) ## now we can close 0
+                    os.close(0) ## close and repopen /dev/tty
+                    fd_tty = os.open("/dev/tty", os.O_RDONLY) ## memorized, if new fd
                     for i in range(len(name)):  ## strip and convert
                         name[i] = Editor.expandtabs(name[i].rstrip('\r\n\t '))
-        pye(name, undo = 500, fd_tty=fd_tty)
+        pye(name, undo = 500, device=fd_tty)
     else:
         print ("\nSorry, this OS is not supported (yet)")
 #endif
