@@ -14,33 +14,11 @@ class Editor:
     b"\x1b[5~": 0x17,
     b"\x1b[6~": 0x19,
     b"\x11" : 0x03, 
-    b"\x03" : 0x03, 
     b"\r" : 0x0a,
-    b"\n" : 0x0a,
     b"\x7f" : 0x08, 
-    b"\x08" : 0x08,
     b"\x1b[3~": 0x1f,
-    b"\x13" : 0x13, 
-    b"\x06" : 0x06, 
-    b"\x0e" : 0x0e, 
-    b"\x07" : 0x07, 
-    b"\x05" : 0x05, 
-    b"\x1a" : 0x1a, 
-    b"\x09" : 0x09,
-    b"\x15" : 0x15, 
     b"\x1b[Z" : 0x15, 
-    b"\x18" : 0x18, 
     b"\x1b[3;5~": 0x18, 
-    b"\x16" : 0x16, 
-    b"\x04" : 0x04, 
-    b"\x12" : 0x12, 
-    b"\x1b[M" : 0x1b,
-    b"\x01" : 0x01, 
-    b"\x14" : 0x02, 
-    b"\x02" : 0x14, 
-    b"\x1b[1;5H": 0x02,
-    b"\x1b[1;5F": 0x14,
-    b"\x0f" : 0x1e, 
     }
     def __init__(self, tab_size, undo_limit):
         self.top_line = 0
@@ -57,10 +35,10 @@ class Editor:
         self.content = [""]
         self.undo = []
         self.undo_limit = max(undo_limit, 0)
-        self.yank_buffer = []
-        self.lastkey = 0
         self.case = "n"
         self.autoindent = "y"
+        self.yank_buffer = []
+        self.lastkey = 0
     if sys.platform == "pyboard":
         @staticmethod
         def wr(s):
@@ -146,7 +124,7 @@ class Editor:
                 c = self.KEYMAP[input]
                 if c != 0x1b:
                     return c
-            elif input[0] >= 0x20: 
+            elif len(input) == 1: 
                 return input[0]
     def display_window(self): 
         self.cur_line = min(self.total_lines - 1, max(self.cur_line, 0))
@@ -260,8 +238,7 @@ class Editor:
                 self.cursor_down()
                 self.col = 0
         elif key == 0x10:
-            ns = self.spaces(self.content[self.cur_line])
-            self.col = ns if self.col != ns else 0
+            self.col = self.spaces(self.content[self.cur_line]) if self.col == 0 else 0
         elif key == 0x11:
             self.col = len(self.content[self.cur_line])
         elif key == 0x17:
@@ -303,7 +280,7 @@ class Editor:
             ni = 0
             if self.autoindent == "y": 
                 ni = min(self.spaces(l), self.col) 
-                r = self.content[self.cur_line].partition("\x23")[0].rstrip() 
+                r = l.partition("\x23")[0].rstrip() 
                 if r and r[-1] == ':' and self.col >= len(r): 
                     ni += self.tab_size
             self.cur_line += 1
@@ -330,15 +307,19 @@ class Editor:
                 self.changed = '*'
         elif key == 0x09:
             self.undo_add(self.cur_line, [l], key)
-            ni = self.tab_size - self.col % self.tab_size 
-            self.content[self.cur_line] = l[:self.col] + ' ' * ni + l[self.col:]
-            self.col += ni
+            if False: pass
+            else:
+                ni = self.tab_size - self.col % self.tab_size 
+                self.content[self.cur_line] = l[:self.col] + ' ' * ni + l[self.col:]
+                self.col += ni
             self.changed = '*'
         elif key == 0x15:
             self.undo_add(self.cur_line, [l], key)
-            ni = min((self.col - 1) % self.tab_size + 1, self.spaces(l, self.col)) 
-            self.content[self.cur_line] = l[:self.col - ni] + l[self.col:]
-            self.col -= ni
+            if False: pass
+            else:
+                ni = min((self.col - 1) % self.tab_size + 1, self.spaces(l, self.col)) 
+                self.content[self.cur_line] = l[:self.col - ni] + l[self.col:]
+                self.col -= ni
             self.changed = '*'
         elif key == 0x18: 
             self.undo_add(self.cur_line, [l], 0, 0)
@@ -397,8 +378,6 @@ class Editor:
                 self.total_lines = len(self.content) 
                 if len(self.undo) == 0: 
                     self.changed = self.sticky_c
-        elif key < 0x20:
-            self.message = "Sorry, command not supported"
         elif key >= 0x20: 
             self.undo_add(self.cur_line, [l], 0x20 if key == 0x20 else 0x41)
             self.content[self.cur_line] = l[:self.col] + chr(key) + l[self.col:]

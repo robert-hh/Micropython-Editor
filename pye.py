@@ -104,12 +104,16 @@ class Editor:
     b"\x1b[5~": KEY_PGUP,
     b"\x1b[6~": KEY_PGDN,
     b"\x11"   : KEY_QUIT, ## Ctrl-Q
-    b"\x03"   : KEY_QUIT, ## Ctrl-C
     b"\r"     : KEY_ENTER,
-    b"\n"     : KEY_ENTER,
     b"\x7f"   : KEY_BACKSPACE, ## Ctrl-? (127)
-    b"\x08"   : KEY_BACKSPACE,
     b"\x1b[3~": KEY_DELETE,
+    b"\x1b[Z" : KEY_BACKTAB, ## Shift Tab
+    b"\x1b[3;5~": KEY_YANK, ## Ctrl-Del
+#ifndef BASIC
+## keys mapped onto themselves
+    b"\x03"   : KEY_QUIT, ## Ctrl-C
+    b"\n"     : KEY_ENTER,
+    b"\x08"   : KEY_BACKSPACE,
     b"\x13"   : KEY_WRITE,  ## Ctrl-S
     b"\x06"   : KEY_FIND, ## Ctrl-F
     b"\x0e"   : KEY_FIND_AGAIN, ## Ctrl-N
@@ -118,12 +122,11 @@ class Editor:
     b"\x1a"   : KEY_UNDO, ## Ctrl-Z
     b"\x09"   : KEY_TAB,
     b"\x15"   : KEY_BACKTAB, ## Ctrl-U
-    b"\x1b[Z" : KEY_BACKTAB, ## Shift Tab
+    b"\x12"   : KEY_REPLC, ## Ctrl-R
     b"\x18"   : KEY_YANK, ## Ctrl-X
-    b"\x1b[3;5~": KEY_YANK, ## Ctrl-Del
     b"\x16"   : KEY_ZAP, ## Ctrl-V
     b"\x04"   : KEY_DUP, ## Ctrl-D
-    b"\x12"   : KEY_REPLC, ## Ctrl-R
+##
     b"\x1b[M" : KEY_MOUSE,
     b"\x01"   : KEY_TOGGLE, ## Ctrl-A
     b"\x14"   : KEY_FIRST, ## Ctrl-T
@@ -131,6 +134,7 @@ class Editor:
     b"\x1b[1;5H": KEY_FIRST,
     b"\x1b[1;5F": KEY_LAST,
     b"\x0f"   : KEY_GET, ## Ctrl-O
+#endif
     }
 
     def __init__(self, tab_size, undo_limit):
@@ -148,10 +152,10 @@ class Editor:
         self.content = [""]
         self.undo = []
         self.undo_limit = max(undo_limit, 0)
-        self.yank_buffer = []
-        self.lastkey = 0
         self.case = "n"
         self.autoindent = "y"
+        self.yank_buffer = []
+        self.lastkey = 0
 #ifndef BASIC
         self.replc_pattern = ""
         self.write_tabs = "n"
@@ -348,7 +352,7 @@ class Editor:
                     else:
                         return KEY_MOUSE ## do nothing but set the cursor
 #endif
-            elif input[0] >= 0x20: ## but only if no Ctrl-Char
+            elif len(input) == 1: ## but only if a single char
                 return input[0]
 
     def display_window(self): ## Update window and status line
@@ -478,8 +482,7 @@ class Editor:
                 self.cursor_down()
                 self.col = 0
         elif key == KEY_HOME:
-            ns = self.spaces(self.content[self.cur_line])
-            self.col = ns if self.col != ns else 0
+            self.col = self.spaces(self.content[self.cur_line]) if self.col == 0 else 0
         elif key == KEY_END:
             self.col = len(self.content[self.cur_line])
         elif key == KEY_PGUP:
@@ -558,7 +561,7 @@ class Editor:
             ni = 0
             if self.autoindent == "y": ## Autoindent
                 ni = min(self.spaces(l), self.col)  ## query indentation
-                r = self.content[self.cur_line].partition("\x23")[0].rstrip() ## \x23 == #
+                r = l.partition("\x23")[0].rstrip() ## \x23 == #
                 if r and r[-1] == ':' and self.col >= len(r): ## look for : as the last non-space before comment
                     ni += self.tab_size
             self.cur_line += 1
@@ -594,15 +597,33 @@ class Editor:
                 self.changed = '*'
         elif key == KEY_TAB:
             self.undo_add(self.cur_line, [l], key)
-            ni = self.tab_size - self.col % self.tab_size ## determine spaces to add
-            self.content[self.cur_line] = l[:self.col] + ' ' * ni + l[self.col:]
-            self.col += ni
+            if False: pass
+#ifndef BASIC
+            else:
+                ns = self.spaces(l)
+            if self.col == 0 and self.col != ns:
+                self.content[self.cur_line] = ' ' * (self.tab_size - ns % self.tab_size) + l
+                self.cursor_down()
+#endif
+            else:
+                ni = self.tab_size - self.col % self.tab_size ## determine spaces to add
+                self.content[self.cur_line] = l[:self.col] + ' ' * ni + l[self.col:]
+                self.col += ni
             self.changed = '*'
         elif key == KEY_BACKTAB:
             self.undo_add(self.cur_line, [l], key)
-            ni = min((self.col - 1) % self.tab_size + 1, self.spaces(l, self.col)) ## determine spaces to drop
-            self.content[self.cur_line] = l[:self.col - ni] + l[self.col:]
-            self.col -= ni
+            if False: pass
+#ifndef BASIC
+            else:
+                ns = self.spaces(l)
+            if self.col == 0 and ns > 0:
+                self.content[self.cur_line] = l[(ns - 1) % self.tab_size + 1:]
+                self.cursor_down()
+#endif
+            else:
+                ni = min((self.col - 1) % self.tab_size + 1, self.spaces(l, self.col)) ## determine spaces to drop
+                self.content[self.cur_line] = l[:self.col - ni] + l[self.col:]
+                self.col -= ni
             self.changed = '*'
 #ifndef BASIC
         elif key == KEY_REPLC:
@@ -706,10 +727,6 @@ class Editor:
                 self.total_lines = len(self.content) ## brute force
                 if len(self.undo) == 0: ## test changed flag
                     self.changed = self.sticky_c
-#ifdef BASIC                    
-        elif key < 0x20:
-            self.message = "Sorry, command not supported"
-#endif
         elif key >= 0x20: ## character to be added
             self.undo_add(self.cur_line, [l], 0x20 if key == 0x20 else 0x41)
             self.content[self.cur_line] = l[:self.col] + chr(key) + l[self.col:]

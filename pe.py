@@ -14,12 +14,14 @@ class Editor:
     b"\x1b[5~": 0x17,
     b"\x1b[6~": 0x19,
     b"\x11" : 0x03, 
-    b"\x03" : 0x03, 
     b"\r" : 0x0a,
-    b"\n" : 0x0a,
     b"\x7f" : 0x08, 
-    b"\x08" : 0x08,
     b"\x1b[3~": 0x1f,
+    b"\x1b[Z" : 0x15, 
+    b"\x1b[3;5~": 0x18, 
+    b"\x03" : 0x03, 
+    b"\n" : 0x0a,
+    b"\x08" : 0x08,
     b"\x13" : 0x13, 
     b"\x06" : 0x06, 
     b"\x0e" : 0x0e, 
@@ -28,12 +30,10 @@ class Editor:
     b"\x1a" : 0x1a, 
     b"\x09" : 0x09,
     b"\x15" : 0x15, 
-    b"\x1b[Z" : 0x15, 
+    b"\x12" : 0x12, 
     b"\x18" : 0x18, 
-    b"\x1b[3;5~": 0x18, 
     b"\x16" : 0x16, 
     b"\x04" : 0x04, 
-    b"\x12" : 0x12, 
     b"\x1b[M" : 0x1b,
     b"\x01" : 0x01, 
     b"\x14" : 0x02, 
@@ -57,10 +57,10 @@ class Editor:
         self.content = [""]
         self.undo = []
         self.undo_limit = max(undo_limit, 0)
-        self.yank_buffer = []
-        self.lastkey = 0
         self.case = "n"
         self.autoindent = "y"
+        self.yank_buffer = []
+        self.lastkey = 0
         self.replc_pattern = ""
         self.write_tabs = "n"
     if sys.platform == "pyboard":
@@ -164,7 +164,7 @@ class Editor:
                         return 0x1c
                     else:
                         return 0x1b 
-            elif input[0] >= 0x20: 
+            elif len(input) == 1: 
                 return input[0]
     def display_window(self): 
         self.cur_line = min(self.total_lines - 1, max(self.cur_line, 0))
@@ -280,8 +280,7 @@ class Editor:
                 self.cursor_down()
                 self.col = 0
         elif key == 0x10:
-            ns = self.spaces(self.content[self.cur_line])
-            self.col = ns if self.col != ns else 0
+            self.col = self.spaces(self.content[self.cur_line]) if self.col == 0 else 0
         elif key == 0x11:
             self.col = len(self.content[self.cur_line])
         elif key == 0x17:
@@ -356,7 +355,7 @@ class Editor:
             ni = 0
             if self.autoindent == "y": 
                 ni = min(self.spaces(l), self.col) 
-                r = self.content[self.cur_line].partition("\x23")[0].rstrip() 
+                r = l.partition("\x23")[0].rstrip() 
                 if r and r[-1] == ':' and self.col >= len(r): 
                     ni += self.tab_size
             self.cur_line += 1
@@ -390,15 +389,29 @@ class Editor:
                 self.changed = '*'
         elif key == 0x09:
             self.undo_add(self.cur_line, [l], key)
-            ni = self.tab_size - self.col % self.tab_size 
-            self.content[self.cur_line] = l[:self.col] + ' ' * ni + l[self.col:]
-            self.col += ni
+            if False: pass
+            else:
+                ns = self.spaces(l)
+            if self.col == 0 and self.col != ns:
+                self.content[self.cur_line] = ' ' * (self.tab_size - ns % self.tab_size) + l
+                self.cursor_down()
+            else:
+                ni = self.tab_size - self.col % self.tab_size 
+                self.content[self.cur_line] = l[:self.col] + ' ' * ni + l[self.col:]
+                self.col += ni
             self.changed = '*'
         elif key == 0x15:
             self.undo_add(self.cur_line, [l], key)
-            ni = min((self.col - 1) % self.tab_size + 1, self.spaces(l, self.col)) 
-            self.content[self.cur_line] = l[:self.col - ni] + l[self.col:]
-            self.col -= ni
+            if False: pass
+            else:
+                ns = self.spaces(l)
+            if self.col == 0 and ns > 0:
+                self.content[self.cur_line] = l[(ns - 1) % self.tab_size + 1:]
+                self.cursor_down()
+            else:
+                ni = min((self.col - 1) % self.tab_size + 1, self.spaces(l, self.col)) 
+                self.content[self.cur_line] = l[:self.col - ni] + l[self.col:]
+                self.col -= ni
             self.changed = '*'
         elif key == 0x12:
             count = 0
