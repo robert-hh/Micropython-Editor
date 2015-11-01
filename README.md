@@ -75,11 +75,12 @@ c) expandtabs() and packtabs() with a second argument for tabsize (not for pye, 
 - Simplified Linux main(). No calling options any more.
 - Always ask when leaving w/o saving after the content was changed.
 
-**1.7** WiPy fixes and othe minor changes
+**1.7** WiPy fixes and other minor changes
 - Fixed a memory leak in REDRAW, removed every instance of "del name"
 - Changed REDRAW to tell the amount of free memory
 - changed wr() for WiPy
 - Simplified the internal interface to init_tty()
 - Changed the handling of reading an empty file
 - Non-supported functions in the minimal version like REPLACE trigger a "Sorry" message
+- Try to recover from MemoryError by clearing the line-buffer and UNDO
 
