@@ -174,16 +174,18 @@ class Editor:
                         Editor.winch = False
                         return b'\x05'
 
-        def init_tty(self, device, baud):
-            self.org_termios = termios.tcgetattr(device)
+        @staticmethod
+        def init_tty(device, baud):
+            Editor.org_termios = termios.tcgetattr(device)
             tty.setraw(device)
             Editor.sdev = device
             if sys.implementation.name == "cpython":
                 signal.signal(signal.SIGWINCH, Editor.signal_handler)
 
-        def deinit_tty(self):
+        @staticmethod
+        def deinit_tty():
             import termios
-            termios.tcsetattr(Editor.sdev, termios.TCSANOW, self.org_termios)
+            termios.tcsetattr(Editor.sdev, termios.TCSANOW, Editor.org_termios)
 
         @staticmethod
         def signal_handler(sig, frame):
@@ -207,7 +209,8 @@ class Editor:
                 pass
             return Editor.serialcomm.read(1)
 
-        def init_tty(self, device, baud):
+        @staticmethod
+        def init_tty(device, baud):
             import pyb
             Editor.sdev = device
             if Editor.sdev:
@@ -216,7 +219,8 @@ class Editor:
                 Editor.serialcomm = pyb.USB_VCP()
                 Editor.serialcomm.setinterrupt(-1)
 
-        def deinit_tty(self):
+        @staticmethod
+        def deinit_tty():
             if not Editor.sdev:
                 Editor.serialcomm.setinterrupt(3)
 #endif
@@ -244,7 +248,8 @@ class Editor:
                             return ch.encode()
                     except: pass
 
-        def init_tty(self, device, baud):
+        @staticmethod
+        def init_tty(device, baud):
             import machine
             if device:
                 Editor.serialcomm = machine.UART(device - 1, baud)
@@ -252,7 +257,8 @@ class Editor:
                 Editor.serialcomm = sys.stdout
             Editor.sdev = device
 
-        def deinit_tty(self):
+        @staticmethod
+        def deinit_tty():
             pass
 #endif
     @staticmethod
@@ -365,13 +371,13 @@ class Editor:
         for c in range(self.height):
             if i == self.total_lines: ## at empty bottom screen part
                 if self.scrbuf[c] != '':
-                    Editor.goto(c, 0)
+                    self.goto(c, 0)
                     self.clear_to_eol()
                     self.scrbuf[c] = ''
             else:
                 l = self.content[i][self.margin:self.margin + self.width]
                 if l != self.scrbuf[c]: ## line changed, print it
-                    Editor.goto(c, 0)
+                    self.goto(c, 0)
                     self.wr(l)
                     if len(l) < self.width:
                         self.clear_to_eol()
@@ -380,14 +386,13 @@ class Editor:
 ## display Status-Line
         self.goto(self.height, 0)
         self.hilite(1)
-        self.clear_to_eol() ## moved up for mate/xfce4-terminal issue with scroll region
         self.wr("[%d] %c Row: %d Col: %d  %s" % (self.total_lines, self.changed, self.cur_line + 1, self.col + 1, self.message[:self.width - 25]))
         self.hilite(0)
-        self.cursor(True)
+        self.clear_to_eol() ## once moved up for mate/xfce4-terminal issue with scroll region
         self.goto(self.row, self.col - self.margin)
+        self.cursor(True)
 
-    @staticmethod
-    def spaces(line, pos = None): ## count spaces
+    def spaces(self, line, pos = None): ## count spaces
         if pos == None: ## at line start
             return len(line) - len(line.lstrip(" "))
         else: ## left to the cursor
@@ -463,9 +468,9 @@ class Editor:
                 self.col -= 1
             elif self.cur_line > 0:
                 self.cur_line -= 1
+                self.col = len(self.content[self.cur_line])
                 if self.cur_line < self.top_line:
                     self.scroll_up(1)
-                self.col = len(self.content[self.cur_line])
         elif key == KEY_RIGHT:
             if self.col < len(self.content[self.cur_line]):
                 self.col += 1
@@ -726,36 +731,43 @@ class Editor:
             key = self.get_input()  ## Get Char of Fct-key code
             self.message = '' ## clear message
 
-            if key == KEY_QUIT:
-                if self.changed != ' ':
-                    res = self.line_edit("Content changed! Quit without saving (y/N)? ", "N")
-                    if not res or res[0].upper() != 'Y':
-                        continue
+            try:
+                if key == KEY_QUIT:
+                    if self.changed != ' ':
+                        res = self.line_edit("Content changed! Quit without saving (y/N)? ", "N")
+                        if not res or res[0].upper() != 'Y':
+                            continue
 ## Do not leave cursor in the middle of screen
 #ifndef BASIC
-                self.mouse_reporting(False) ## disable mouse reporting, enable scrolling
+                    self.mouse_reporting(False) ## disable mouse reporting, enable scrolling
 #endif
-                self.scroll_region(0)
-                self.goto(self.height, 0)
-                self.clear_to_eol()
-                return None
-            elif key == KEY_REDRAW:
-                self.set_screen_parms()
-                self.row = min(self.height - 1, self.row)
+                    self.scroll_region(0)
+                    self.goto(self.height, 0)
+                    self.clear_to_eol()
+                    return None
+                elif key == KEY_REDRAW:
+                    self.set_screen_parms()
+                    self.row = min(self.height - 1, self.row)
 #ifdef LINUX
-                if sys.platform in ("linux", "darwin") and sys.implementation.name == "cpython":
-                    signal.signal(signal.SIGWINCH, Editor.signal_handler)
+                    if sys.platform in ("linux", "darwin") and sys.implementation.name == "cpython":
+                        signal.signal(signal.SIGWINCH, Editor.signal_handler)
 #endif
-                if sys.implementation.name == "micropython":
-                    gc.collect()
-                    self.message = "%d Bytes Memory available" % gc.mem_free()
-            elif  self.handle_cursor_keys(key):
-                pass
-            else: self.handle_edit_key(key)
-            self.lastkey = key
+                    if sys.implementation.name == "micropython":
+                        gc.collect()
+                        self.message = "%d Bytes Memory available" % gc.mem_free()
+                elif  self.handle_cursor_keys(key):
+                    pass
+                else: self.handle_edit_key(key)
+                self.lastkey = key
+            except MemoryError:
+                del self.undo[:]
+                del self.yank_buffer[:]
+                gc.collect()
+                self.message ="Memory Error. Undo and Yank cleared!"
+
+
 ## expandtabs: hopefully sometimes replaced by the built-in function
-    @staticmethod
-    def expandtabs(s):
+    def expandtabs(self, s):
         from _io import StringIO
         if '\t' in s:
             sb = StringIO()
@@ -772,8 +784,7 @@ class Editor:
             return s
 ## packtabs: replace sequence of space by tab
 #ifndef BASIC
-    @staticmethod
-    def packtabs(s):
+    def packtabs(self, s):
         from _io import StringIO
         sb = StringIO()
         for i in range(0, len(s), 8):
@@ -785,8 +796,7 @@ class Editor:
                 sb.write(c)
         return sb.getvalue()
 #endif
-    @staticmethod
-    def get_file(fname):
+    def get_file(self, fname):
         try:
 #ifdef LINUX
             if sys.implementation.name == "cpython":
@@ -800,7 +810,7 @@ class Editor:
             message = 'Could not load %s, Error: %s' % (fname, err)
             return (None, message)
         for i in range(len(content)):  ## strip and convert
-            content[i] = Editor.expandtabs(content[i].rstrip('\r\n\t '))
+            content[i] = self.expandtabs(content[i].rstrip('\r\n\t '))
         return (content, "")
 
 def pye(content = None, tab_size = 4, undo = 50, device = 0, baud = 115200):
@@ -819,9 +829,8 @@ def pye(content = None, tab_size = 4, undo = 50, device = 0, baud = 115200):
     e.init_tty(device, baud)
     e.edit_loop()
     e.deinit_tty()
-## clean-up
-    content = e.content if (e.fname == None) else e.fname
-    return content
+## close
+    return e.content if (e.fname == None) else e.fname
 
 #ifdef LINUX
 if __name__ == "__main__":

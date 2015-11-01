@@ -76,7 +76,8 @@ class Editor:
             while not Editor.serialcomm.any():
                 pass
             return Editor.serialcomm.read(1)
-        def init_tty(self, device, baud):
+        @staticmethod
+        def init_tty(device, baud):
             import pyb
             Editor.sdev = device
             if Editor.sdev:
@@ -84,7 +85,8 @@ class Editor:
             else:
                 Editor.serialcomm = pyb.USB_VCP()
                 Editor.serialcomm.setinterrupt(-1)
-        def deinit_tty(self):
+        @staticmethod
+        def deinit_tty():
             if not Editor.sdev:
                 Editor.serialcomm.setinterrupt(3)
     @staticmethod
@@ -179,13 +181,13 @@ class Editor:
         for c in range(self.height):
             if i == self.total_lines: 
                 if self.scrbuf[c] != '':
-                    Editor.goto(c, 0)
+                    self.goto(c, 0)
                     self.clear_to_eol()
                     self.scrbuf[c] = ''
             else:
                 l = self.content[i][self.margin:self.margin + self.width]
                 if l != self.scrbuf[c]: 
-                    Editor.goto(c, 0)
+                    self.goto(c, 0)
                     self.wr(l)
                     if len(l) < self.width:
                         self.clear_to_eol()
@@ -193,13 +195,12 @@ class Editor:
                 i += 1
         self.goto(self.height, 0)
         self.hilite(1)
-        self.clear_to_eol() 
         self.wr("[%d] %c Row: %d Col: %d  %s" % (self.total_lines, self.changed, self.cur_line + 1, self.col + 1, self.message[:self.width - 25]))
         self.hilite(0)
-        self.cursor(True)
+        self.clear_to_eol() 
         self.goto(self.row, self.col - self.margin)
-    @staticmethod
-    def spaces(line, pos = None): 
+        self.cursor(True)
+    def spaces(self, line, pos = None): 
         if pos == None: 
             return len(line) - len(line.lstrip(" "))
         else: 
@@ -269,9 +270,9 @@ class Editor:
                 self.col -= 1
             elif self.cur_line > 0:
                 self.cur_line -= 1
+                self.col = len(self.content[self.cur_line])
                 if self.cur_line < self.top_line:
                     self.scroll_up(1)
-                self.col = len(self.content[self.cur_line])
         elif key == 0x0f:
             if self.col < len(self.content[self.cur_line]):
                 self.col += 1
@@ -512,28 +513,33 @@ class Editor:
             self.display_window() 
             key = self.get_input() 
             self.message = '' 
-            if key == 0x03:
-                if self.changed != ' ':
-                    res = self.line_edit("Content changed! Quit without saving (y/N)? ", "N")
-                    if not res or res[0].upper() != 'Y':
-                        continue
-                self.mouse_reporting(False) 
-                self.scroll_region(0)
-                self.goto(self.height, 0)
-                self.clear_to_eol()
-                return None
-            elif key == 0x05:
-                self.set_screen_parms()
-                self.row = min(self.height - 1, self.row)
-                if sys.implementation.name == "micropython":
-                    gc.collect()
-                    self.message = "%d Bytes Memory available" % gc.mem_free()
-            elif self.handle_cursor_keys(key):
-                pass
-            else: self.handle_edit_key(key)
-            self.lastkey = key
-    @staticmethod
-    def expandtabs(s):
+            try:
+                if key == 0x03:
+                    if self.changed != ' ':
+                        res = self.line_edit("Content changed! Quit without saving (y/N)? ", "N")
+                        if not res or res[0].upper() != 'Y':
+                            continue
+                    self.mouse_reporting(False) 
+                    self.scroll_region(0)
+                    self.goto(self.height, 0)
+                    self.clear_to_eol()
+                    return None
+                elif key == 0x05:
+                    self.set_screen_parms()
+                    self.row = min(self.height - 1, self.row)
+                    if sys.implementation.name == "micropython":
+                        gc.collect()
+                        self.message = "%d Bytes Memory available" % gc.mem_free()
+                elif self.handle_cursor_keys(key):
+                    pass
+                else: self.handle_edit_key(key)
+                self.lastkey = key
+            except MemoryError:
+                del self.undo[:]
+                del self.yank_buffer[:]
+                gc.collect()
+                self.message ="Memory Error. Undo and Yank cleared!"
+    def expandtabs(self, s):
         from _io import StringIO
         if '\t' in s:
             sb = StringIO()
@@ -548,8 +554,7 @@ class Editor:
             return sb.getvalue()
         else:
             return s
-    @staticmethod
-    def packtabs(s):
+    def packtabs(self, s):
         from _io import StringIO
         sb = StringIO()
         for i in range(0, len(s), 8):
@@ -560,8 +565,7 @@ class Editor:
             else:
                 sb.write(c)
         return sb.getvalue()
-    @staticmethod
-    def get_file(fname):
+    def get_file(self, fname):
         try:
                 with open(fname) as f:
                     content = f.readlines()
@@ -569,7 +573,7 @@ class Editor:
             message = 'Could not load %s, Error: %s' % (fname, err)
             return (None, message)
         for i in range(len(content)): 
-            content[i] = Editor.expandtabs(content[i].rstrip('\r\n\t '))
+            content[i] = self.expandtabs(content[i].rstrip('\r\n\t '))
         return (content, "")
 def pye(content = None, tab_size = 4, undo = 50, device = 0, baud = 115200):
     e = Editor(tab_size, undo)
@@ -585,5 +589,4 @@ def pye(content = None, tab_size = 4, undo = 50, device = 0, baud = 115200):
     e.init_tty(device, baud)
     e.edit_loop()
     e.deinit_tty()
-    content = e.content if (e.fname == None) else e.fname
-    return content
+    return e.content if (e.fname == None) else e.fname
