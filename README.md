@@ -2,20 +2,19 @@
 
 **Description**
 
-A small text editor written in Python running on PYBoard, allowing to edit files locally. It is based on the editor widget of pfalcon at https://github.com/pfalcon/pyedit. I ported it to PyBoard and added a few functions:
+A small text editor written in Python running on PYBoard and WiPy, allowing to edit files locally. It is based on the editor widget of pfalcon at https://github.com/pfalcon/pyedit. I ported it to PyBoard and WiPy and added a few functions:
 
 - Use USB_VCP or UART for input and output.
 - Changed the read keyboard function to comply with slow byte-by-byte input on serial lines.
-- Added support for TAB, BACKTAB, SAVE, FIND, REPLACE, GOTO line, YANK (delete line into a buffer), DUP (copy line into a buffer), ZAP (insert buffer), UNDO and GET (file)
-- Join Lines by 'Delete Char' at the end or Backspace at the beginning of a line, Auto-indent for ENTER, context sensitive TAB, BACKTAB, HOME and and BACKSPACE
-- Moved main into a function with some optional parameters
-- Added an optional status line and single line prompts for QUIT, SAVE, FIND, REPLACE, GOTO, GET and Toggles.
-  The status line can be turned (almost) off for slow connections.
+- Added support for TAB, BACKTAB, SAVE, FIND, REPLACE, GOTO line, YANK (delete line into a buffer), DUP (copy line into a buffer), ZAP (insert buffer),REDRAW, UNDO and GET (file)
+- Join Lines by 'Delete Char' at the end or Backspace at the beginning of a line, Auto-indent for ENTER, context sensitive TAB, BACKTAB, and HOME
+- Moved main into a function
+- Added a status line and single line prompts for QUIT, SAVE, FIND, REPLACE, GOTO, GET and Toggles.
 - Support of the basic mouse functions scrolling up/down and setting the cursor.
 
 The editor assumes a VT100 terminal. It works in Insert mode. Cursor Keys, Home, End, PgUp, PgDn, Del and Backspace work as you would expect. The additional functions like FIND etc. are available with Ctrl-Keys. On reading files, tab characters are expanded to spaces with a tab size of 8, and trailing white space on a line will be discarded. The orginal state of tabs will not be restored when the file is written. Optionally, tabs can be written when saving the file, replacing spaces with tabs when possible. The screen size is determined, when the editor is started or when the Redraw-key (Ctrl-E) is hit.
 
-The editor works also well in a Linux or MAC terminal environment, with both python3 and micropython. For that purpose, a small main() section is embedded, which also accepts data from a pipe or redirection.
+The editor works also well in a Linux or MAC terminal environment, with both python3 and micropython. For that purpose, a small main() section is embedded, which when called with CPython also accepts data from a pipe or redirection.
 
 **Files:**
 
@@ -83,4 +82,8 @@ c) expandtabs() and packtabs() with a second argument for tabsize (not for pye, 
 - Changed the handling of reading an empty file
 - Non-supported functions in the minimal version like REPLACE trigger a "Sorry" message
 - Try to recover from MemoryError by clearing the line-buffer and UNDO
+
+**1.7a** Size reduction for WiPy & Tabbify for PyBoard
+- Reduced KEYMAP in the WiPy version by omitting entries, where the function code is identical to the key value (e.g. \x08 -> 8). Not fool proof, but it helps reducing the size.
+- Adding a "Tabbify" behaviour for the full version. Tab/Backtab with the cursor at col 1 indents/unindents the line and moves the cursor one line down.
 
