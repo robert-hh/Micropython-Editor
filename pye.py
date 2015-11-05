@@ -146,7 +146,7 @@ class Editor:
         self.tab_size = tab_size
         self.changed = ' '
         self.sticky_c = " "
-        self.message = " "
+        self.message = ""
         self.find_pattern = ""
         self.fname = None
         self.content = [""]
@@ -329,15 +329,15 @@ class Editor:
 
     def get_input(self):  ## read from interface/keyboard one byte each and match against function keys
         while True:
-            input = Editor.rd()
-            if input == b'\x1b': ## starting with ESC, must be fct
+            in_buffer = Editor.rd()
+            if in_buffer == b'\x1b': ## starting with ESC, must be fct
                 while True:
-                    input += Editor.rd()
-                    c = chr(input[-1])
+                    in_buffer += Editor.rd()
+                    c = chr(in_buffer[-1])
                     if c == '~' or (c.isalpha() and c != 'O'):
                         break
-            if input in self.KEYMAP:
-                c = self.KEYMAP[input]
+            if in_buffer in self.KEYMAP:
+                c = self.KEYMAP[in_buffer]
                 if c != KEY_MOUSE:
                     return c
 #ifndef BASIC
@@ -352,8 +352,8 @@ class Editor:
                     else:
                         return KEY_MOUSE ## do nothing but set the cursor
 #endif
-            elif len(input) == 1: ## but only if a single char
-                return input[0]
+            elif len(in_buffer) == 1: ## but only if a single char
+                return in_buffer[0]
 
     def display_window(self): ## Update window and status line
 ## Force cur_line and col to be in the reasonable bounds
@@ -409,7 +409,6 @@ class Editor:
         self.wr(default)
         self.clear_to_eol()
         res = default
-        self.message = ' ' # Shows status after lineedit
         while True:
             key = self.get_input()  ## Get Char of Fct.
             if key in (KEY_ENTER, KEY_TAB): ## Finis
@@ -450,7 +449,6 @@ class Editor:
             return 0
         self.col = match + spos
         self.cur_line = line
-        self.message = ' ' ## force status once
         return len(pattern)
 
     def cursor_down(self):
@@ -468,19 +466,23 @@ class Editor:
                 if self.cur_line < self.top_line:
                     self.scroll_up(1)
         elif key == KEY_LEFT:
-            if self.col > 0:
-                self.col -= 1
-            elif self.cur_line > 0:
+#ifndef BASIC
+            if self.col == 0 and self.cur_line > 0:
                 self.cur_line -= 1
                 self.col = len(self.content[self.cur_line])
                 if self.cur_line < self.top_line:
                     self.scroll_up(1)
+            else:
+#endif
+                self.col -= 1
         elif key == KEY_RIGHT:
-            if self.col < len(self.content[self.cur_line]):
-                self.col += 1
-            elif self.cur_line < self.total_lines - 1:
+#ifndef BASIC
+            if self.col >= len(self.content[self.cur_line]) and self.cur_line < self.total_lines - 1:
                 self.cursor_down()
                 self.col = 0
+            else:
+#endif
+                self.col += 1
         elif key == KEY_HOME:
             self.col = self.spaces(self.content[self.cur_line]) if self.col == 0 else 0
         elif key == KEY_END:
@@ -511,7 +513,6 @@ class Editor:
             if self.mouse_y < self.height:
                 self.col = self.mouse_x + self.margin
                 self.cur_line = self.mouse_y + self.top_line
-            self.message = ' '
         elif key == KEY_SCRLUP: ##
             if self.top_line > 0:
                 self.top_line = max(self.top_line - 3, 0)
@@ -546,6 +547,7 @@ class Editor:
         return True
 
     def undo_add(self, lnum, text, key, span = 1):
+        self.changed = '*'
         if self.undo_limit > 0 and (
            len(self.undo) == 0 or key == 0 or self.undo[-1][3] != key or self.undo[-1][0] != lnum):
             if len(self.undo) >= self.undo_limit: ## drop oldest undo
@@ -568,13 +570,11 @@ class Editor:
             self.content[self.cur_line:self.cur_line] = [' ' * ni + l[self.col:]]
             self.total_lines += 1
             self.col = ni
-            self.changed = '*'
         elif key == KEY_BACKSPACE:
             if self.col > 0:
                 self.undo_add(self.cur_line, [l], key)
                 self.content[self.cur_line] = l[:self.col - 1] + l[self.col:]
                 self.col -= 1
-                self.changed = '*'
 #ifndef BASIC
             elif self.cur_line > 0: # at the start of a line, but not the first
                 self.undo_add(self.cur_line - 1, [self.content[self.cur_line - 1], l], 0)
@@ -582,49 +582,42 @@ class Editor:
                 self.content[self.cur_line - 1] += self.content.pop(self.cur_line)
                 self.cur_line -= 1
                 self.total_lines -= 1
-                self.changed = '*'
 #endif
         elif key == KEY_DELETE:
             if self.col < len(l):
                 self.undo_add(self.cur_line, [l], key)
-                l = l[:self.col] + l[self.col + 1:]
-                self.content[self.cur_line] = l
-                self.changed = '*'
+                self.content[self.cur_line] = l[:self.col] + l[self.col + 1:]
             elif (self.cur_line + 1) < self.total_lines: ## test for last line
                 self.undo_add(self.cur_line, [l, self.content[self.cur_line + 1]], 0)
                 self.content[self.cur_line] = l + self.content.pop(self.cur_line + 1)
                 self.total_lines -= 1
-                self.changed = '*'
         elif key == KEY_TAB:
-            self.undo_add(self.cur_line, [l], key)
-            if False: pass
 #ifndef BASIC
-            else:
-                ns = self.spaces(l)
-            if self.col == 0 and self.col != ns:
+            ns = self.spaces(l)
+            if self.col == 0 and ns > 0:
+                self.undo_add(self.cur_line, [l], key)
                 self.content[self.cur_line] = ' ' * (self.tab_size - ns % self.tab_size) + l
                 self.cursor_down()
-#endif
             else:
+#endif
+                self.undo_add(self.cur_line, [l], key)
                 ni = self.tab_size - self.col % self.tab_size ## determine spaces to add
                 self.content[self.cur_line] = l[:self.col] + ' ' * ni + l[self.col:]
                 self.col += ni
-            self.changed = '*'
         elif key == KEY_BACKTAB:
-            self.undo_add(self.cur_line, [l], key)
-            if False: pass
 #ifndef BASIC
-            else:
-                ns = self.spaces(l)
+            ns = self.spaces(l)
             if self.col == 0 and ns > 0:
+                self.undo_add(self.cur_line, [l], key)
                 self.content[self.cur_line] = l[(ns - 1) % self.tab_size + 1:]
                 self.cursor_down()
-#endif
             else:
+#endif
                 ni = min((self.col - 1) % self.tab_size + 1, self.spaces(l, self.col)) ## determine spaces to drop
-                self.content[self.cur_line] = l[:self.col - ni] + l[self.col:]
-                self.col -= ni
-            self.changed = '*'
+                if ni > 0:
+                    self.undo_add(self.cur_line, [l], key)
+                    self.content[self.cur_line] = l[:self.col - ni] + l[self.col:]
+                    self.col -= ni
 #ifndef BASIC
         elif key == KEY_REPLC:
             count = 0
@@ -649,7 +642,6 @@ class Editor:
                                 self.content[self.cur_line] = self.content[self.cur_line][:self.col] + rpat + self.content[self.cur_line][self.col + ni:]
                                 self.col += len(rpat)
                                 count += 1
-                                self.changed = '*'
                             else: ## everything else is no
                                 self.col += 1
                         else:
@@ -663,22 +655,19 @@ class Editor:
                     self.undo_add(self.cur_line, None, 0, -len(content))
                     self.content[self.cur_line:self.cur_line] = content
                     self.total_lines = len(self.content)
-                    self.changed = "*"
 #endif
         elif key == KEY_YANK:  # delete line into buffer
-            self.undo_add(self.cur_line, [l], 0, 0)
             if key == self.lastkey: # yank series?
                 self.yank_buffer.append(l) # add line
             else:
                 self.yank_buffer = [l]
             if self.total_lines > 1: ## not a single line
+                self.undo_add(self.cur_line, [l], 0, 0) ## undo inserts
                 del self.content[self.cur_line]
                 self.total_lines -= 1
-                if self.cur_line  >= self.total_lines: ## on last line move pointer
-                    self.cur_line -= 1
             else: ## line is kept but wiped
+                self.undo_add(self.cur_line, [l], 0, 1) ## undo replaces
                 self.content[self.cur_line] = ''
-            self.changed = '*'
         elif key == KEY_DUP:  # copy line into buffer and go down one line
             if key == self.lastkey: # yank series?
                 self.yank_buffer.append(l) # add line
@@ -690,7 +679,6 @@ class Editor:
                 self.undo_add(self.cur_line, None, 0, -len(self.yank_buffer))
                 self.content[self.cur_line:self.cur_line] = self.yank_buffer # insert lines
                 self.total_lines += len(self.yank_buffer)
-                self.changed = '*'
         elif key == KEY_WRITE:
             fname = self.fname
             if fname == None:
@@ -731,7 +719,6 @@ class Editor:
             self.undo_add(self.cur_line, [l], 0x20 if key == 0x20 else 0x41)
             self.content[self.cur_line] = l[:self.col] + chr(key) + l[self.col:]
             self.col += 1
-            self.changed = '*'
 
     def edit_loop(self): ## main editing loop
 
@@ -780,7 +767,7 @@ class Editor:
                 del self.undo[:]
                 del self.yank_buffer[:]
                 gc.collect()
-                self.message ="Memory Error. Undo and Yank cleared!"
+                self.message = "Memory Error. Undo and Yank cleared!"
 
 
 ## expandtabs: hopefully sometimes replaced by the built-in function
@@ -814,7 +801,8 @@ class Editor:
         return sb.getvalue()
 #endif
     def get_file(self, fname):
-        try:
+        from os import listdir
+        if fname in listdir():
 #ifdef LINUX
             if sys.implementation.name == "cpython":
                 with open(fname, errors="ignore") as f:
@@ -823,8 +811,8 @@ class Editor:
 #endif
                 with open(fname) as f:
                     content = f.readlines()
-        except Exception as err:
-            message = 'Could not load %s, Error: %s' % (fname, err)
+        else:
+            message = 'Could not load %s, File is not in the local directory' % fname
             return (None, message)
         for i in range(len(content)):  ## strip and convert
             content[i] = self.expandtabs(content[i].rstrip('\r\n\t '))

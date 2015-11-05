@@ -29,7 +29,7 @@ class Editor:
         self.tab_size = tab_size
         self.changed = ' '
         self.sticky_c = " "
-        self.message = " "
+        self.message = ""
         self.find_pattern = ""
         self.fname = None
         self.content = [""]
@@ -113,19 +113,19 @@ class Editor:
         self.scroll_region(self.height)
     def get_input(self): 
         while True:
-            input = Editor.rd()
-            if input == b'\x1b': 
+            in_buffer = Editor.rd()
+            if in_buffer == b'\x1b': 
                 while True:
-                    input += Editor.rd()
-                    c = chr(input[-1])
+                    in_buffer += Editor.rd()
+                    c = chr(in_buffer[-1])
                     if c == '~' or (c.isalpha() and c != 'O'):
                         break
-            if input in self.KEYMAP:
-                c = self.KEYMAP[input]
+            if in_buffer in self.KEYMAP:
+                c = self.KEYMAP[in_buffer]
                 if c != 0x1b:
                     return c
-            elif len(input) == 1: 
-                return input[0]
+            elif len(in_buffer) == 1: 
+                return in_buffer[0]
     def display_window(self): 
         self.cur_line = min(self.total_lines - 1, max(self.cur_line, 0))
         self.col = max(0, min(self.col, len(self.content[self.cur_line])))
@@ -172,7 +172,6 @@ class Editor:
         self.wr(default)
         self.clear_to_eol()
         res = default
-        self.message = ' ' 
         while True:
             key = self.get_input() 
             if key in (0x0a, 0x09): 
@@ -208,7 +207,6 @@ class Editor:
             return 0
         self.col = match + spos
         self.cur_line = line
-        self.message = ' ' 
         return len(pattern)
     def cursor_down(self):
         if self.cur_line < self.total_lines - 1:
@@ -224,19 +222,9 @@ class Editor:
                 if self.cur_line < self.top_line:
                     self.scroll_up(1)
         elif key == 0x0c:
-            if self.col > 0:
                 self.col -= 1
-            elif self.cur_line > 0:
-                self.cur_line -= 1
-                self.col = len(self.content[self.cur_line])
-                if self.cur_line < self.top_line:
-                    self.scroll_up(1)
         elif key == 0x0f:
-            if self.col < len(self.content[self.cur_line]):
                 self.col += 1
-            elif self.cur_line < self.total_lines - 1:
-                self.cursor_down()
-                self.col = 0
         elif key == 0x10:
             self.col = self.spaces(self.content[self.cur_line]) if self.col == 0 else 0
         elif key == 0x11:
@@ -266,6 +254,7 @@ class Editor:
             return False
         return True
     def undo_add(self, lnum, text, key, span = 1):
+        self.changed = '*'
         if self.undo_limit > 0 and (
            len(self.undo) == 0 or key == 0 or self.undo[-1][3] != key or self.undo[-1][0] != lnum):
             if len(self.undo) >= self.undo_limit: 
@@ -287,54 +276,42 @@ class Editor:
             self.content[self.cur_line:self.cur_line] = [' ' * ni + l[self.col:]]
             self.total_lines += 1
             self.col = ni
-            self.changed = '*'
         elif key == 0x08:
             if self.col > 0:
                 self.undo_add(self.cur_line, [l], key)
                 self.content[self.cur_line] = l[:self.col - 1] + l[self.col:]
                 self.col -= 1
-                self.changed = '*'
         elif key == 0x1f:
             if self.col < len(l):
                 self.undo_add(self.cur_line, [l], key)
-                l = l[:self.col] + l[self.col + 1:]
-                self.content[self.cur_line] = l
-                self.changed = '*'
+                self.content[self.cur_line] = l[:self.col] + l[self.col + 1:]
             elif (self.cur_line + 1) < self.total_lines: 
                 self.undo_add(self.cur_line, [l, self.content[self.cur_line + 1]], 0)
                 self.content[self.cur_line] = l + self.content.pop(self.cur_line + 1)
                 self.total_lines -= 1
-                self.changed = '*'
         elif key == 0x09:
-            self.undo_add(self.cur_line, [l], key)
-            if False: pass
-            else:
+                self.undo_add(self.cur_line, [l], key)
                 ni = self.tab_size - self.col % self.tab_size 
                 self.content[self.cur_line] = l[:self.col] + ' ' * ni + l[self.col:]
                 self.col += ni
-            self.changed = '*'
         elif key == 0x15:
-            self.undo_add(self.cur_line, [l], key)
-            if False: pass
-            else:
                 ni = min((self.col - 1) % self.tab_size + 1, self.spaces(l, self.col)) 
-                self.content[self.cur_line] = l[:self.col - ni] + l[self.col:]
-                self.col -= ni
-            self.changed = '*'
+                if ni > 0:
+                    self.undo_add(self.cur_line, [l], key)
+                    self.content[self.cur_line] = l[:self.col - ni] + l[self.col:]
+                    self.col -= ni
         elif key == 0x18: 
-            self.undo_add(self.cur_line, [l], 0, 0)
             if key == self.lastkey: 
                 self.yank_buffer.append(l) 
             else:
                 self.yank_buffer = [l]
             if self.total_lines > 1: 
+                self.undo_add(self.cur_line, [l], 0, 0) 
                 del self.content[self.cur_line]
                 self.total_lines -= 1
-                if self.cur_line >= self.total_lines: 
-                    self.cur_line -= 1
             else: 
+                self.undo_add(self.cur_line, [l], 0, 1) 
                 self.content[self.cur_line] = ''
-            self.changed = '*'
         elif key == 0x04: 
             if key == self.lastkey: 
                 self.yank_buffer.append(l) 
@@ -346,7 +323,6 @@ class Editor:
                 self.undo_add(self.cur_line, None, 0, -len(self.yank_buffer))
                 self.content[self.cur_line:self.cur_line] = self.yank_buffer 
                 self.total_lines += len(self.yank_buffer)
-                self.changed = '*'
         elif key == 0x13:
             fname = self.fname
             if fname == None:
@@ -382,7 +358,6 @@ class Editor:
             self.undo_add(self.cur_line, [l], 0x20 if key == 0x20 else 0x41)
             self.content[self.cur_line] = l[:self.col] + chr(key) + l[self.col:]
             self.col += 1
-            self.changed = '*'
     def edit_loop(self): 
         if len(self.content) == 0: 
             self.content = [""]
@@ -416,7 +391,7 @@ class Editor:
                 del self.undo[:]
                 del self.yank_buffer[:]
                 gc.collect()
-                self.message ="Memory Error. Undo and Yank cleared!"
+                self.message = "Memory Error. Undo and Yank cleared!"
     def expandtabs(self, s):
         from _io import StringIO
         if '\t' in s:
@@ -433,11 +408,12 @@ class Editor:
         else:
             return s
     def get_file(self, fname):
-        try:
+        from os import listdir
+        if fname in listdir():
                 with open(fname) as f:
                     content = f.readlines()
-        except Exception as err:
-            message = 'Could not load %s, Error: %s' % (fname, err)
+        else:
+            message = 'Could not load %s, File is not in the local directory' % fname
             return (None, message)
         for i in range(len(content)): 
             content[i] = self.expandtabs(content[i].rstrip('\r\n\t '))

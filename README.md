@@ -87,3 +87,8 @@ c) expandtabs() and packtabs() with a second argument for tabsize (not for pye, 
 - Reduced KEYMAP in the WiPy version by omitting entries, where the function code is identical to the key value (e.g. \x08 -> 8). Not fool proof, but it helps reducing the size.
 - Adding a "Tabbify" behaviour for the full version. Tab/Backtab with the cursor at col 1 indents/unindents the line and moves the cursor one line down.
 
+**1.7b** Further size reduction for WiPy
+- Moved setting of the change flag into the function add_undo()
+- Removed skipping to the adjacent line with Right/Left in the WiPy Version
+- Temporary avoidance of the memory leak when a file is not found
+
