@@ -392,7 +392,7 @@ class Editor:
                 del self.yank_buffer[:]
                 gc.collect()
                 self.message = "Memory Error. Undo and Yank cleared!"
-    def expandtabs(self, s):
+    def expandtabs(self,s):
         from _io import StringIO
         if '\t' in s:
             sb = StringIO()
@@ -419,6 +419,7 @@ class Editor:
             content[i] = self.expandtabs(content[i].rstrip('\r\n\t '))
         return (content, "")
 def pye(content = None, tab_size = 4, undo = 50, device = 0, baud = 115200):
+    gc.collect() 
     e = Editor(tab_size, undo)
     if type(content) == str and content: 
         e.fname = content

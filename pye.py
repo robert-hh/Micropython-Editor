@@ -771,7 +771,7 @@ class Editor:
 
 
 ## expandtabs: hopefully sometimes replaced by the built-in function
-    def expandtabs(self, s):
+    def expandtabs(self,s):
         from _io import StringIO
         if '\t' in s:
             sb = StringIO()
@@ -820,6 +820,7 @@ class Editor:
 
 def pye(content = None, tab_size = 4, undo = 50, device = 0, baud = 115200):
 ## prepare content
+    gc.collect() ## all (memory) is mine
     e = Editor(tab_size, undo)
     if type(content) == str and content: ## String = non-empty Filename
         e.fname = content
@@ -853,7 +854,7 @@ if __name__ == "__main__":
                     os.close(0) ## close and repopen /dev/tty
                     fd_tty = os.open("/dev/tty", os.O_RDONLY) ## memorized, if new fd
                     for i in range(len(name)):  ## strip and convert
-                        name[i] = Editor.expandtabs(name[i].rstrip('\r\n\t '))
+                        name[i] = Editor.expandtabs(0, name[i].rstrip('\r\n\t '))
         pye(name, undo = 500, device=fd_tty)
     else:
         print ("\nSorry, this OS is not supported (yet)")
