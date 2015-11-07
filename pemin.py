@@ -67,7 +67,7 @@ class Editor:
                 Editor.serialcomm.setinterrupt(3)
     @staticmethod
     def goto(row, col):
-        Editor.wr("\x1b[%d;%dH" % (row + 1, col + 1))
+        Editor.wr("\x1b[{};{}H".format(row + 1, col + 1))
     @staticmethod
     def clear_to_eol():
         Editor.wr(b"\x1b[0K")
@@ -86,7 +86,7 @@ class Editor:
     @staticmethod
     def scroll_region(stop):
         if stop:
-            Editor.wr('\x1b[1;%dr' % stop) 
+            Editor.wr('\x1b[1;{}r'.format(stop)) 
         else:
             Editor.wr('\x1b[r') 
     def scroll_up(self, scrolling):
@@ -155,7 +155,7 @@ class Editor:
                 i += 1
         self.goto(self.height, 0)
         self.hilite(1)
-        self.wr("[%d] %c Row: %d Col: %d  %s" % (self.total_lines, self.changed, self.cur_line + 1, self.col + 1, self.message[:self.width - 25]))
+        self.wr("[{}] {} Row: {} Col: {}  {}".format(self.total_lines, self.changed, self.cur_line + 1, self.col + 1, self.message[:self.width - 25]))
         self.hilite(0)
         self.clear_to_eol() 
         self.goto(self.row, self.col - self.margin)
@@ -338,7 +338,7 @@ class Editor:
                     del self.undo[:]
                     self.fname = fname 
                 except Exception as err:
-                    self.message = 'Could not save %s, Error: %s' % (fname, err)
+                    self.message = 'Could not save {}, {!r}'.format(fname, err)
         elif key == 0x1a:
             if len(self.undo) > 0:
                 action = self.undo.pop(-1) 
@@ -382,7 +382,7 @@ class Editor:
                     self.row = min(self.height - 1, self.row)
                     if sys.implementation.name == "micropython":
                         gc.collect()
-                        self.message = "%d Bytes Memory available" % gc.mem_free()
+                        self.message = "{} Bytes Memory available".format(gc.mem_free())
                 elif self.handle_cursor_keys(key):
                     pass
                 else: self.handle_edit_key(key)
@@ -392,7 +392,7 @@ class Editor:
                 del self.yank_buffer[:]
                 gc.collect()
                 self.message = "Memory Error. Undo and Yank cleared!"
-    def expandtabs(self,s):
+    def expandtabs(self, s):
         from _io import StringIO
         if '\t' in s:
             sb = StringIO()
@@ -413,7 +413,7 @@ class Editor:
                 with open(fname) as f:
                     content = f.readlines()
         else:
-            message = 'Could not load %s, File is not in the local directory' % fname
+            message = 'File {!r} is not in the local directory'.format(fname)
             return (None, message)
         for i in range(len(content)): 
             content[i] = self.expandtabs(content[i].rstrip('\r\n\t '))

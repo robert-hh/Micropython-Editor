@@ -12,10 +12,10 @@
             return False
         spos = pos
         for line in range(self.cur_line, self.total_lines):
-            if self.case == "y":
-                match = rex.search(self.content[line][spos:])
-            else:
+            if self.case != "y":
                 match = rex.search(self.content[line][spos:].lower())
+            else:
+                match = rex.search(self.content[line][spos:])
             if match:
                 break
             spos = 0
@@ -23,10 +23,10 @@
             self.message = pattern + " not found"
             return 0
 ## micropython does not support span(), therefore a second simple find on the target line
-        if self.case == "y":
-            self.col = max(self.content[line][spos:].find(match.group(0)), 0) + spos
-        else:
+        if self.case != "y":
             self.col = max(self.content[line][spos:].lower().find(match.group(0)), 0) + spos
+        else:
+            self.col = max(self.content[line][spos:].find(match.group(0)), 0) + spos
         self.cur_line = line
         self.message = ' ' ## force status once
         return len(match.group(0))
@@ -121,5 +121,26 @@
     @staticmethod
     def cls():
         Editor.wr(b"\x1b[2J")
+#
+# This is a safe place for the initial get_file function, which is replaced by another one
+# until the MiPy error about stalling about non-existing files is solved
+#
+    def get_file(self, fname):
+        try:
+#ifdef LINUX
+            if sys.implementation.name == "cpython":
+                with open(fname, errors="ignore") as f:
+                    content = f.readlines()
+            else:
+#endif
+                with open(fname) as f:
+                    content = f.readlines()
+        except Exception as err:
+            message = 'Could not load {}, {!r}'.format(fname, err)
+            return (None, message)
+        for i in range(len(content)):  ## strip and convert
+            content[i] = self.expandtabs(content[i].rstrip('\r\n\t '))
+        return (content, "")
+
 
 

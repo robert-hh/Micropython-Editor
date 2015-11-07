@@ -267,7 +267,7 @@ class Editor:
 #endif
     @staticmethod
     def goto(row, col):
-        Editor.wr("\x1b[%d;%dH" % (row + 1, col + 1))
+        Editor.wr("\x1b[{};{}H".format(row + 1, col + 1))
 
     @staticmethod
     def clear_to_eol():
@@ -298,7 +298,7 @@ class Editor:
     @staticmethod
     def scroll_region(stop):
         if stop:
-            Editor.wr('\x1b[1;%dr' % stop) ## enable partial scrolling
+            Editor.wr('\x1b[1;{}r'.format(stop)) ## enable partial scrolling
         else:
             Editor.wr('\x1b[r') ## full scrolling
 
@@ -390,7 +390,7 @@ class Editor:
 ## display Status-Line
         self.goto(self.height, 0)
         self.hilite(1)
-        self.wr("[%d] %c Row: %d Col: %d  %s" % (self.total_lines, self.changed, self.cur_line + 1, self.col + 1, self.message[:self.width - 25]))
+        self.wr("[{}] {} Row: {} Col: {}  {}".format(self.total_lines, self.changed, self.cur_line + 1, self.col + 1, self.message[:self.width - 25]))
         self.hilite(0)
         self.clear_to_eol() ## once moved up for mate/xfce4-terminal issue with scroll region
         self.goto(self.row, self.col - self.margin)
@@ -646,7 +646,7 @@ class Editor:
                                 self.col += 1
                         else:
                             break
-                    self.message = "'%s' replaced %d times" % (pat, count)
+                    self.message = "'{}' replaced {} times".format(pat, count)
         elif key == KEY_GET:
             fname = self.line_edit("Insert File: ", "")
             if fname:
@@ -699,7 +699,7 @@ class Editor:
                     del self.undo[:]
                     self.fname = fname ## remember (new) name
                 except Exception as err:
-                    self.message = 'Could not save %s, Error: %s' % (fname, err)
+                    self.message = 'Could not save {}, {!r}'.format(fname, err)
         elif key == KEY_UNDO:
             if len(self.undo) > 0:
                 action = self.undo.pop(-1) ## get action from stack
@@ -758,7 +758,7 @@ class Editor:
 #endif
                     if sys.implementation.name == "micropython":
                         gc.collect()
-                        self.message = "%d Bytes Memory available" % gc.mem_free()
+                        self.message = "{} Bytes Memory available".format(gc.mem_free())
                 elif  self.handle_cursor_keys(key):
                     pass
                 else: self.handle_edit_key(key)
@@ -771,7 +771,7 @@ class Editor:
 
 
 ## expandtabs: hopefully sometimes replaced by the built-in function
-    def expandtabs(self,s):
+    def expandtabs(self, s):
         from _io import StringIO
         if '\t' in s:
             sb = StringIO()
@@ -812,7 +812,7 @@ class Editor:
                 with open(fname) as f:
                     content = f.readlines()
         else:
-            message = 'Could not load %s, File is not in the local directory' % fname
+            message = 'File {!r} is not in the local directory'.format(fname)
             return (None, message)
         for i in range(len(content)):  ## strip and convert
             content[i] = self.expandtabs(content[i].rstrip('\r\n\t '))
