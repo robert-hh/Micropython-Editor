@@ -121,26 +121,7 @@
     @staticmethod
     def cls():
         Editor.wr(b"\x1b[2J")
-#
-# This is a safe place for the initial get_file function, which is replaced by another one
-# until the MiPy error about stalling about non-existing files is solved
-#
-    def get_file(self, fname):
-        try:
-#ifdef LINUX
-            if sys.implementation.name == "cpython":
-                with open(fname, errors="ignore") as f:
-                    content = f.readlines()
-            else:
-#endif
-                with open(fname) as f:
-                    content = f.readlines()
-        except Exception as err:
-            message = 'Could not load {}, {!r}'.format(fname, err)
-            return (None, message)
-        for i in range(len(content)):  ## strip and convert
-            content[i] = self.expandtabs(content[i].rstrip('\r\n\t '))
-        return (content, "")
+
 
 
 

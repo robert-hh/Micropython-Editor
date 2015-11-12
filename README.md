@@ -92,3 +92,6 @@ c) expandtabs() and packtabs() with a second argument for tabsize (not for pye, 
 - Removed skipping to the adjacent line with Right/Left in the WiPy Version
 - Temporary avoidance of the memory leak when a file is not found
 
+**1.7c** Re-establish try-except for file-not-found error
+- Removed the temporary fix for memory corruption by exception for file-not-found error
+- Changed string formatting to Python3 style

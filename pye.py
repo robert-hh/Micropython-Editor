@@ -524,8 +524,7 @@ class Editor:
                 self.cur_line = max(self.cur_line, self.top_line)
                 self.scroll_down(3)
         elif key == KEY_TOGGLE: ## Toggle Autoindent/Statusline/Search case
-            pat = self.line_edit("Case Sensitive Search %c, Autoindent %c, Tab Size %d, Write Tabs %c: " %
-                  (self.case, self.autoindent, self.tab_size, self.write_tabs), "")
+            pat = self.line_edit("Case Sensitive Search {}, Autoindent {}, Tab Size {}, Write Tabs {}: ".format(self.case, self.autoindent, self.tab_size, self.write_tabs), "")
             try:
                 res =  [i.strip().lower() for i in pat.split(",")]
                 if res[0]: self.case       = 'y' if res[0][0] == 'y' else 'n'
@@ -801,8 +800,7 @@ class Editor:
         return sb.getvalue()
 #endif
     def get_file(self, fname):
-        from os import listdir
-        if fname in listdir():
+        try:
 #ifdef LINUX
             if sys.implementation.name == "cpython":
                 with open(fname, errors="ignore") as f:
@@ -811,8 +809,8 @@ class Editor:
 #endif
                 with open(fname) as f:
                     content = f.readlines()
-        else:
-            message = 'File {!r} is not in the local directory'.format(fname)
+        except Exception as err:
+            message = 'Could not load {}, {!r}'.format(fname, err)
             return (None, message)
         for i in range(len(content)):  ## strip and convert
             content[i] = self.expandtabs(content[i].rstrip('\r\n\t '))

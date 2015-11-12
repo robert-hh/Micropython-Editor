@@ -414,12 +414,11 @@ class Editor:
         else:
             return s
     def get_file(self, fname):
-        from os import listdir
-        if fname in listdir():
+        try:
                 with open(fname) as f:
                     content = f.readlines()
-        else:
-            message = 'File {!r} is not in the local directory'.format(fname)
+        except Exception as err:
+            message = 'Could not load {}, {!r}'.format(fname, err)
             return (None, message)
         for i in range(len(content)): 
             content[i] = self.expandtabs(content[i].rstrip('\r\n\t '))
