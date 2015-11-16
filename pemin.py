@@ -3,7 +3,7 @@ class Editor:
     KEYMAP = { 
     b"\x1b[A" : 0x0b,
     b"\x1b[B" : 0x0d,
-    b"\x1b[D" : 0x0c,
+    b"\x1b[D" : 0x1f,
     b"\x1b[C" : 0x0f,
     b"\x1b[H" : 0x10, 
     b"\x1bOH" : 0x10, 
@@ -16,7 +16,7 @@ class Editor:
     b"\x11" : 0x03, 
     b"\r" : 0x0a,
     b"\x7f" : 0x08, 
-    b"\x1b[3~": 0x1f,
+    b"\x1b[3~": 0x7f,
     b"\x1b[Z" : 0x15, 
     b"\x1b[3;5~": 0x18, 
     }
@@ -38,85 +38,79 @@ class Editor:
         self.case = "n"
         self.autoindent = "y"
         self.yank_buffer = []
-        self.lastkey = 0
+        self.mark = -1
+        self.check_mark = -1
     if sys.platform == "pyboard":
-        @staticmethod
-        def wr(s):
+        def wr(self,s):
             ns = 0
             while ns < len(s): 
-                res = Editor.serialcomm.write(s[ns:])
+                res = self.serialcomm.write(s[ns:])
                 if res != None:
                     ns += res
-        @staticmethod
-        def rd():
-            while not Editor.serialcomm.any():
+        def rd(self):
+            while not self.serialcomm.any():
                 pass
-            return Editor.serialcomm.read(1)
-        @staticmethod
-        def init_tty(device, baud):
+            return self.serialcomm.read(1)
+        def init_tty(self, device, baud):
             import pyb
-            Editor.sdev = device
-            if Editor.sdev:
-                Editor.serialcomm = pyb.UART(device, baud)
+            self.sdev = device
+            if self.sdev:
+                self.serialcomm = pyb.UART(device, baud)
             else:
-                Editor.serialcomm = pyb.USB_VCP()
-                Editor.serialcomm.setinterrupt(-1)
-        @staticmethod
-        def deinit_tty():
-            if not Editor.sdev:
-                Editor.serialcomm.setinterrupt(3)
-    @staticmethod
-    def goto(row, col):
-        Editor.wr("\x1b[{};{}H".format(row + 1, col + 1))
-    @staticmethod
-    def clear_to_eol():
-        Editor.wr(b"\x1b[0K")
-    @staticmethod
-    def cursor(onoff):
+                self.serialcomm = pyb.USB_VCP()
+                self.serialcomm.setinterrupt(-1)
+        def deinit_tty(self):
+            if not self.sdev:
+                self.serialcomm.setinterrupt(3)
+    def goto(self, row, col):
+        self.wr("\x1b[{};{}H".format(row + 1, col + 1))
+    def clear_to_eol(self):
+        self.wr(b"\x1b[0K")
+    def cursor(self, onoff):
         if onoff:
-            Editor.wr(b"\x1b[?25h")
+            self.wr(b"\x1b[?25h")
         else:
-            Editor.wr(b"\x1b[?25l")
-    @staticmethod
-    def hilite(mode):
+            self.wr(b"\x1b[?25l")
+    def hilite(self, mode):
         if mode == 1:
-            Editor.wr(b"\x1b[1m")
+            self.wr(b"\x1b[1m")
+        if mode == 2:
+            self.wr(b"\x1b[7m")
         else:
-            Editor.wr(b"\x1b[0m")
-    @staticmethod
-    def scroll_region(stop):
+            self.wr(b"\x1b[0m")
+    def scroll_region(self, stop):
         if stop:
-            Editor.wr('\x1b[1;{}r'.format(stop)) 
+            self.wr('\x1b[1;{}r'.format(stop)) 
         else:
-            Editor.wr('\x1b[r') 
+            self.wr('\x1b[r') 
     def scroll_up(self, scrolling):
         self.scrbuf[scrolling:] = self.scrbuf[:-scrolling]
         self.scrbuf[:scrolling] = [''] * scrolling
         self.goto(0, 0)
-        Editor.wr("\x1bM" * scrolling)
+        self.wr("\x1bM" * scrolling)
     def scroll_down(self, scrolling):
         self.scrbuf[:-scrolling] = self.scrbuf[scrolling:]
         self.scrbuf[-scrolling:] = [''] * scrolling
         self.goto(self.height - 1, 0)
-        Editor.wr("\x1bD " * scrolling)
+        self.wr("\x1bD " * scrolling)
     def set_screen_parms(self):
         self.cursor(False)
-        Editor.wr('\x1b[999;999H\x1b[6n')
+        self.wr('\x1b[999;999H\x1b[6n')
         pos = b''
-        char = Editor.rd() 
+        char = self.rd() 
         while char != b'R':
             if char in b"0123456789;": pos += char
-            char = Editor.rd()
+            char = self.rd()
         (self.height, self.width) = [int(i, 10) for i in pos.split(b';')]
         self.height -= 1
         self.scrbuf = ["\x01"] * self.height 
         self.scroll_region(self.height)
     def get_input(self): 
         while True:
-            in_buffer = Editor.rd()
+            in_buffer = self.rd()
             if in_buffer == b'\x1b': 
                 while True:
-                    in_buffer += Editor.rd()
+                    in_buffer += self.rd()
                     c = chr(in_buffer[-1])
                     if c == '~' or (c.isalpha() and c != 'O'):
                         break
@@ -146,16 +140,25 @@ class Editor:
                     self.scrbuf[c] = ''
             else:
                 l = self.content[i][self.margin:self.margin + self.width]
-                if l != self.scrbuf[c]: 
+                if l != self.scrbuf[c] or i == self.check_mark: 
                     self.goto(c, 0)
-                    self.wr(l)
+                    if i == self.mark:
+                        self.hilite(2)
+                        self.wr(l)
+                        if l == "": self.wr('    ') 
+                        self.hilite(0)
+                    else:
+                        self.wr(l)
+                        if i == self.check_mark: self.check_mark = -1
                     if len(l) < self.width:
                         self.clear_to_eol()
                     self.scrbuf[c] = l
                 i += 1
         self.goto(self.height, 0)
         self.hilite(1)
-        self.wr("[{}] {} Row: {} Col: {}  {}".format(self.total_lines, self.changed, self.cur_line + 1, self.col + 1, self.message[:self.width - 25]))
+        self.wr("[{}] {} Row: {} Col: {}  {}".format(
+            self.total_lines, self.changed, self.cur_line + 1,
+            self.col + 1, self.message[:self.width - 25]))
         self.hilite(0)
         self.clear_to_eol() 
         self.goto(self.row, self.col - self.margin)
@@ -165,6 +168,11 @@ class Editor:
             return len(line) - len(line.lstrip(" "))
         else: 
             return len(line[:pos]) - len(line[:pos].rstrip(" "))
+    def line_range(self):
+        if self.mark < 0: return (self.cur_line, self.cur_line + 1, False)
+        else:
+            if self.mark < self.cur_line: return (self.mark, self.cur_line + 1, True)
+            else: return (self.cur_line, self.mark + 1, True)
     def line_edit(self, prompt, default): 
         self.goto(self.height, 0)
         self.hilite(1)
@@ -184,7 +192,7 @@ class Editor:
                 if (len(res) > 0):
                     res = res[:len(res)-1]
                     self.wr('\b \b')
-            elif key == 0x1f: 
+            elif key == 0x7f: 
                 self.wr('\b \b' * len(res))
                 res = ''
             elif key >= 0x20: 
@@ -221,7 +229,7 @@ class Editor:
                 self.cur_line -= 1
                 if self.cur_line < self.top_line:
                     self.scroll_up(1)
-        elif key == 0x0c:
+        elif key == 0x1f:
                 self.col -= 1
         elif key == 0x0f:
                 self.col += 1
@@ -281,7 +289,7 @@ class Editor:
                 self.undo_add(self.cur_line, [l], key)
                 self.content[self.cur_line] = l[:self.col - 1] + l[self.col:]
                 self.col -= 1
-        elif key == 0x1f:
+        elif key == 0x7f:
             if self.col < len(l):
                 self.undo_add(self.cur_line, [l], key)
                 self.content[self.cur_line] = l[:self.col] + l[self.col + 1:]
@@ -290,34 +298,52 @@ class Editor:
                 self.content[self.cur_line] = l + self.content.pop(self.cur_line + 1)
                 self.total_lines -= 1
         elif key == 0x09:
+            lrange = self.line_range()
+            if lrange[2]:
+                self.undo_add(lrange[0], self.content[lrange[0]:lrange[1]], key, lrange[1] - lrange[0]) 
+                for i in range(lrange[0],lrange[1]):
+                    self.content[i] = ' ' * (self.tab_size - self.spaces(self.content[i]) % self.tab_size) + self.content[i]
+            else:
                 self.undo_add(self.cur_line, [l], key)
                 ni = self.tab_size - self.col % self.tab_size 
                 self.content[self.cur_line] = l[:self.col] + ' ' * ni + l[self.col:]
                 self.col += ni
         elif key == 0x15:
+            lrange = self.line_range()
+            if lrange[2]:
+                self.undo_add(lrange[0], self.content[lrange[0]:lrange[1]], key, lrange[1] - lrange[0]) 
+                for i in range(lrange[0],lrange[1]):
+                    ns = self.spaces(self.content[i])
+                    if ns > 0:
+                        self.content[i] = self.content[i][(ns - 1) % self.tab_size + 1:]
+            else:
                 ni = min((self.col - 1) % self.tab_size + 1, self.spaces(l, self.col)) 
                 if ni > 0:
                     self.undo_add(self.cur_line, [l], key)
                     self.content[self.cur_line] = l[:self.col - ni] + l[self.col:]
                     self.col -= ni
-        elif key == 0x18: 
-            if key == self.lastkey: 
-                self.yank_buffer.append(l) 
+        elif key == 0x0c:
+            if self.mark == -1:
+                self.mark = self.check_mark = self.cur_line
             else:
-                self.yank_buffer = [l]
+                self.mark = -1
+        elif key == 0x18: 
+            lrange = self.line_range()
+            if lrange[2]: 
+                self.yank_buffer = self.content[lrange[0]:lrange[1]]
             if self.total_lines > 1: 
-                self.undo_add(self.cur_line, [l], 0, 0) 
-                del self.content[self.cur_line]
-                self.total_lines -= 1
+                self.undo_add(lrange[0], self.content[lrange[0]:lrange[1]], 0, 0) 
+                del self.content[lrange[0]:lrange[1]]
+                self.total_lines -= lrange[1] - lrange[0]
             else: 
                 self.undo_add(self.cur_line, [l], 0, 1) 
                 self.content[self.cur_line] = ''
+            self.cur_line = lrange[0]
+            self.mark = -1 
         elif key == 0x04: 
-            if key == self.lastkey: 
-                self.yank_buffer.append(l) 
-            else:
-                self.yank_buffer = [l]
-            self.cursor_down()
+            lrange = self.line_range()
+            if lrange[2]: 
+                self.yank_buffer = self.content[lrange[0]:lrange[1]]
         elif key == 0x16: 
             if self.yank_buffer:
                 self.undo_add(self.cur_line, None, 0, -len(self.yank_buffer))
@@ -342,15 +368,16 @@ class Editor:
         elif key == 0x1a:
             if len(self.undo) > 0:
                 action = self.undo.pop(-1) 
-                self.cur_line = action[0]
-                self.col = action[4]
+                if not action[3] in (0x09, 0x15):
+                    self.cur_line = action[0]
+                    self.col = action[4]
                 if action[1] >= 0: 
                     if action[0] < self.total_lines:
-                        self.content[self.cur_line:self.cur_line + action[1]] = action[2] 
+                        self.content[action[0]:action[0] + action[1]] = action[2] 
                     else:
                         self.content += action[2]
                 else: 
-                    del self.content[self.cur_line : self.cur_line - action[1]]
+                    del self.content[action[0]:action[0] - action[1]]
                 self.total_lines = len(self.content) 
                 if len(self.undo) == 0: 
                     self.changed = self.sticky_c
@@ -367,46 +394,24 @@ class Editor:
             self.display_window() 
             key = self.get_input() 
             self.message = '' 
-            try:
-                if key == 0x03:
-                    if self.changed != ' ':
-                        res = self.line_edit("Content changed! Quit without saving (y/N)? ", "N")
-                        if not res or res[0].upper() != 'Y':
-                            continue
-                    self.scroll_region(0)
-                    self.goto(self.height, 0)
-                    self.clear_to_eol()
-                    return None
-                elif key == 0x05:
-                    self.set_screen_parms()
-                    self.row = min(self.height - 1, self.row)
-                    if sys.implementation.name == "micropython":
-                        gc.collect()
-                        self.message = "{} Bytes Memory available".format(gc.mem_free())
-                elif self.handle_cursor_keys(key):
-                    pass
-                else: self.handle_edit_key(key)
-                self.lastkey = key
-            except MemoryError:
-                del self.undo[:]
-                del self.yank_buffer[:]
-                gc.collect()
-                self.message = "Memory Error. Undo and Yank cleared!"
-    def expandtabs(self, s):
-        from _io import StringIO
-        if '\t' in s:
-            sb = StringIO()
-            pos = 0
-            for c in s:
-                if c == '\t': 
-                    sb.write(" " * (8 - pos % 8)) 
-                    pos += 8 - pos % 8
-                else:
-                    sb.write(c)
-                    pos += 1
-            return sb.getvalue()
-        else:
-            return s
+            if key == 0x03:
+                if self.changed != ' ':
+                    res = self.line_edit("Content changed! Quit without saving (y/N)? ", "N")
+                    if not res or res[0].upper() != 'Y':
+                        continue
+                self.scroll_region(0)
+                self.goto(self.height, 0)
+                self.clear_to_eol()
+                return None
+            elif key == 0x05:
+                self.set_screen_parms()
+                self.row = min(self.height - 1, self.row)
+                if sys.implementation.name == "micropython":
+                    gc.collect()
+                    self.message = "{} Bytes Memory available".format(gc.mem_free())
+            elif self.handle_cursor_keys(key):
+                pass
+            else: self.handle_edit_key(key)
     def get_file(self, fname):
         try:
                 with open(fname) as f:
@@ -415,8 +420,23 @@ class Editor:
             message = 'Could not load {}, {!r}'.format(fname, err)
             return (None, message)
         for i in range(len(content)): 
-            content[i] = self.expandtabs(content[i].rstrip('\r\n\t '))
+            content[i] = expandtabs(content[i].rstrip('\r\n\t '))
         return (content, "")
+def expandtabs(s):
+    from _io import StringIO
+    if '\t' in s:
+        sb = StringIO()
+        pos = 0
+        for c in s:
+            if c == '\t': 
+                sb.write(" " * (8 - pos % 8)) 
+                pos += 8 - pos % 8
+            else:
+                sb.write(c)
+                pos += 1
+        return sb.getvalue()
+    else:
+        return s
 def pye(content = None, tab_size = 4, undo = 50, device = 0, baud = 115200):
     gc.collect() 
     e = Editor(tab_size, undo)

@@ -95,3 +95,10 @@ c) expandtabs() and packtabs() with a second argument for tabsize (not for pye, 
 **1.7c** Re-establish try-except for file-not-found error
 - Removed the temporary fix for memory corruption by exception for file-not-found error
 - Changed string formatting to Python3 style
+
+**1.8** Clean Copy & Paste, Indent, Un-Indent
+- Added a Mark Line key for Line Delete, Line Copy, Indent and Un-Indent
+- Changed Line Delete, Line Copy and Buffer Insert into a cleaner Copy & Paste mode
+- Added a cleaner Indent and Un-Indent method; for WiPy too 
+- Removed the attempt to recover from out-of-memory situations: did not work.
+- Still runs on WiPy, but really at it's limit

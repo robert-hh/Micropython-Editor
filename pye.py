@@ -5,14 +5,17 @@
 ## Copyright (c) 2015 Robert Hammelrath (additional code)
 ## Distributed under MIT License
 ## Changes:
-## - Ported the code to pyboard (still runs on Linux Python3 and on Linux Micropython)
-##   It uses VCP_USB on Pyboard, but that may easyly be changed to UART
-## - changed read keyboard function to comply with char-by-char input (on serial lines)
-## - added support for TAB, BACKTAB, SAVE, DEL at end joining lines, Find,
-## - Goto Line, Yank (delete line into buffer), Zap (insert buffer), UNDO, GET file
+## - Ported the code to PyBoard and Wipy (still runs on Linux or Darwin)
+##   It uses VCP_USB on Pyboard and sys.stdin on WiPy, or UART, if selected.
+## - changed read keyboard function to comply with char-by-char input
+## - added support for TAB, BACKTAB, SAVE, DEL and Backspace joining lines,
+##   Find, Replace, Goto Line, UNDO, GET file, Auto-Indent, Set Flags,
+##   Copy/Delete & Paste, Indent, Un-Indent
+## - Added mouse support for pointing and scrolling (not WiPy)
+## - handling tab (0x09) on reading & writing files,
+## - Added a status line, line number column and single line prompts for
+##   Quit, Save, Find, Replace, Flags and Goto
 ## - moved main into a function with some optional parameters
-## - Added a status line, line number column and single line prompts for Quit, Save, Find and Goto
-## - Added mouse support for pointing and scrolling
 ##
 import sys, gc
 #ifdef LINUX
@@ -22,7 +25,7 @@ if sys.platform in ("linux", "darwin"):
 #ifdef DEFINES
 #define KEY_UP          0x0b
 #define KEY_DOWN        0x0d
-#define KEY_LEFT        0x0c
+#define KEY_LEFT        0x1f
 #define KEY_RIGHT       0x0f
 #define KEY_HOME        0x10
 #define KEY_END         0x11
@@ -31,7 +34,7 @@ if sys.platform in ("linux", "darwin"):
 #define KEY_QUIT        0x03
 #define KEY_ENTER       0x0a
 #define KEY_BACKSPACE   0x08
-#define KEY_DELETE      0x1f
+#define KEY_DELETE      0x7f
 #define KEY_WRITE       0x13
 #define KEY_TAB         0x09
 #define KEY_BACKTAB     0x15
@@ -51,10 +54,11 @@ if sys.platform in ("linux", "darwin"):
 #define KEY_REDRAW      0x05
 #define KEY_UNDO        0x1a
 #define KEY_GET         0x1e
+#define KEY_MARK        0x0c
 #else
 KEY_UP        = 0x0b
 KEY_DOWN      = 0x0d
-KEY_LEFT      = 0x0c
+KEY_LEFT      = 0x1f
 KEY_RIGHT     = 0x0f
 KEY_HOME      = 0x10
 KEY_END       = 0x11
@@ -63,7 +67,7 @@ KEY_PGDN      = 0x19
 KEY_QUIT      = 0x03
 KEY_ENTER     = 0x0a
 KEY_BACKSPACE = 0x08
-KEY_DELETE    = 0x1f
+KEY_DELETE    = 0x7f
 KEY_WRITE     = 0x13
 KEY_TAB       = 0x09
 KEY_BACKTAB   = 0x15
@@ -86,8 +90,9 @@ KEY_SCRLUP    = 0x1c
 KEY_SCRLDN    = 0x1d
 KEY_TOGGLE    = 0x01
 KEY_GET       = 0x1e
+KEY_MARK      = 0x0c
 #endif
-
+ 
 class Editor:
 
     KEYMAP = { ## Gets lengthy
@@ -126,6 +131,7 @@ class Editor:
     b"\x18"   : KEY_YANK, ## Ctrl-X
     b"\x16"   : KEY_ZAP, ## Ctrl-V
     b"\x04"   : KEY_DUP, ## Ctrl-D
+    b"\x0c"   : KEY_MARK, ## Ctrl-L
 ##
     b"\x1b[M" : KEY_MOUSE,
     b"\x01"   : KEY_TOGGLE, ## Ctrl-A
@@ -155,41 +161,38 @@ class Editor:
         self.case = "n"
         self.autoindent = "y"
         self.yank_buffer = []
-        self.lastkey = 0
+        self.mark = -1
+        self.check_mark = -1
 #ifndef BASIC
         self.replc_pattern = ""
         self.write_tabs = "n"
 #endif
 #ifdef LINUX
     if sys.platform in ("linux", "darwin"):
-        @staticmethod
-        def wr(s):
+        def wr(self,s):
             if isinstance(s, str):
                 s = bytes(s, "utf-8")
             os.write(1, s)
 
-        @staticmethod
-        def rd():
+        def rd(self):
             while True:
                 try: ## WINCH causes interrupt
-                    return os.read(Editor.sdev,1)
+                    return os.read(self.sdev,1)
                 except:
                     if Editor.winch: ## simulate REDRAW key
                         Editor.winch = False
                         return b'\x05'
 
-        @staticmethod
-        def init_tty(device, baud):
-            Editor.org_termios = termios.tcgetattr(device)
+        def init_tty(self, device, baud):
+            self.org_termios = termios.tcgetattr(device)
             tty.setraw(device)
-            Editor.sdev = device
+            self.sdev = device
             if sys.implementation.name == "cpython":
                 signal.signal(signal.SIGWINCH, Editor.signal_handler)
 
-        @staticmethod
-        def deinit_tty():
+        def deinit_tty(self):
             import termios
-            termios.tcsetattr(Editor.sdev, termios.TCSANOW, Editor.org_termios)
+            termios.tcsetattr(self.sdev, termios.TCSANOW, self.org_termios)
 
         @staticmethod
         def signal_handler(sig, frame):
@@ -199,51 +202,45 @@ class Editor:
 #endif
 #ifdef PYBOARD
     if sys.platform == "pyboard":
-        @staticmethod
-        def wr(s):
+        def wr(self,s):
             ns = 0
             while ns < len(s): # complicated but needed, since USB_VCP.write() has issues
-                res = Editor.serialcomm.write(s[ns:])
+                res = self.serialcomm.write(s[ns:])
                 if res != None:
                     ns += res
 
-        @staticmethod
-        def rd():
-            while not Editor.serialcomm.any():
+        def rd(self):
+            while not self.serialcomm.any():
                 pass
-            return Editor.serialcomm.read(1)
+            return self.serialcomm.read(1)
 
-        @staticmethod
-        def init_tty(device, baud):
+        def init_tty(self, device, baud):
             import pyb
-            Editor.sdev = device
-            if Editor.sdev:
-                Editor.serialcomm = pyb.UART(device, baud)
+            self.sdev = device
+            if self.sdev:
+                self.serialcomm = pyb.UART(device, baud)
             else:
-                Editor.serialcomm = pyb.USB_VCP()
-                Editor.serialcomm.setinterrupt(-1)
+                self.serialcomm = pyb.USB_VCP()
+                self.serialcomm.setinterrupt(-1)
 
-        @staticmethod
-        def deinit_tty():
-            if not Editor.sdev:
-                Editor.serialcomm.setinterrupt(3)
+        def deinit_tty(self):
+            if not self.sdev:
+                self.serialcomm.setinterrupt(3)
 #endif
 #ifdef WIPY
     if sys.platform == "WiPy":
-        @staticmethod
-        def wr(s):
+        def wr(self, s):
             ns = 0
             while ns < len(s): # trial, since Telnet sometimes lags
-                res = Editor.serialcomm.write(s[ns:])
+                res = self.serialcomm.write(s[ns:])
                 if res != None:
                     ns += res
 
-        @staticmethod
-        def rd():
-            if Editor.sdev:
-                while not Editor.serialcomm.any():
+        def rd(self):
+            if self.sdev:
+                while not self.serialcomm.any():
                     pass
-                return Editor.serialcomm.read(1)
+                return self.serialcomm.read(1)
             else:
                 while True:
                     try:
@@ -252,76 +249,70 @@ class Editor:
                             return ch.encode()
                     except: pass
 
-        @staticmethod
-        def init_tty(device, baud):
+        def init_tty(self, device, baud):
             import machine
             if device:
-                Editor.serialcomm = machine.UART(device - 1, baud)
+                self.serialcomm = machine.UART(device - 1, baud)
             else:
-                Editor.serialcomm = sys.stdout
-            Editor.sdev = device
+                self.serialcomm = sys.stdout
+            self.sdev = device
 
-        @staticmethod
-        def deinit_tty():
+        def deinit_tty(self):
             pass
 #endif
-    @staticmethod
-    def goto(row, col):
-        Editor.wr("\x1b[{};{}H".format(row + 1, col + 1))
+    def goto(self, row, col):
+        self.wr("\x1b[{};{}H".format(row + 1, col + 1))
 
-    @staticmethod
-    def clear_to_eol():
-        Editor.wr(b"\x1b[0K")
+    def clear_to_eol(self):
+        self.wr(b"\x1b[0K")
 
-    @staticmethod
-    def cursor(onoff):
+    def cursor(self, onoff):
         if onoff:
-            Editor.wr(b"\x1b[?25h")
+            self.wr(b"\x1b[?25h")
         else:
-            Editor.wr(b"\x1b[?25l")
+            self.wr(b"\x1b[?25l")
 
-    @staticmethod
-    def hilite(mode):
+    def hilite(self, mode):
         if mode == 1:
-            Editor.wr(b"\x1b[1m")
+            self.wr(b"\x1b[1m")
+        if mode == 2:
+            self.wr(b"\x1b[7m")
         else:
-            Editor.wr(b"\x1b[0m")
+            self.wr(b"\x1b[0m")
 
 #ifndef BASIC
-    @staticmethod
-    def mouse_reporting(onoff):
+    def mouse_reporting(self, onoff):
         if onoff:
-            Editor.wr('\x1b[?9h') ## enable mouse reporting
+            self.wr('\x1b[?9h') ## enable mouse reporting
         else:
-            Editor.wr('\x1b[?9l') ## disable mouse reporting
+            self.wr('\x1b[?9l') ## disable mouse reporting
 #endif
-    @staticmethod
-    def scroll_region(stop):
+    def scroll_region(self, stop):
         if stop:
-            Editor.wr('\x1b[1;{}r'.format(stop)) ## enable partial scrolling
+            self.wr('\x1b[1;{}r'.format(stop)) ## enable partial scrolling
         else:
-            Editor.wr('\x1b[r') ## full scrolling
+            self.wr('\x1b[r') ## full scrolling
 
     def scroll_up(self, scrolling):
         self.scrbuf[scrolling:] = self.scrbuf[:-scrolling]
         self.scrbuf[:scrolling] = [''] * scrolling
         self.goto(0, 0)
-        Editor.wr("\x1bM" * scrolling)
+        self.wr("\x1bM" * scrolling)
 
     def scroll_down(self, scrolling):
         self.scrbuf[:-scrolling] = self.scrbuf[scrolling:]
         self.scrbuf[-scrolling:] = [''] * scrolling
         self.goto(self.height - 1, 0)
-        Editor.wr("\x1bD " * scrolling)
+        self.wr("\x1bD " * scrolling)
 
     def set_screen_parms(self):
         self.cursor(False)
-        Editor.wr('\x1b[999;999H\x1b[6n')
+        self.wr('\x1b[999;999H\x1b[6n')
         pos = b''
-        char = Editor.rd() ## expect ESC[yyy;xxxR
+        char = self.rd() ## expect ESC[yyy;xxxR
         while char != b'R':
             if char in b"0123456789;": pos += char
-            char = Editor.rd()
+            char = self.rd()
         (self.height, self.width) = [int(i, 10) for i in pos.split(b';')]
         self.height -= 1
         self.scrbuf = ["\x01"] * self.height ## force delete
@@ -329,10 +320,10 @@ class Editor:
 
     def get_input(self):  ## read from interface/keyboard one byte each and match against function keys
         while True:
-            in_buffer = Editor.rd()
+            in_buffer = self.rd()
             if in_buffer == b'\x1b': ## starting with ESC, must be fct
                 while True:
-                    in_buffer += Editor.rd()
+                    in_buffer += self.rd()
                     c = chr(in_buffer[-1])
                     if c == '~' or (c.isalpha() and c != 'O'):
                         break
@@ -342,9 +333,9 @@ class Editor:
                     return c
 #ifndef BASIC
                 else: ## special for mice
-                    mf = ord((Editor.rd())) & 0xe3 ## read 3 more chars
-                    self.mouse_x = ord(Editor.rd()) - 33
-                    self.mouse_y = ord(Editor.rd()) - 33
+                    mf = ord((self.rd())) & 0xe3 ## read 3 more chars
+                    self.mouse_x = ord(self.rd()) - 33
+                    self.mouse_y = ord(self.rd()) - 33
                     if mf == 0x61:
                         return KEY_SCRLDN
                     elif mf == 0x60:
@@ -380,9 +371,16 @@ class Editor:
                     self.scrbuf[c] = ''
             else:
                 l = self.content[i][self.margin:self.margin + self.width]
-                if l != self.scrbuf[c]: ## line changed, print it
+                if l != self.scrbuf[c] or i == self.check_mark: ## line changed, print it
                     self.goto(c, 0)
-                    self.wr(l)
+                    if i == self.mark:
+                        self.hilite(2)
+                        self.wr(l)
+                        if l == "": self.wr('    ') ## add a few spaces
+                        self.hilite(0)
+                    else:
+                        self.wr(l)
+                        if i == self.check_mark: self.check_mark = -1
                     if len(l) < self.width:
                         self.clear_to_eol()
                     self.scrbuf[c] = l
@@ -390,7 +388,9 @@ class Editor:
 ## display Status-Line
         self.goto(self.height, 0)
         self.hilite(1)
-        self.wr("[{}] {} Row: {} Col: {}  {}".format(self.total_lines, self.changed, self.cur_line + 1, self.col + 1, self.message[:self.width - 25]))
+        self.wr("[{}] {} Row: {} Col: {}  {}".format(
+            self.total_lines, self.changed, self.cur_line + 1,
+            self.col + 1, self.message[:self.width - 25]))
         self.hilite(0)
         self.clear_to_eol() ## once moved up for mate/xfce4-terminal issue with scroll region
         self.goto(self.row, self.col - self.margin)
@@ -401,6 +401,12 @@ class Editor:
             return len(line) - len(line.lstrip(" "))
         else: ## left to the cursor
             return len(line[:pos]) - len(line[:pos].rstrip(" "))
+
+    def line_range(self):
+        if self.mark < 0: return (self.cur_line, self.cur_line + 1, False)
+        else:
+            if self.mark < self.cur_line: return (self.mark, self.cur_line + 1, True)
+            else: return (self.cur_line, self.mark + 1, True)
 
     def line_edit(self, prompt, default):  ## simple one: only 4 fcts
         self.goto(self.height, 0)
@@ -591,27 +597,25 @@ class Editor:
                 self.content[self.cur_line] = l + self.content.pop(self.cur_line + 1)
                 self.total_lines -= 1
         elif key == KEY_TAB:
-#ifndef BASIC
-            ns = self.spaces(l)
-            if self.col == 0 and ns > 0:
-                self.undo_add(self.cur_line, [l], key)
-                self.content[self.cur_line] = ' ' * (self.tab_size - ns % self.tab_size) + l
-                self.cursor_down()
+            lrange = self.line_range()
+            if lrange[2]:
+                self.undo_add(lrange[0], self.content[lrange[0]:lrange[1]], key, lrange[1] - lrange[0]) ## undo replaces
+                for i in range(lrange[0],lrange[1]):
+                    self.content[i] = ' ' * (self.tab_size - self.spaces(self.content[i]) % self.tab_size) + self.content[i]
             else:
-#endif
                 self.undo_add(self.cur_line, [l], key)
                 ni = self.tab_size - self.col % self.tab_size ## determine spaces to add
                 self.content[self.cur_line] = l[:self.col] + ' ' * ni + l[self.col:]
                 self.col += ni
         elif key == KEY_BACKTAB:
-#ifndef BASIC
-            ns = self.spaces(l)
-            if self.col == 0 and ns > 0:
-                self.undo_add(self.cur_line, [l], key)
-                self.content[self.cur_line] = l[(ns - 1) % self.tab_size + 1:]
-                self.cursor_down()
+            lrange = self.line_range()
+            if lrange[2]:
+                self.undo_add(lrange[0], self.content[lrange[0]:lrange[1]], key, lrange[1] - lrange[0]) ## undo replaces
+                for i in range(lrange[0],lrange[1]):
+                    ns = self.spaces(self.content[i])
+                    if ns > 0:
+                        self.content[i] = self.content[i][(ns - 1) % self.tab_size + 1:]
             else:
-#endif
                 ni = min((self.col - 1) % self.tab_size + 1, self.spaces(l, self.col)) ## determine spaces to drop
                 if ni > 0:
                     self.undo_add(self.cur_line, [l], key)
@@ -655,24 +659,28 @@ class Editor:
                     self.content[self.cur_line:self.cur_line] = content
                     self.total_lines = len(self.content)
 #endif
-        elif key == KEY_YANK:  # delete line into buffer
-            if key == self.lastkey: # yank series?
-                self.yank_buffer.append(l) # add line
+        elif key == KEY_MARK:
+            if self.mark == -1:
+                self.mark = self.check_mark = self.cur_line
             else:
-                self.yank_buffer = [l]
+                self.mark = -1
+        elif key == KEY_YANK:  # delete line or line(s) into buffer
+            lrange = self.line_range()
+            if lrange[2]: ## copy only if line mark is set
+                self.yank_buffer = self.content[lrange[0]:lrange[1]]
             if self.total_lines > 1: ## not a single line
-                self.undo_add(self.cur_line, [l], 0, 0) ## undo inserts
-                del self.content[self.cur_line]
-                self.total_lines -= 1
+                self.undo_add(lrange[0], self.content[lrange[0]:lrange[1]], 0, 0) ## undo inserts
+                del self.content[lrange[0]:lrange[1]]
+                self.total_lines -= lrange[1] - lrange[0]
             else: ## line is kept but wiped
                 self.undo_add(self.cur_line, [l], 0, 1) ## undo replaces
                 self.content[self.cur_line] = ''
-        elif key == KEY_DUP:  # copy line into buffer and go down one line
-            if key == self.lastkey: # yank series?
-                self.yank_buffer.append(l) # add line
-            else:
-                self.yank_buffer = [l]
-            self.cursor_down()
+            self.cur_line = lrange[0]
+            self.mark = -1 ## unset line mark
+        elif key == KEY_DUP:  # copy line(s) into buffer
+            lrange = self.line_range()
+            if lrange[2]: ## dup only if line mark is set
+                self.yank_buffer = self.content[lrange[0]:lrange[1]]
         elif key == KEY_ZAP: ## insert buffer
             if self.yank_buffer:
                 self.undo_add(self.cur_line, None, 0, -len(self.yank_buffer))
@@ -702,15 +710,16 @@ class Editor:
         elif key == KEY_UNDO:
             if len(self.undo) > 0:
                 action = self.undo.pop(-1) ## get action from stack
-                self.cur_line = action[0]
-                self.col = action[4]
+                if not action[3] in (KEY_TAB, KEY_BACKTAB):
+                    self.cur_line = action[0]
+                    self.col = action[4]
                 if action[1] >= 0: ## insert or replace line
                     if action[0] < self.total_lines:
-                        self.content[self.cur_line:self.cur_line + action[1]] = action[2] # insert lines
+                        self.content[action[0]:action[0] + action[1]] = action[2] # insert lines
                     else:
                         self.content += action[2]
                 else: ## delete lines
-                    del self.content[self.cur_line : self.cur_line - action[1]]
+                    del self.content[action[0]:action[0] - action[1]]
                 self.total_lines = len(self.content) ## brute force
                 if len(self.undo) == 0: ## test changed flag
                     self.changed = self.sticky_c
@@ -734,57 +743,33 @@ class Editor:
             key = self.get_input()  ## Get Char of Fct-key code
             self.message = '' ## clear message
 
-            try:
-                if key == KEY_QUIT:
-                    if self.changed != ' ':
-                        res = self.line_edit("Content changed! Quit without saving (y/N)? ", "N")
-                        if not res or res[0].upper() != 'Y':
-                            continue
+            if key == KEY_QUIT:
+                if self.changed != ' ':
+                    res = self.line_edit("Content changed! Quit without saving (y/N)? ", "N")
+                    if not res or res[0].upper() != 'Y':
+                        continue
 ## Do not leave cursor in the middle of screen
 #ifndef BASIC
-                    self.mouse_reporting(False) ## disable mouse reporting, enable scrolling
+                self.mouse_reporting(False) ## disable mouse reporting, enable scrolling
 #endif
-                    self.scroll_region(0)
-                    self.goto(self.height, 0)
-                    self.clear_to_eol()
-                    return None
-                elif key == KEY_REDRAW:
-                    self.set_screen_parms()
-                    self.row = min(self.height - 1, self.row)
+                self.scroll_region(0)
+                self.goto(self.height, 0)
+                self.clear_to_eol()
+                return None
+            elif key == KEY_REDRAW:
+                self.set_screen_parms()
+                self.row = min(self.height - 1, self.row)
 #ifdef LINUX
-                    if sys.platform in ("linux", "darwin") and sys.implementation.name == "cpython":
-                        signal.signal(signal.SIGWINCH, Editor.signal_handler)
+                if sys.platform in ("linux", "darwin") and sys.implementation.name == "cpython":
+                    signal.signal(signal.SIGWINCH, Editor.signal_handler)
 #endif
-                    if sys.implementation.name == "micropython":
-                        gc.collect()
-                        self.message = "{} Bytes Memory available".format(gc.mem_free())
-                elif  self.handle_cursor_keys(key):
-                    pass
-                else: self.handle_edit_key(key)
-                self.lastkey = key
-            except MemoryError:
-                del self.undo[:]
-                del self.yank_buffer[:]
-                gc.collect()
-                self.message = "Memory Error. Undo and Yank cleared!"
+                if sys.implementation.name == "micropython":
+                    gc.collect()
+                    self.message = "{} Bytes Memory available".format(gc.mem_free())
+            elif  self.handle_cursor_keys(key):
+                pass
+            else: self.handle_edit_key(key)
 
-
-## expandtabs: hopefully sometimes replaced by the built-in function
-    def expandtabs(self, s):
-        from _io import StringIO
-        if '\t' in s:
-            sb = StringIO()
-            pos = 0
-            for c in s:
-                if c == '\t': ## tab is seen
-                    sb.write(" " * (8 - pos % 8)) ## replace by space
-                    pos += 8 - pos % 8
-                else:
-                    sb.write(c)
-                    pos += 1
-            return sb.getvalue()
-        else:
-            return s
 ## packtabs: replace sequence of space by tab
 #ifndef BASIC
     def packtabs(self, s):
@@ -813,8 +798,24 @@ class Editor:
             message = 'Could not load {}, {!r}'.format(fname, err)
             return (None, message)
         for i in range(len(content)):  ## strip and convert
-            content[i] = self.expandtabs(content[i].rstrip('\r\n\t '))
+            content[i] = expandtabs(content[i].rstrip('\r\n\t '))
         return (content, "")
+## expandtabs: hopefully sometimes replaced by the built-in function
+def expandtabs(s):
+    from _io import StringIO
+    if '\t' in s:
+        sb = StringIO()
+        pos = 0
+        for c in s:
+            if c == '\t': ## tab is seen
+                sb.write(" " * (8 - pos % 8)) ## replace by space
+                pos += 8 - pos % 8
+            else:
+                sb.write(c)
+                pos += 1
+        return sb.getvalue()
+    else:
+        return s
 
 def pye(content = None, tab_size = 4, undo = 50, device = 0, baud = 115200):
 ## prepare content
@@ -852,7 +853,7 @@ if __name__ == "__main__":
                     os.close(0) ## close and repopen /dev/tty
                     fd_tty = os.open("/dev/tty", os.O_RDONLY) ## memorized, if new fd
                     for i in range(len(name)):  ## strip and convert
-                        name[i] = Editor.expandtabs(0, name[i].rstrip('\r\n\t '))
+                        name[i] = expandtabs(name[i].rstrip('\r\n\t '))
         pye(name, undo = 500, device=fd_tty)
     else:
         print ("\nSorry, this OS is not supported (yet)")
