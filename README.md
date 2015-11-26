@@ -110,3 +110,9 @@ c) expandtabs() and packtabs() with a second argument for tabsize (not for pye, 
 - Removed UART mode on WiPy. Not stable yet. UART mode can be achieved by redirecting REPL.
 - A variant of pye.py, called pye2.py, keeps the cursor column even if the cursor is moved beyond the text in a line, instead of moving to the end of text if a line is shorter than the actual cursor column. Another variant, pye3, tries to go back to the cursor column which once was set by a horizontal move. That's more how gedit works. Not sure which I like better.
 
+**1.10** Further refinement of Mark
+- When the mark is set, the whole area affected is now highlighted instead of just the line with the mark.
+- Paste, Delete and Backspace now also take notice of the line Mark. You can Mark a line range and delete it (or cut it). Implicit deleting marked lines when pressing the Enter or character key was considered but rejected (easy - just 3 lines of code).
+- Except for Delete, Backspace, Cut and Paste, Mark has to be toggled off when not needed any more.
+- Right click (Button 2) or Ctrl-Click on the mouse sets/unsets the Mark, left Click extends it, when set.
+

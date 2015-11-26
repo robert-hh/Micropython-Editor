@@ -158,10 +158,7 @@ class Editor:
         self.case = "n"
         self.autoindent = "y"
         self.yank_buffer = []
-        self.mark = -1
-        self.check_mark = -1
-        self.mark_tab = False
-        self.msg_find = "Find: "
+        self.mark = None
 #ifndef BASIC
         self.replc_pattern = ""
         self.write_tabs = "n"
@@ -233,11 +230,10 @@ class Editor:
 
         def rd(self):
             while True:
-                try:
-                    ch = sys.stdin.read(1)
-                    if ch != "\x00":
-                        return ch.encode()
-                except: pass
+                try: 
+                    return sys.stdin.read(1).encode()
+                except: 
+                    pass
 
         def init_tty(self, device, baud):
             pass
@@ -252,10 +248,7 @@ class Editor:
         self.wr(b"\x1b[0K")
 
     def cursor(self, onoff):
-        if onoff:
-            self.wr(b"\x1b[?25h")
-        else:
-            self.wr(b"\x1b[?25l")
+        self.wr(b"\x1b[?25h" if onoff else b"\x1b[?25l")
 
     def hilite(self, mode):
         if mode == 1:
@@ -267,16 +260,10 @@ class Editor:
 
 #ifndef BASIC
     def mouse_reporting(self, onoff):
-        if onoff:
-            self.wr('\x1b[?9h') ## enable mouse reporting
-        else:
-            self.wr('\x1b[?9l') ## disable mouse reporting
+        self.wr('\x1b[?9h' if onoff else '\x1b[?9l') ## enable/disable mouse reporting
 #endif
     def scroll_region(self, stop):
-        if stop:
-            self.wr('\x1b[1;{}r'.format(stop)) ## enable partial scrolling
-        else:
-            self.wr('\x1b[r') ## full scrolling
+        self.wr('\x1b[1;{}r'.format(stop) if stop else '\x1b[r') ## set scrolling range
 
     def scroll_up(self, scrolling):
         self.scrbuf[scrolling:] = self.scrbuf[:-scrolling]
@@ -300,7 +287,7 @@ class Editor:
             char = self.rd()
         (self.height, self.width) = [int(i, 10) for i in pos[2:].split(b';')]
         self.height -= 1
-        self.scrbuf = ["\x01"] * self.height ## force delete
+        self.scrbuf = [(False,"\x00")] * self.height ## force delete
         self.scroll_region(self.height)
 
     def get_input(self):  ## read from interface/keyboard one byte each and match against function keys
@@ -318,12 +305,12 @@ class Editor:
                     return c
 #ifndef BASIC
                 else: ## special for mice
-                    mf = ord((self.rd())) ## read 3 more chars
+                    self.mouse_fct = ord((self.rd())) ## read 3 more chars
                     self.mouse_x = ord(self.rd()) - 33
                     self.mouse_y = ord(self.rd()) - 33
-                    if mf == 0x61:
+                    if self.mouse_fct == 0x61:
                         return KEY_SCRLDN
-                    elif mf == 0x60:
+                    elif self.mouse_fct == 0x60:
                         return KEY_SCRLUP
                     else:
                         return KEY_MOUSE ## do nothing but set the cursor
@@ -350,23 +337,24 @@ class Editor:
         i = self.top_line
         for c in range(self.height):
             if i == self.total_lines: ## at empty bottom screen part
-                if self.scrbuf[c] != '':
+                if self.scrbuf[c][1] != '':
                     self.goto(c, 0)
                     self.clear_to_eol()
-                    self.scrbuf[c] = ''
+                    self.scrbuf[c] = (False,'')
             else:
-                l = self.content[i][self.margin:self.margin + self.width]
-                if l != self.scrbuf[c] or i == self.check_mark: ## line changed, print it
+                l = (self.mark != None and (
+                    (self.mark <= i <= self.cur_line) or (self.cur_line <= i <= self.mark)),
+                     self.content[i][self.margin:self.margin + self.width])
+                if l != self.scrbuf[c]: ## line changed, print it
                     self.goto(c, 0)
-                    if i == self.mark:
+                    if l[0]:
                         self.hilite(2)
-                        self.wr(l)
-                        if l == "": self.wr(' ') ## add a spaces
+                        self.wr(l[1])
+                        if l[1] == '': self.wr(' ') ## add a space to show a marked empty line
                         self.hilite(0)
                     else:
-                        self.wr(l)
-                        if i == self.check_mark: self.check_mark = -1
-                    if len(l) < self.width:
+                        self.wr(l[1])
+                    if len(l[1]) < self.width:
                         self.clear_to_eol()
                     self.scrbuf[c] = l
                 i += 1
@@ -382,19 +370,15 @@ class Editor:
         self.cursor(True)
 
     def spaces(self, line, pos = None): ## count spaces
-        if pos == None: ## at line start
-            return len(line) - len(line.lstrip(" "))
-        else: ## left to pos
-            return len(line[:pos]) - len(line[:pos].rstrip(" "))
+        return (len(line) - len(line.lstrip(" ")) if pos == None else ## at line start
+                len(line[:pos]) - len(line[:pos].rstrip(" ")))
 
     def line_range(self):
-        if self.mark < 0:
-            return (self.cur_line, self.cur_line + 1)
-        else:
-            if self.mark < self.cur_line:
-                return (self.mark, self.cur_line + 1)
-            else:
-                return (self.cur_line, self.mark + 1)
+##        if self.mark == None:
+##            return (self.cur_line, self.cur_line + 1)
+##        else:
+            return ((self.mark, self.cur_line + 1) if self.mark < self.cur_line else 
+                    (self.cur_line, self.mark + 1))
 
     def line_edit(self, prompt, default):  ## simple one: only 4 fcts
         self.goto(self.height, 0)
@@ -486,7 +470,7 @@ class Editor:
         elif key == KEY_PGDN:
             self.cur_line += self.height
         elif key == KEY_FIND:
-            pat = self.line_edit(self.msg_find, self.find_pattern)
+            pat = self.line_edit("Find: ", self.find_pattern)
             if pat:
                 self.find_in_file(pat, self.col, self.total_lines)
                 self.row = self.height >> 1
@@ -507,6 +491,8 @@ class Editor:
             if self.mouse_y < self.height:
                 self.col = self.mouse_x + self.margin
                 self.cur_line = self.mouse_y + self.top_line
+                if self.mouse_fct in (0x22, 0x30): ## Right/Ctrl button on Mouse
+                    self.mark = self.cur_line if self.mark == None else None
         elif key == KEY_SCRLUP: ##
             if self.top_line > 0:
                 self.top_line = max(self.top_line - 3, 0)
@@ -548,23 +534,39 @@ class Editor:
                 self.undo_zero -= 1
             self.undo.append((lnum, span, text, key, self.col))
 
+    def delete_lines(self, yank):
+        lrange = self.line_range()
+        if yank: self.yank_buffer = self.content[lrange[0]:lrange[1]]
+        self.undo_add(lrange[0], self.content[lrange[0]:lrange[1]], 0, 0) ## undo inserts
+        del self.content[lrange[0]:lrange[1]]
+        if self.content == []: ## if all was wiped
+            self.content = [""]
+        self.total_lines = len(self.content)
+        self.cur_line = lrange[0]
+        self.mark = None ## unset line mark
+
     def handle_edit_key(self, key): ## keys which change content
         l = self.content[self.cur_line]
         if key == KEY_ENTER:
+            self.mark = None
             self.undo_add(self.cur_line, [l], 0, 2)
             self.content[self.cur_line] = l[:self.col]
             ni = 0
             if self.autoindent == "y": ## Autoindent
                 ni = min(self.spaces(l), self.col)  ## query indentation
+#ifndef BASIC                
                 r = l.partition("\x23")[0].rstrip() ## \x23 == #
                 if r and r[-1] == ':' and self.col >= len(r): ## look for : as the last non-space before comment
                     ni += self.tab_size
+#endif
             self.cur_line += 1
             self.content[self.cur_line:self.cur_line] = [' ' * ni + l[self.col:]]
             self.total_lines += 1
             self.col = ni
         elif key == KEY_BACKSPACE:
-            if self.col > 0:
+            if self.mark != None:
+                self.delete_lines(False)
+            elif self.col > 0:
                 self.undo_add(self.cur_line, [l], KEY_BACKSPACE)
                 self.content[self.cur_line] = l[:self.col - 1] + l[self.col:]
                 self.col -= 1
@@ -577,7 +579,9 @@ class Editor:
                 self.total_lines -= 1
 #endif
         elif key == KEY_DELETE:
-            if self.col < len(l):
+            if self.mark != None:
+                self.delete_lines(False)
+            elif self.col < len(l):
                 self.undo_add(self.cur_line, [l], KEY_DELETE)
                 self.content[self.cur_line] = l[:self.col] + l[self.col + 1:]
             elif (self.cur_line + 1) < self.total_lines: ## test for last line
@@ -585,8 +589,7 @@ class Editor:
                 self.content[self.cur_line] = l + self.content.pop(self.cur_line + 1)
                 self.total_lines -= 1
         elif key == KEY_TAB:
-            if self.mark >= 0:
-                self.mark_tab = True
+            if self.mark != None:
                 lrange = self.line_range()
                 self.undo_add(lrange[0], self.content[lrange[0]:lrange[1]], KEY_INDENT, lrange[1] - lrange[0]) ## undo replaces
                 for i in range(lrange[0],lrange[1]):
@@ -598,8 +601,7 @@ class Editor:
                 self.content[self.cur_line] = l[:self.col] + ' ' * ni + l[self.col:]
                 self.col += ni
         elif key == KEY_BACKTAB:
-            if self.mark >= 0:
-                self.mark_tab = True
+            if self.mark != None:
                 lrange = self.line_range()
                 self.undo_add(lrange[0], self.content[lrange[0]:lrange[1]], KEY_INDENT, lrange[1] - lrange[0]) ## undo replaces
                 for i in range(lrange[0],lrange[1]):
@@ -615,13 +617,13 @@ class Editor:
 #ifndef BASIC
         elif key == KEY_REPLC:
             count = 0
-            pat = self.line_edit(self.msg_find, self.find_pattern)
+            pat = self.line_edit("Find: ", self.find_pattern)
             if pat:
                 rpat = self.line_edit("Replace with: ", self.replc_pattern)
                 if rpat != None:
                     self.replc_pattern = rpat
                     q = ''
-                    if self.mark >= 0: ## Replace in Marked area
+                    if self.mark != None: ## Replace in Marked area
                         lrange = self.line_range()
                         self.cur_line = lrange[0]
                     else:
@@ -656,37 +658,27 @@ class Editor:
                     self.total_lines = len(self.content)
 #endif
         elif key == KEY_MARK:
-            if self.mark < 0:
-                self.mark = self.check_mark = self.cur_line
-                self.mark_tab = False
-            else:
-                self.mark = -1
+            self.mark = self.cur_line if self.mark == None else None
         elif key == KEY_YANK:  # delete line or line(s) into buffer
-            lrange = self.line_range()
-            self.yank_buffer = self.content[lrange[0]:lrange[1]]
-            self.undo_add(lrange[0], self.content[lrange[0]:lrange[1]], 0, 0) ## undo inserts
-            del self.content[lrange[0]:lrange[1]]
-            if self.content == []: ## if all was wiped
-                self.content = [""]
-            self.total_lines = len(self.content)
-            self.cur_line = lrange[0]
-            self.mark = -1 ## unset line mark
+            if self.mark != None:
+                self.delete_lines(True)
         elif key == KEY_DUP:  # copy line(s) into buffer
-            lrange = self.line_range()
-            self.yank_buffer = self.content[lrange[0]:lrange[1]]
-            self.mark = -1 ## unset line mark
+            if self.mark != None:
+                lrange = self.line_range()
+                self.yank_buffer = self.content[lrange[0]:lrange[1]]
         elif key == KEY_ZAP: ## insert buffer
             if self.yank_buffer:
+                if self.mark != None:
+                    self.delete_lines(False)
                 self.undo_add(self.cur_line, None, 0, -len(self.yank_buffer))
                 self.content[self.cur_line:self.cur_line] = self.yank_buffer # insert lines
                 self.total_lines += len(self.yank_buffer)
         elif key == KEY_WRITE:
             if False: pass
 #ifndef BASIC
-            elif self.mark >= 0:
+            elif self.mark != None:
                 fname = self.line_edit("Save Mark: ", "")
                 lrange = self.line_range()
-                self.mark = -1
 #endif
             else:
                 fname = self.fname
@@ -725,13 +717,15 @@ class Editor:
                 self.total_lines = len(self.content) ## brute force
                 self.changed = ' ' if len(self.undo) == self.undo_zero else '*'
         elif key >= 0x20: ## character to be added
+            self.mark = None
             self.undo_add(self.cur_line, [l], 0x20 if key == 0x20 else 0x41)
             self.content[self.cur_line] = l[:self.col] + chr(key) + l[self.col:]
             self.col += 1
 
+
     def edit_loop(self): ## main editing loop
 
-        if len(self.content) == 0: ## check for empty content
+        if self.content == []: ## check for empty content
             self.content = [""]
         self.total_lines = len(self.content)
         self.set_screen_parms()
@@ -743,8 +737,6 @@ class Editor:
             self.display_window()  ## Update & display window
             key = self.get_input()  ## Get Char of Fct-key code
             self.message = '' ## clear message
-            if self.mark_tab and key != KEY_TAB and key != KEY_BACKTAB:
-                self.mark = -1
 
             if key == KEY_QUIT:
                 if self.changed != ' ':

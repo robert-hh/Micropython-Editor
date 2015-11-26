@@ -56,10 +56,7 @@ class Editor:
         self.case = "n"
         self.autoindent = "y"
         self.yank_buffer = []
-        self.mark = -1
-        self.check_mark = -1
-        self.mark_tab = False
-        self.msg_find = "Find: "
+        self.mark = None
         self.replc_pattern = ""
         self.write_tabs = "n"
     if sys.platform == "pyboard":
@@ -89,10 +86,7 @@ class Editor:
     def clear_to_eol(self):
         self.wr(b"\x1b[0K")
     def cursor(self, onoff):
-        if onoff:
-            self.wr(b"\x1b[?25h")
-        else:
-            self.wr(b"\x1b[?25l")
+        self.wr(b"\x1b[?25h" if onoff else b"\x1b[?25l")
     def hilite(self, mode):
         if mode == 1:
             self.wr(b"\x1b[1m")
@@ -101,15 +95,9 @@ class Editor:
         else:
             self.wr(b"\x1b[0m")
     def mouse_reporting(self, onoff):
-        if onoff:
-            self.wr('\x1b[?9h') 
-        else:
-            self.wr('\x1b[?9l') 
+        self.wr('\x1b[?9h' if onoff else '\x1b[?9l') 
     def scroll_region(self, stop):
-        if stop:
-            self.wr('\x1b[1;{}r'.format(stop)) 
-        else:
-            self.wr('\x1b[r') 
+        self.wr('\x1b[1;{}r'.format(stop) if stop else '\x1b[r') 
     def scroll_up(self, scrolling):
         self.scrbuf[scrolling:] = self.scrbuf[:-scrolling]
         self.scrbuf[:scrolling] = [''] * scrolling
@@ -130,7 +118,7 @@ class Editor:
             char = self.rd()
         (self.height, self.width) = [int(i, 10) for i in pos[2:].split(b';')]
         self.height -= 1
-        self.scrbuf = ["\x01"] * self.height 
+        self.scrbuf = [(False,"\x00")] * self.height 
         self.scroll_region(self.height)
     def get_input(self): 
         while True:
@@ -146,12 +134,12 @@ class Editor:
                 if c != 0x1b:
                     return c
                 else: 
-                    mf = ord((self.rd())) 
+                    self.mouse_fct = ord((self.rd())) 
                     self.mouse_x = ord(self.rd()) - 33
                     self.mouse_y = ord(self.rd()) - 33
-                    if mf == 0x61:
+                    if self.mouse_fct == 0x61:
                         return 0x1d
-                    elif mf == 0x60:
+                    elif self.mouse_fct == 0x60:
                         return 0x1c
                     else:
                         return 0x1b 
@@ -171,23 +159,24 @@ class Editor:
         i = self.top_line
         for c in range(self.height):
             if i == self.total_lines: 
-                if self.scrbuf[c] != '':
+                if self.scrbuf[c][1] != '':
                     self.goto(c, 0)
                     self.clear_to_eol()
-                    self.scrbuf[c] = ''
+                    self.scrbuf[c] = (False,'')
             else:
-                l = self.content[i][self.margin:self.margin + self.width]
-                if l != self.scrbuf[c] or i == self.check_mark: 
+                l = (self.mark != None and (
+                    (self.mark <= i <= self.cur_line) or (self.cur_line <= i <= self.mark)),
+                     self.content[i][self.margin:self.margin + self.width])
+                if l != self.scrbuf[c]: 
                     self.goto(c, 0)
-                    if i == self.mark:
+                    if l[0]:
                         self.hilite(2)
-                        self.wr(l)
-                        if l == "": self.wr(' ') 
+                        self.wr(l[1])
+                        if l[1] == '': self.wr(' ') 
                         self.hilite(0)
                     else:
-                        self.wr(l)
-                        if i == self.check_mark: self.check_mark = -1
-                    if len(l) < self.width:
+                        self.wr(l[1])
+                    if len(l[1]) < self.width:
                         self.clear_to_eol()
                     self.scrbuf[c] = l
                 i += 1
@@ -201,18 +190,11 @@ class Editor:
         self.goto(self.row, self.col - self.margin)
         self.cursor(True)
     def spaces(self, line, pos = None): 
-        if pos == None: 
-            return len(line) - len(line.lstrip(" "))
-        else: 
-            return len(line[:pos]) - len(line[:pos].rstrip(" "))
+        return (len(line) - len(line.lstrip(" ")) if pos == None else 
+                len(line[:pos]) - len(line[:pos].rstrip(" ")))
     def line_range(self):
-        if self.mark < 0:
-            return (self.cur_line, self.cur_line + 1)
-        else:
-            if self.mark < self.cur_line:
-                return (self.mark, self.cur_line + 1)
-            else:
-                return (self.cur_line, self.mark + 1)
+            return ((self.mark, self.cur_line + 1) if self.mark < self.cur_line else
+                    (self.cur_line, self.mark + 1))
     def line_edit(self, prompt, default): 
         self.goto(self.height, 0)
         self.hilite(1)
@@ -294,7 +276,7 @@ class Editor:
         elif key == 0x19:
             self.cur_line += self.height
         elif key == 0x06:
-            pat = self.line_edit(self.msg_find, self.find_pattern)
+            pat = self.line_edit("Find: ", self.find_pattern)
             if pat:
                 self.find_in_file(pat, self.col, self.total_lines)
                 self.row = self.height >> 1
@@ -314,6 +296,8 @@ class Editor:
             if self.mouse_y < self.height:
                 self.col = self.mouse_x + self.margin
                 self.cur_line = self.mouse_y + self.top_line
+                if self.mouse_fct in (0x22, 0x30): 
+                    self.mark = self.cur_line if self.mark == None else None
         elif key == 0x1c: 
             if self.top_line > 0:
                 self.top_line = max(self.top_line - 3, 0)
@@ -352,9 +336,20 @@ class Editor:
                 del self.undo[0]
                 self.undo_zero -= 1
             self.undo.append((lnum, span, text, key, self.col))
+    def delete_lines(self, yank):
+        lrange = self.line_range()
+        if yank: self.yank_buffer = self.content[lrange[0]:lrange[1]]
+        self.undo_add(lrange[0], self.content[lrange[0]:lrange[1]], 0, 0) 
+        del self.content[lrange[0]:lrange[1]]
+        if self.content == []: 
+            self.content = [""]
+        self.total_lines = len(self.content)
+        self.cur_line = lrange[0]
+        self.mark = None 
     def handle_edit_key(self, key): 
         l = self.content[self.cur_line]
         if key == 0x0a:
+            self.mark = None
             self.undo_add(self.cur_line, [l], 0, 2)
             self.content[self.cur_line] = l[:self.col]
             ni = 0
@@ -368,7 +363,9 @@ class Editor:
             self.total_lines += 1
             self.col = ni
         elif key == 0x08:
-            if self.col > 0:
+            if self.mark != None:
+                self.delete_lines(False)
+            elif self.col > 0:
                 self.undo_add(self.cur_line, [l], 0x08)
                 self.content[self.cur_line] = l[:self.col - 1] + l[self.col:]
                 self.col -= 1
@@ -379,7 +376,9 @@ class Editor:
                 self.cur_line -= 1
                 self.total_lines -= 1
         elif key == 0x7f:
-            if self.col < len(l):
+            if self.mark != None:
+                self.delete_lines(False)
+            elif self.col < len(l):
                 self.undo_add(self.cur_line, [l], 0x7f)
                 self.content[self.cur_line] = l[:self.col] + l[self.col + 1:]
             elif (self.cur_line + 1) < self.total_lines: 
@@ -387,8 +386,7 @@ class Editor:
                 self.content[self.cur_line] = l + self.content.pop(self.cur_line + 1)
                 self.total_lines -= 1
         elif key == 0x09:
-            if self.mark >= 0:
-                self.mark_tab = True
+            if self.mark != None:
                 lrange = self.line_range()
                 self.undo_add(lrange[0], self.content[lrange[0]:lrange[1]], 0xffff, lrange[1] - lrange[0]) 
                 for i in range(lrange[0],lrange[1]):
@@ -400,8 +398,7 @@ class Editor:
                 self.content[self.cur_line] = l[:self.col] + ' ' * ni + l[self.col:]
                 self.col += ni
         elif key == 0x15:
-            if self.mark >= 0:
-                self.mark_tab = True
+            if self.mark != None:
                 lrange = self.line_range()
                 self.undo_add(lrange[0], self.content[lrange[0]:lrange[1]], 0xffff, lrange[1] - lrange[0]) 
                 for i in range(lrange[0],lrange[1]):
@@ -416,13 +413,13 @@ class Editor:
                     self.col -= ni
         elif key == 0x12:
             count = 0
-            pat = self.line_edit(self.msg_find, self.find_pattern)
+            pat = self.line_edit("Find: ", self.find_pattern)
             if pat:
                 rpat = self.line_edit("Replace with: ", self.replc_pattern)
                 if rpat != None:
                     self.replc_pattern = rpat
                     q = ''
-                    if self.mark >= 0: 
+                    if self.mark != None: 
                         lrange = self.line_range()
                         self.cur_line = lrange[0]
                     else:
@@ -456,36 +453,26 @@ class Editor:
                     self.content[self.cur_line:self.cur_line] = content
                     self.total_lines = len(self.content)
         elif key == 0x0c:
-            if self.mark < 0:
-                self.mark = self.check_mark = self.cur_line
-                self.mark_tab = False
-            else:
-                self.mark = -1
+            self.mark = self.cur_line if self.mark == None else None
         elif key == 0x18: 
-            lrange = self.line_range()
-            self.yank_buffer = self.content[lrange[0]:lrange[1]]
-            self.undo_add(lrange[0], self.content[lrange[0]:lrange[1]], 0, 0) 
-            del self.content[lrange[0]:lrange[1]]
-            if self.content == []: 
-                self.content = [""]
-            self.total_lines = len(self.content)
-            self.cur_line = lrange[0]
-            self.mark = -1 
+            if self.mark != None:
+                self.delete_lines(True)
         elif key == 0x04: 
-            lrange = self.line_range()
-            self.yank_buffer = self.content[lrange[0]:lrange[1]]
-            self.mark = -1 
+            if self.mark != None:
+                lrange = self.line_range()
+                self.yank_buffer = self.content[lrange[0]:lrange[1]]
         elif key == 0x16: 
             if self.yank_buffer:
+                if self.mark != None:
+                    self.delete_lines(False)
                 self.undo_add(self.cur_line, None, 0, -len(self.yank_buffer))
                 self.content[self.cur_line:self.cur_line] = self.yank_buffer 
                 self.total_lines += len(self.yank_buffer)
         elif key == 0x13:
             if False: pass
-            elif self.mark >= 0:
+            elif self.mark != None:
                 fname = self.line_edit("Save Mark: ", "")
                 lrange = self.line_range()
-                self.mark = -1
             else:
                 fname = self.fname
                 if fname == None:
@@ -521,11 +508,12 @@ class Editor:
                 self.total_lines = len(self.content) 
                 self.changed = ' ' if len(self.undo) == self.undo_zero else '*'
         elif key >= 0x20: 
+            self.mark = None
             self.undo_add(self.cur_line, [l], 0x20 if key == 0x20 else 0x41)
             self.content[self.cur_line] = l[:self.col] + chr(key) + l[self.col:]
             self.col += 1
     def edit_loop(self): 
-        if len(self.content) == 0: 
+        if self.content == []: 
             self.content = [""]
         self.total_lines = len(self.content)
         self.set_screen_parms()
@@ -534,8 +522,6 @@ class Editor:
             self.display_window() 
             key = self.get_input() 
             self.message = '' 
-            if self.mark_tab and key != 0x09 and key != 0x15:
-                self.mark = -1
             if key == 0x11:
                 if self.changed != ' ':
                     res = self.line_edit("Content changed! Quit without saving (y/N)? ", "N")
