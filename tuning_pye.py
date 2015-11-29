@@ -1,6 +1,6 @@
 ##
 ## This is the regex version of find.
-    def find_in_file(self, pattern, pos):
+    def find_in_file(self, pattern, pos, end):
         import re
         self.find_pattern = pattern ## remember it
         if self.case != "y":
@@ -11,7 +11,7 @@
             self.message = "Invalid pattern: " + pattern
             return False
         spos = pos
-        for line in range(self.cur_line, self.total_lines):
+        for line in range(self.cur_line, end):
             if self.case != "y":
                 match = rex.search(self.content[line][spos:].lower())
             else:
@@ -31,21 +31,21 @@
         self.message = ' ' ## force status once
         return len(match.group(0))
 
-    @staticmethod
-    def push_msg(msg): ## Write a message and place cursor back
-        Editor.wr("\x1b[s")  ## Push cursor
-        Editor.wr(msg)
-        Editor.wr("\x1b[u")  ## Pop Cursor
+    def push_msg(self, msg): ## push cursor, Write a message, pop cursor
+        self.wr("\x1b[s")  ## Push cursor
+        self.wr(msg)
+        self.wr("\x1b[u")  ## Pop Cursor
+        ## alternative: replace the three line above by: self.wr(msg + "\b" * len(msg))
 
     def line_edit(self, prompt, default):  ## better one: added cursor keys and backsp, delete
         self.goto(self.height, 0)
         self.hilite(True)
         self.wr(prompt)
+        self.wr(default)
         self.clear_to_eol()
         res = default
         self.message = ' ' # Shows status after lineedit
-        pos = 0
-        self.push_msg(res)
+        pos = len(res)
         while True:
             key = self.get_input()  ## Get Char of Fct.
             if key in (KEY_ENTER, KEY_TAB): ## Finis
@@ -73,21 +73,19 @@
                     res = res[:pos-1] + res[pos:]
                     self.wr("\b")
                     pos -= 1
-                    self.push_msg(res[pos:] + ' ') ## Push + pop cursor
+                    self.wr(res[pos:] + ' ' +  '\b' * (len(res[pos:]) + 1)) ## update tail
             elif key == KEY_DELETE: ## Delete
                 if pos < len(res):
                     res = res[:pos] + res[pos+1:]
-                    self.push_msg(res[pos:] + ' ') ## Push + pop cursor
-            else: ## char to be inserted
+                    self.wr(res[pos:] + ' ' +  '\b' * (len(res[pos:]) + 1)) ## update tail
+            elif key >= 0x20: ## char to be inserted
                 if len(prompt) + len(res) < self.width - 2:
                     res = res[:pos] + chr(key) + res[pos:]
                     self.wr(res[pos])
                     pos += 1
-                    self.push_msg(res[pos:]) ## Push + pop cursor
+                    self.wr(res[pos:] + '\b' * len(res[pos:])) ## update tail
 
-
-    @staticmethod
-    def expandtabs(s, tabsize = 8):
+    def expandtabs(self, s, tabsize = 8):
         import _io
         if '\t' in s and tabsize > 0:
             sb = _io.StringIO()
@@ -103,8 +101,7 @@
         else:
             return s
 
-    @staticmethod
-    def packtabs(s, tabsize = 8):
+    def packtabs(self, s, tabsize = 8):
         if tabsize > 0:
             sb = _io.StringIO()
             for i in range(0, len(s), tabsize):
@@ -118,8 +115,7 @@
         else:
             return s
 
-    @staticmethod
-    def cls():
+    def cls(self):
         Editor.wr(b"\x1b[2J")
 
 
