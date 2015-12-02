@@ -240,9 +240,9 @@ class Editor:
 
         def rd(self):
             while True:
-                try: 
+                try:
                     return sys.stdin.read(1).encode()
-                except: 
+                except:
                     pass
 
         def not_pending(self):
@@ -385,7 +385,7 @@ class Editor:
 ##        if self.mark == None:
 ##            return (self.cur_line, self.cur_line + 1)
 ##        else:
-            return ((self.mark, self.cur_line + 1) if self.mark < self.cur_line else 
+            return ((self.mark, self.cur_line + 1) if self.mark < self.cur_line else
                     (self.cur_line, self.mark + 1))
 
     def line_edit(self, prompt, default):  ## simple one: only 4 fcts
@@ -548,7 +548,7 @@ class Editor:
         self.mark = None ## unset line mark
 
     def handle_edit_key(self, key): ## keys which change content
-        from os import rename, remove
+        from os import rename, unlink
         l = self.content[self.cur_line]
         jut = self.col - len(l) ## <0: before text end, =0 at text end, >0 beyond text end
         if key == KEY_ENTER:
@@ -557,7 +557,7 @@ class Editor:
             ni = 0
             if self.autoindent == "y": ## Autoindent
                 ni = min(self.spaces(l), self.col)  ## query indentation
-#ifndef BASIC                
+#ifndef BASIC
                 r = l.partition("\x23")[0].rstrip() ## \x23 == #
                 if r and r[-1] == ':' and self.col >= len(r): ## look for : as the last non-space before comment
                     ni += self.tab_size
@@ -625,7 +625,7 @@ class Editor:
                         self.content[self.cur_line] = l[:self.col - ni] + l[self.col:]
                         self.col -= ni
                 else:
-                    self.col -= min(ni, jut) 
+                    self.col -= min(ni, jut)
 #ifndef BASIC
         elif key == KEY_REPLC:
             count = 0
@@ -708,7 +708,7 @@ class Editor:
                             else:
 #endif
                                 f.write(l + '\n')
-                    try:    remove(fname)
+                    try:    unlink(fname)
                     except: pass
                     rename("tmpfile.pye", fname)
                     self.changed = ' ' ## clear change flag

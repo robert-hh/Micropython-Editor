@@ -118,5 +118,6 @@ c) expandtabs() and packtabs() with a second argument for tabsize (not for pye, 
 
 **1.11** Minor fixes
 - Change the way a marked area is highlighted from reverse to a different background color. That works well for black chars on yellow background (code 43). For white chars on black background, the setting for background color in the function hilite() has to be changed, e.g. to blue (code 44).
-- Save to a temporary file first, and rename it to the target name when successfully written.
-
+- Save file to a temporary file first, and rename it to the target name when successfully written.
+- Lazy screen update: defer screen update, until all chars from the keyboard are processed.
+- Use os.unlink() instead of os.remove(), because remove is not suported by unix micropython

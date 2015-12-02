@@ -165,7 +165,7 @@ class Editor:
 #endif
 #ifdef LINUX
     if sys.platform in ("linux", "darwin"):
-    
+
         def wr(self,s):
             if isinstance(s, str):
                 s = bytes(s, "utf-8")
@@ -266,7 +266,7 @@ class Editor:
 
     def hilite(self, mode):
         if mode == 1: ## used for the status line
-            self.wr(b"\x1b[1m")
+            self.wr(b"\x1b[1;47m")
         elif mode == 2: ## used for the marked area
             self.wr(b"\x1b[43m")
         else:         ## plain text
@@ -556,7 +556,7 @@ class Editor:
         self.mark = None ## unset line mark
 
     def handle_edit_key(self, key): ## keys which change content
-        from os import rename, remove
+        from os import rename, unlink
         l = self.content[self.cur_line]
         if key == KEY_ENTER:
             self.mark = None
@@ -707,7 +707,7 @@ class Editor:
                             else:
 #endif
                                 f.write(l + '\n')
-                    try:    remove(fname)
+                    try:    unlink(fname)
                     except: pass
                     rename("tmpfile.pye", fname)
                     self.changed = ' ' ## clear change flag

@@ -65,7 +65,7 @@ class Editor:
         self.wr(b"\x1b[?25h" if onoff else b"\x1b[?25l")
     def hilite(self, mode):
         if mode == 1: 
-            self.wr(b"\x1b[1m")
+            self.wr(b"\x1b[1;47m")
         elif mode == 2: 
             self.wr(b"\x1b[43m")
         else: 
@@ -267,7 +267,7 @@ class Editor:
         self.cur_line = lrange[0]
         self.mark = None 
     def handle_edit_key(self, key): 
-        from os import rename, remove
+        from os import rename, unlink
         l = self.content[self.cur_line]
         if key == 0x0a:
             self.mark = None
@@ -352,7 +352,7 @@ class Editor:
                     with open("tmpfile.pye", "w") as f:
                         for l in self.content[lrange[0]:lrange[1]]:
                                 f.write(l + '\n')
-                    try: remove(fname)
+                    try: unlink(fname)
                     except: pass
                     rename("tmpfile.pye", fname)
                     self.changed = ' ' 
