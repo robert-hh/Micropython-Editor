@@ -4,7 +4,7 @@
 
 A small text editor written in Python running on PYBoard and WiPy, allowing to edit files locally. It is based on the editor widget of pfalcon at https://github.com/pfalcon/pyedit. I ported it to PyBoard and WiPy and added a few functions:
 
-- Use USB_VCP or UART for input and output.
+- Use USB_VCP/Telnet or UART for input and output.
 - Changed the read keyboard function to comply with slow byte-by-byte input on serial lines.
 - Added support for Tab, BackTab, Save, Del and Backspace joining lines, Find, Replace, Goto Line, Undo, Get file, Auto-Indent, Set Flags, Copy/Delete & Paste, Indent, Un-Indent
 - handling tab (0x09) on reading & writing files,
@@ -115,4 +115,8 @@ c) expandtabs() and packtabs() with a second argument for tabsize (not for pye, 
 - Paste, Delete and Backspace now also take notice of the line Mark. You can Mark a line range and delete it (or cut it). Implicit deleting marked lines when pressing the Enter or character key was considered but rejected (easy - just 3 lines of code).
 - Except for Delete, Backspace, Cut and Paste, Mark has to be toggled off when not needed any more.
 - Right click (Button 2) or Ctrl-Click on the mouse sets/unsets the Mark, left Click extends it, when set.
+
+**1.11** Minor fixes
+- Change the way a marked area is highlighted from reverse to a different background color. That works well for black chars on yellow background (code 43). For white chars on black background, the setting for background color in the function hilite() has to be changed, e.g. to blue (code 44).
+- Save to a temporary file first, and rename it to the target name when successfully written.
 

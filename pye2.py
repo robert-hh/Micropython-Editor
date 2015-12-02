@@ -179,6 +179,13 @@ class Editor:
                         Editor.winch = False
                         return b'\x05'
 
+        def not_pending(self):
+            if sys.implementation.name == "cpython":
+                import select
+                return select.select([self.sdev], [], [], 0)[0] == []
+            else:
+                return True
+
         def init_tty(self, device, baud):
             self.org_termios = termios.tcgetattr(device)
             tty.setraw(device)
@@ -210,6 +217,9 @@ class Editor:
                 pass
             return self.serialcomm.read(1)
 
+        def not_pending(self):
+            return not self.serialcomm.any()
+
         def init_tty(self, device, baud):
             import pyb
             self.sdev = device
@@ -235,11 +245,14 @@ class Editor:
                 except: 
                     pass
 
-        def init_tty(self, device, baud):
-            pass
+        def not_pending(self):
+            return True
 
-        def deinit_tty(self):
-            pass
+##        def init_tty(self, device, baud):
+##            pass
+
+##        def deinit_tty(self):
+##
 #endif
     def goto(self, row, col):
         self.wr("\x1b[{};{}H".format(row + 1, col + 1))
@@ -253,8 +266,8 @@ class Editor:
     def hilite(self, mode):
         if mode == 1:
             self.wr(b"\x1b[1m")
-        if mode == 2:
-            self.wr(b"\x1b[7m")
+        elif mode == 2:
+            self.wr(b"\x1b[43m")
         else:
             self.wr(b"\x1b[0m")
 
@@ -336,7 +349,7 @@ class Editor:
         i = self.top_line
         for c in range(self.height):
             if i == self.total_lines: ## at empty bottom screen part
-                if self.scrbuf[c][1] != '':
+                if self.scrbuf[c] != (False,''):
                     self.goto(c, 0)
                     self.clear_to_eol()
                     self.scrbuf[c] = (False,'')
@@ -346,15 +359,11 @@ class Editor:
                      self.content[i][self.margin:self.margin + self.width])
                 if l != self.scrbuf[c]: ## line changed, print it
                     self.goto(c, 0)
-                    if l[0]:
-                        self.hilite(2)
-                        self.wr(l[1])
-                        if l[1] == '': self.wr(' ') ## add a space to show a marked empty line
-                        self.hilite(0)
-                    else:
-                        self.wr(l[1])
+                    if l[0]: self.hilite(2)
+                    self.wr(l[1])
                     if len(l[1]) < self.width:
                         self.clear_to_eol()
+                    if l[0]: self.hilite(0)
                     self.scrbuf[c] = l
                 i += 1
 ## display Status-Line
@@ -363,8 +372,8 @@ class Editor:
         self.wr("[{}] {} Row: {} Col: {}  {}".format(
             self.total_lines, self.changed, self.cur_line + 1,
             self.col + 1, self.message[:self.width - 25]))
-        self.hilite(0)
         self.clear_to_eol() ## once moved up for mate/xfce4-terminal issue with scroll region
+        self.hilite(0)
         self.goto(self.row, self.col - self.margin)
         self.cursor(True)
 
@@ -508,12 +517,12 @@ class Editor:
                 if res[3]: self.write_tabs = 'y' if res[3][0] == 'y' else 'n'
             except:
                 pass
+#endif
         elif key == KEY_FIRST: ## first line
             self.cur_line = 0
         elif key == KEY_LAST: ## last line
             self.cur_line = self.total_lines - 1
             self.row = self.height - 1 ## will be fixed if required
-#endif
         else:
             return False
         return True
@@ -539,6 +548,7 @@ class Editor:
         self.mark = None ## unset line mark
 
     def handle_edit_key(self, key): ## keys which change content
+        from os import rename, remove
         l = self.content[self.cur_line]
         jut = self.col - len(l) ## <0: before text end, =0 at text end, >0 beyond text end
         if key == KEY_ENTER:
@@ -690,7 +700,7 @@ class Editor:
                 lrange = (0, self.total_lines)
             if fname:
                 try:
-                    with open(fname, "w") as f:
+                    with open("tmpfile.pye", "w") as f:
                         for l in self.content[lrange[0]:lrange[1]]:
 #ifndef BASIC
                             if self.write_tabs == 'y':
@@ -698,6 +708,9 @@ class Editor:
                             else:
 #endif
                                 f.write(l + '\n')
+                    try:    remove(fname)
+                    except: pass
+                    rename("tmpfile.pye", fname)
                     self.changed = ' ' ## clear change flag
                     self.undo_zero = len(self.undo) ## remember state
                     self.fname = fname ## remember (new) name
@@ -737,7 +750,8 @@ class Editor:
 #endif
 
         while True:
-            self.display_window()  ## Update & display window
+            if self.not_pending(): ## skip update if a char is waiting
+                self.display_window()  ## Update & display window
             key = self.get_input()  ## Get Char of Fct-key code
             self.message = '' ## clear message
 
@@ -829,9 +843,13 @@ def pye(content = None, tab_size = 4, undo = 50, device = 0, baud = 115200):
         ## non-empty list of strings -> edit
         e.content = content
 ## edit
+#ifndef WIPY
     e.init_tty(device, baud)
+#endif
     e.edit_loop()
+#ifndef WIPY
     e.deinit_tty()
+#endif
 ## close
     return e.content if (e.fname == None) else e.fname
 

@@ -40,8 +40,8 @@ if sys.platform in ("linux", "darwin"):
 #define KEY_BACKTAB     0x15
 #define KEY_FIND        0x06
 #define KEY_GOTO        0x07
-#define KEY_FIRST       0x02
-#define KEY_LAST        0x14
+#define KEY_FIRST       0x14
+#define KEY_LAST        0x02
 #define KEY_FIND_AGAIN  0x0e
 #define KEY_YANK        0x18
 #define KEY_ZAP         0x16
@@ -83,8 +83,8 @@ KEY_UNDO      = 0x1a
 KEY_YANK      = 0x18
 KEY_ZAP       = 0x16
 KEY_DUP       = 0x04
-KEY_FIRST     = 0x02
-KEY_LAST      = 0x14
+KEY_FIRST     = 0x14
+KEY_LAST      = 0x02
 KEY_REPLC     = 0x12
 KEY_MOUSE     = 0x1b
 KEY_SCRLUP    = 0x1c
@@ -115,7 +115,6 @@ class Editor:
     b"\x7f"   : KEY_BACKSPACE, ## Ctrl-? (127)
     b"\x1b[3~": KEY_DELETE,
     b"\x1b[Z" : KEY_BACKTAB, ## Shift Tab
-    b"\x1b[3;5~": KEY_YANK, ## Ctrl-Del
 #ifndef BASIC
 ## keys mapped onto themselves
     b"\x11"   : KEY_QUIT, ## Ctrl-Q
@@ -134,13 +133,14 @@ class Editor:
     b"\x16"   : KEY_ZAP, ## Ctrl-V
     b"\x04"   : KEY_DUP, ## Ctrl-D
     b"\x0c"   : KEY_MARK, ## Ctrl-L
-##
-    b"\x1b[M" : KEY_MOUSE,
-    b"\x01"   : KEY_TOGGLE, ## Ctrl-A
     b"\x14"   : KEY_FIRST, ## Ctrl-T
     b"\x02"   : KEY_LAST,  ## Ctrl-B
+## other keys
+    b"\x1b[M" : KEY_MOUSE,
+    b"\x01"   : KEY_TOGGLE, ## Ctrl-A
     b"\x1b[1;5H": KEY_FIRST,
     b"\x1b[1;5F": KEY_LAST,
+    b"\x1b[3;5~": KEY_YANK, ## Ctrl-Del
     b"\x0f"   : KEY_GET, ## Ctrl-O
 #endif
     }
@@ -165,10 +165,18 @@ class Editor:
 #endif
 #ifdef LINUX
     if sys.platform in ("linux", "darwin"):
+    
         def wr(self,s):
             if isinstance(s, str):
                 s = bytes(s, "utf-8")
             os.write(1, s)
+
+        def not_pending(self):
+            if sys.implementation.name == "cpython":
+                import select
+                return select.select([self.sdev], [], [], 0)[0] == []
+            else:
+                return True
 
         def rd(self):
             while True:
@@ -205,6 +213,9 @@ class Editor:
                 if res != None:
                     ns += res
 
+        def not_pending(self):
+            return not self.serialcomm.any()
+
         def rd(self):
             while not self.serialcomm.any():
                 pass
@@ -228,18 +239,21 @@ class Editor:
         def wr(self, s):
             sys.stdout.write(s)
 
+        def not_pending(self):
+            return True
+
         def rd(self):
             while True:
-                try: 
+                try:
                     return sys.stdin.read(1).encode()
-                except: 
+                except:
                     pass
 
-        def init_tty(self, device, baud):
-            pass
+##        def init_tty(self, device, baud):
+##            pass
 
-        def deinit_tty(self):
-            pass
+##        def deinit_tty(self):
+##            pass
 #endif
     def goto(self, row, col):
         self.wr("\x1b[{};{}H".format(row + 1, col + 1))
@@ -251,11 +265,11 @@ class Editor:
         self.wr(b"\x1b[?25h" if onoff else b"\x1b[?25l")
 
     def hilite(self, mode):
-        if mode == 1:
+        if mode == 1: ## used for the status line
             self.wr(b"\x1b[1m")
-        if mode == 2:
-            self.wr(b"\x1b[7m")
-        else:
+        elif mode == 2: ## used for the marked area
+            self.wr(b"\x1b[43m")
+        else:         ## plain text
             self.wr(b"\x1b[0m")
 
 #ifndef BASIC
@@ -337,7 +351,7 @@ class Editor:
         i = self.top_line
         for c in range(self.height):
             if i == self.total_lines: ## at empty bottom screen part
-                if self.scrbuf[c][1] != '':
+                if self.scrbuf[c] != (False,''):
                     self.goto(c, 0)
                     self.clear_to_eol()
                     self.scrbuf[c] = (False,'')
@@ -347,15 +361,11 @@ class Editor:
                      self.content[i][self.margin:self.margin + self.width])
                 if l != self.scrbuf[c]: ## line changed, print it
                     self.goto(c, 0)
-                    if l[0]:
-                        self.hilite(2)
-                        self.wr(l[1])
-                        if l[1] == '': self.wr(' ') ## add a space to show a marked empty line
-                        self.hilite(0)
-                    else:
-                        self.wr(l[1])
+                    if l[0]: self.hilite(2)
+                    self.wr(l[1])
                     if len(l[1]) < self.width:
                         self.clear_to_eol()
+                    if l[0]: self.hilite(0)
                     self.scrbuf[c] = l
                 i += 1
 ## display Status-Line
@@ -364,8 +374,8 @@ class Editor:
         self.wr("[{}] {} Row: {} Col: {}  {}".format(
             self.total_lines, self.changed, self.cur_line + 1,
             self.col + 1, self.message[:self.width - 25]))
-        self.hilite(0)
         self.clear_to_eol() ## once moved up for mate/xfce4-terminal issue with scroll region
+        self.hilite(0)
         self.goto(self.row, self.col - self.margin)
         self.cursor(True)
 
@@ -377,7 +387,7 @@ class Editor:
 ##        if self.mark == None:
 ##            return (self.cur_line, self.cur_line + 1)
 ##        else:
-            return ((self.mark, self.cur_line + 1) if self.mark < self.cur_line else 
+            return ((self.mark, self.cur_line + 1) if self.mark < self.cur_line else
                     (self.cur_line, self.mark + 1))
 
     def line_edit(self, prompt, default):  ## simple one: only 4 fcts
@@ -515,12 +525,12 @@ class Editor:
                 if res[3]: self.write_tabs = 'y' if res[3][0] == 'y' else 'n'
             except:
                 pass
+#endif
         elif key == KEY_FIRST: ## first line
             self.cur_line = 0
         elif key == KEY_LAST: ## last line
             self.cur_line = self.total_lines - 1
             self.row = self.height - 1 ## will be fixed if required
-#endif
         else:
             return False
         return True
@@ -546,6 +556,7 @@ class Editor:
         self.mark = None ## unset line mark
 
     def handle_edit_key(self, key): ## keys which change content
+        from os import rename, remove
         l = self.content[self.cur_line]
         if key == KEY_ENTER:
             self.mark = None
@@ -554,7 +565,7 @@ class Editor:
             ni = 0
             if self.autoindent == "y": ## Autoindent
                 ni = min(self.spaces(l), self.col)  ## query indentation
-#ifndef BASIC                
+#ifndef BASIC
                 r = l.partition("\x23")[0].rstrip() ## \x23 == #
                 if r and r[-1] == ':' and self.col >= len(r): ## look for : as the last non-space before comment
                     ni += self.tab_size
@@ -688,7 +699,7 @@ class Editor:
                 lrange = (0, self.total_lines)
             if fname:
                 try:
-                    with open(fname, "w") as f:
+                    with open("tmpfile.pye", "w") as f:
                         for l in self.content[lrange[0]:lrange[1]]:
 #ifndef BASIC
                             if self.write_tabs == 'y':
@@ -696,6 +707,9 @@ class Editor:
                             else:
 #endif
                                 f.write(l + '\n')
+                    try:    remove(fname)
+                    except: pass
+                    rename("tmpfile.pye", fname)
                     self.changed = ' ' ## clear change flag
                     self.undo_zero = len(self.undo) ## remember state
                     self.fname = fname ## remember (new) name
@@ -734,7 +748,8 @@ class Editor:
 #endif
 
         while True:
-            self.display_window()  ## Update & display window
+            if self.not_pending(): ## skip update if a char is waiting
+                self.display_window()  ## Update & display window
             key = self.get_input()  ## Get Char of Fct-key code
             self.message = '' ## clear message
 
@@ -826,9 +841,13 @@ def pye(content = None, tab_size = 4, undo = 50, device = 0, baud = 115200):
         ## non-empty list of strings -> edit
         e.content = content
 ## edit
+#ifndef WIPY
     e.init_tty(device, baud)
+#endif
     e.edit_loop()
+#ifndef WIPY
     e.deinit_tty()
+#endif
 ## close
     return e.content if (e.fname == None) else e.fname
 

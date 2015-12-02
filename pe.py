@@ -18,7 +18,6 @@ class Editor:
     b"\x7f" : 0x08, 
     b"\x1b[3~": 0x7f,
     b"\x1b[Z" : 0x15, 
-    b"\x1b[3;5~": 0x18, 
     b"\x11" : 0x11, 
     b"\n" : 0x0a,
     b"\x08" : 0x08,
@@ -35,12 +34,13 @@ class Editor:
     b"\x16" : 0x16, 
     b"\x04" : 0x04, 
     b"\x0c" : 0x0c, 
+    b"\x14" : 0x14, 
+    b"\x02" : 0x02, 
     b"\x1b[M" : 0x1b,
     b"\x01" : 0x01, 
-    b"\x14" : 0x02, 
-    b"\x02" : 0x14, 
-    b"\x1b[1;5H": 0x02,
-    b"\x1b[1;5F": 0x14,
+    b"\x1b[1;5H": 0x14,
+    b"\x1b[1;5F": 0x02,
+    b"\x1b[3;5~": 0x18, 
     b"\x0f" : 0x1e, 
     }
     def __init__(self, tab_size, undo_limit):
@@ -66,6 +66,8 @@ class Editor:
                 res = self.serialcomm.write(s[ns:])
                 if res != None:
                     ns += res
+        def not_pending(self):
+            return not self.serialcomm.any()
         def rd(self):
             while not self.serialcomm.any():
                 pass
@@ -88,11 +90,11 @@ class Editor:
     def cursor(self, onoff):
         self.wr(b"\x1b[?25h" if onoff else b"\x1b[?25l")
     def hilite(self, mode):
-        if mode == 1:
+        if mode == 1: 
             self.wr(b"\x1b[1m")
-        if mode == 2:
-            self.wr(b"\x1b[7m")
-        else:
+        elif mode == 2: 
+            self.wr(b"\x1b[43m")
+        else: 
             self.wr(b"\x1b[0m")
     def mouse_reporting(self, onoff):
         self.wr('\x1b[?9h' if onoff else '\x1b[?9l') 
@@ -159,7 +161,7 @@ class Editor:
         i = self.top_line
         for c in range(self.height):
             if i == self.total_lines: 
-                if self.scrbuf[c][1] != '':
+                if self.scrbuf[c] != (False,''):
                     self.goto(c, 0)
                     self.clear_to_eol()
                     self.scrbuf[c] = (False,'')
@@ -169,15 +171,11 @@ class Editor:
                      self.content[i][self.margin:self.margin + self.width])
                 if l != self.scrbuf[c]: 
                     self.goto(c, 0)
-                    if l[0]:
-                        self.hilite(2)
-                        self.wr(l[1])
-                        if l[1] == '': self.wr(' ') 
-                        self.hilite(0)
-                    else:
-                        self.wr(l[1])
+                    if l[0]: self.hilite(2)
+                    self.wr(l[1])
                     if len(l[1]) < self.width:
                         self.clear_to_eol()
+                    if l[0]: self.hilite(0)
                     self.scrbuf[c] = l
                 i += 1
         self.goto(self.height, 0)
@@ -185,8 +183,8 @@ class Editor:
         self.wr("[{}] {} Row: {} Col: {}  {}".format(
             self.total_lines, self.changed, self.cur_line + 1,
             self.col + 1, self.message[:self.width - 25]))
-        self.hilite(0)
         self.clear_to_eol() 
+        self.hilite(0)
         self.goto(self.row, self.col - self.margin)
         self.cursor(True)
     def spaces(self, line, pos = None): 
@@ -320,9 +318,9 @@ class Editor:
                 if res[3]: self.write_tabs = 'y' if res[3][0] == 'y' else 'n'
             except:
                 pass
-        elif key == 0x02: 
-            self.cur_line = 0
         elif key == 0x14: 
+            self.cur_line = 0
+        elif key == 0x02: 
             self.cur_line = self.total_lines - 1
             self.row = self.height - 1 
         else:
@@ -347,6 +345,7 @@ class Editor:
         self.cur_line = lrange[0]
         self.mark = None 
     def handle_edit_key(self, key): 
+        from os import rename, remove
         l = self.content[self.cur_line]
         if key == 0x0a:
             self.mark = None
@@ -481,12 +480,15 @@ class Editor:
                 lrange = (0, self.total_lines)
             if fname:
                 try:
-                    with open(fname, "w") as f:
+                    with open("tmpfile.pye", "w") as f:
                         for l in self.content[lrange[0]:lrange[1]]:
                             if self.write_tabs == 'y':
                                 f.write(self.packtabs(l) + '\n')
                             else:
                                 f.write(l + '\n')
+                    try: remove(fname)
+                    except: pass
+                    rename("tmpfile.pye", fname)
                     self.changed = ' ' 
                     self.undo_zero = len(self.undo) 
                     self.fname = fname 
@@ -519,7 +521,8 @@ class Editor:
         self.set_screen_parms()
         self.mouse_reporting(True) 
         while True:
-            self.display_window() 
+            if self.not_pending(): 
+                self.display_window() 
             key = self.get_input() 
             self.message = '' 
             if key == 0x11:

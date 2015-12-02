@@ -73,17 +73,17 @@
                     res = res[:pos-1] + res[pos:]
                     self.wr("\b")
                     pos -= 1
-                    self.wr(res[pos:] + ' ' +  '\b' * (len(res[pos:]) + 1)) ## update tail
+                    self.push_msg(res[pos:] + ' ') ## update tail
             elif key == KEY_DELETE: ## Delete
                 if pos < len(res):
                     res = res[:pos] + res[pos+1:]
-                    self.wr(res[pos:] + ' ' +  '\b' * (len(res[pos:]) + 1)) ## update tail
+                    self.push_msg(res[pos:] + ' ') ## update tail
             elif key >= 0x20: ## char to be inserted
                 if len(prompt) + len(res) < self.width - 2:
                     res = res[:pos] + chr(key) + res[pos:]
                     self.wr(res[pos])
                     pos += 1
-                    self.wr(res[pos:] + '\b' * len(res[pos:])) ## update tail
+                    self.push_msg(res[pos:]) ## update tail
 
     def expandtabs(self, s, tabsize = 8):
         import _io
