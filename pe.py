@@ -104,13 +104,11 @@ class Editor:
     def scroll_up(self, scrolling):
         self.scrbuf[scrolling:] = self.scrbuf[:-scrolling]
         self.scrbuf[:scrolling] = [''] * scrolling
-        self.cursor(False)
         self.goto(0, 0)
         self.wr("\x1bM" * scrolling)
     def scroll_down(self, scrolling):
         self.scrbuf[:-scrolling] = self.scrbuf[scrolling:]
         self.scrbuf[-scrolling:] = [''] * scrolling
-        self.cursor(False)
         self.goto(self.height - 1, 0)
         self.wr("\x1bD " * scrolling)
     def set_screen_parms(self):
@@ -241,6 +239,7 @@ class Editor:
         self.cur_line = line
         return len(pattern)
     def handle_cursor_keys(self, key): 
+        l = self.content[self.cur_line]
         if key == 0x0d:
             if self.cur_line < self.total_lines - 1:
                 self.cur_line += 1
@@ -254,13 +253,13 @@ class Editor:
         elif key == 0x1f:
             if self.col == 0 and self.cur_line > 0:
                 self.cur_line -= 1
-                self.col = len(self.content[self.cur_line])
+                self.col = len(l)
                 if self.cur_line < self.top_line:
                     self.scroll_up(1)
             else:
                 self.col -= 1
         elif key == 0x1e:
-            if self.col >= len(self.content[self.cur_line]) and self.cur_line < self.total_lines - 1:
+            if self.col >= len(l) and self.cur_line < self.total_lines - 1:
                 self.col = 0
                 self.cur_line += 1
                 if self.cur_line == self.top_line + self.height:
@@ -268,9 +267,9 @@ class Editor:
             else:
                 self.col += 1
         elif key == 0x10:
-            self.col = self.spaces(self.content[self.cur_line]) if self.col == 0 else 0
+            self.col = self.spaces(l) if self.col == 0 else 0
         elif key == 0x03:
-            self.col = len(self.content[self.cur_line])
+            self.col = len(l)
         elif key == 0x17:
             self.cur_line -= self.height
         elif key == 0x19:
@@ -328,36 +327,18 @@ class Editor:
             self.cur_line = self.total_lines - 1
             self.row = self.height - 1 
         elif key == 0xfffe:
-            if self.col >= len(self.content[self.cur_line]): 
-                return True
-            opening = "([{<"
-            closing = ")]}>"
-            level = 0
-            pos = self.col
-            srch = self.content[self.cur_line][pos]
-            i = opening.find(srch)
-            if i >= 0: 
-                pos += 1
-                match = closing[i]
-                for i in range(self.cur_line, self.total_lines):
-                    for c in range(pos, len(self.content[i])):
-                        if self.content[i][c] == match:
-                            if level == 0: 
-                                self.cur_line = i
-                                self.col = c
-                                return True 
-                            else:
-                                level -= 1
-                        elif self.content[i][c] == srch:
-                            level += 1
-                    pos = 0 
-            else:
-                i = closing.find(srch)
+            if self.col < len(l): 
+                opening = "([{<"
+                closing = ")]}>"
+                level = 0
+                pos = self.col
+                srch = l[pos]
+                i = opening.find(srch)
                 if i >= 0: 
-                    pos -= 1
-                    match = opening[i]
-                    for i in range(self.cur_line, -1, -1):
-                        for c in range(pos, -1, -1):
+                    pos += 1
+                    match = closing[i]
+                    for i in range(self.cur_line, self.total_lines):
+                        for c in range(pos, len(self.content[i])):
                             if self.content[i][c] == match:
                                 if level == 0: 
                                     self.cur_line = i
@@ -367,8 +348,25 @@ class Editor:
                                     level -= 1
                             elif self.content[i][c] == srch:
                                 level += 1
-                        if i > 0: 
-                            pos = len(self.content[i - 1]) - 1
+                        pos = 0 
+                else:
+                    i = closing.find(srch)
+                    if i >= 0: 
+                        pos -= 1
+                        match = opening[i]
+                        for i in range(self.cur_line, -1, -1):
+                            for c in range(pos, -1, -1):
+                                if self.content[i][c] == match:
+                                    if level == 0: 
+                                        self.cur_line = i
+                                        self.col = c
+                                        return True 
+                                    else:
+                                        level -= 1
+                                elif self.content[i][c] == srch:
+                                    level += 1
+                            if i > 0: 
+                                pos = len(self.content[i - 1]) - 1
         elif key == 0x0c:
             self.mark = self.cur_line if self.mark == None else None
         else:

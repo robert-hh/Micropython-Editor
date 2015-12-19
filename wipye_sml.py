@@ -173,6 +173,7 @@ class Editor:
         self.cur_line = line
         return len(pattern)
     def handle_cursor_keys(self, key): 
+        l = self.content[self.cur_line]
         if key == 0x0d:
                 self.cur_line += 1
         elif key == 0x0b:
@@ -182,9 +183,9 @@ class Editor:
         elif key == 0x1e:
                 self.col += 1
         elif key == 0x10:
-            self.col = self.spaces(self.content[self.cur_line]) if self.col == 0 else 0
+            self.col = self.spaces(l) if self.col == 0 else 0
         elif key == 0x03:
-            self.col = len(self.content[self.cur_line])
+            self.col = len(l)
         elif key == 0x17:
             self.cur_line -= self.height
         elif key == 0x19:

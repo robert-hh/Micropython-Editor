@@ -447,6 +447,7 @@ class Editor:
         return len(pattern)
 
     def handle_cursor_keys(self, key): ## keys which move, sanity checks later
+        l = self.content[self.cur_line]
         if key == KEY_DOWN:
 #ifdef SCROLL
             if self.cur_line < self.total_lines - 1:
@@ -469,7 +470,7 @@ class Editor:
 #ifndef BASIC
             if self.col == 0 and self.cur_line > 0:
                 self.cur_line -= 1
-                self.col = len(self.content[self.cur_line])
+                self.col = len(l)
                 if self.cur_line < self.top_line:
                     self.scroll_up(1)
             else:
@@ -478,9 +479,9 @@ class Editor:
         elif key == KEY_RIGHT:
                 self.col += 1
         elif key == KEY_HOME:
-            self.col = self.spaces(self.content[self.cur_line]) if self.col == 0 else 0
+            self.col = self.spaces(l) if self.col == 0 else 0
         elif key == KEY_END:
-            self.col = len(self.content[self.cur_line])
+            self.col = len(l)
         elif key == KEY_PGUP:
             self.cur_line -= self.height
         elif key == KEY_PGDN:
@@ -502,10 +503,10 @@ class Editor:
                     self.row = self.height >> 1
                 except:
                     pass
-        elif key == KEY_TOGGLE: ## Toggle Autoindent/Statusline/Search case
-            self.autoindent = 'y' if self.autoindent != 'y' else 'n'
 #ifndef BASIC
-            self.autoindent = 'y' if self.autoindent != 'y' else 'n'
+        elif key == KEY_TOGGLE: ## Toggle Autoindent/Statusline/Search case
+            ##self.autoindent = 'y' if self.autoindent != 'y' else 'n'
+            ##self.autoindent = 'y' if self.autoindent != 'y' else 'n'
             pat = self.line_edit("Case Sensitive Search {}, Autoindent {}, Tab Size {}, Write Tabs {}: ".format(self.case, self.autoindent, self.tab_size, self.write_tabs), "")
             try:
                 res =  [i.strip().lower() for i in pat.split(",")]
@@ -536,47 +537,46 @@ class Editor:
 #endif
 #ifdef BRACKET
         elif key == KEY_MATCH:
-            if self.col >= len(self.content[self.cur_line]): ## beyond EOL
-                return True
-            opening = "([{<"
-            closing = ")]}>"
-            level = 0
-            pos = self.col
-            srch = self.content[self.cur_line][pos]
-            i = opening.find(srch)
-            if i >= 0: ## at opening bracket, look forward
-                pos += 1
-                match = closing[i]
-                for i in range(self.cur_line, self.total_lines):
-                    for c in range(pos, len(self.content[i])):
-                        if self.content[i][c] == match:
-                            if level == 0: ## match found
-                                self.cur_line = i
-                                self.col = c
-                                return True  ## return here instead of ml-breaking
-                            else:
-                                level -= 1
-                        elif self.content[i][c] == srch:
-                            level += 1
-                    pos = 0 ## next line starts at 0
-            else:
-                i = closing.find(srch)
-                if i >= 0: ## at closing bracket, look back
-                    pos -= 1
-                    match = opening[i]
-                    for i in range(self.cur_line, -1, -1):
-                        for c in range(pos, -1, -1):
+            if self.col < len(l): ## only within text
+                opening = "([{<"
+                closing = ")]}>"
+                level = 0
+                pos = self.col
+                srch = l[pos]
+                i = opening.find(srch)
+                if i >= 0: ## at opening bracket, look forward
+                    pos += 1
+                    match = closing[i]
+                    for i in range(self.cur_line, self.total_lines):
+                        for c in range(pos, len(self.content[i])):
                             if self.content[i][c] == match:
                                 if level == 0: ## match found
                                     self.cur_line = i
                                     self.col = c
-                                    return True ## return here instead of ml-breaking
+                                    return True  ## return here instead of ml-breaking
                                 else:
                                     level -= 1
                             elif self.content[i][c] == srch:
                                 level += 1
-                        if i > 0: ## prev line, if any, starts at the end
-                            pos = len(self.content[i - 1]) - 1
+                        pos = 0 ## next line starts at 0
+                else:
+                    i = closing.find(srch)
+                    if i >= 0: ## at closing bracket, look back
+                        pos -= 1
+                        match = opening[i]
+                        for i in range(self.cur_line, -1, -1):
+                            for c in range(pos, -1, -1):
+                                if self.content[i][c] == match:
+                                    if level == 0: ## match found
+                                        self.cur_line = i
+                                        self.col = c
+                                        return True ## return here instead of ml-breaking
+                                    else:
+                                        level -= 1
+                                elif self.content[i][c] == srch:
+                                    level += 1
+                            if i > 0: ## prev line, if any, starts at the end
+                                pos = len(self.content[i - 1]) - 1
 #endif
         elif key == KEY_FIRST: ## first line
             self.cur_line = 0
