@@ -123,6 +123,6 @@ c) expandtabs() and packtabs() with a second argument for tabsize (not for pye, 
 **1.12** Bracket Match and Minor changes
 - Ctrl-K causes the cursor set to the matching bracket, if any. Pretty raw, not elegant. Brackets in comments and strings are counting as well.
 - On Copy the mark will be cleared, since it is assumed that the just copied lines will not be overwritten.
-- Ctrl-A at least toggles autoindent in the minimal version.
+- High level try/except catching internal errors (mostly coding errors)
 - Separate cpp options for including scroll optimization, replace or bracket match into the minimal version. Changes in strip.sh script to generate the minimal wipye version too.
 - Some editorial changes and fixign of tyops.
