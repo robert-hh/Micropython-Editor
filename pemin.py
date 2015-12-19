@@ -220,9 +220,9 @@ class Editor:
                     self.row = self.height >> 1
                 except:
                     pass
-        elif key == 0x01: 
-            self.autoindent = 'y' if self.autoindent != 'y' else 'n' 
         elif key == 0xfffe:
+            if self.col >= len(self.content[self.cur_line]): 
+                return True
             opening = "([{<"
             closing = ")]}>"
             level = 0
@@ -262,11 +262,6 @@ class Editor:
                                 level += 1
                         if i > 0: 
                             pos = len(self.content[i - 1]) - 1
-        elif key == 0x14: 
-            self.cur_line = 0
-        elif key == 0x02: 
-            self.cur_line = self.total_lines - 1
-            self.row = self.height - 1 
         elif key == 0x0c:
             self.mark = self.cur_line if self.mark == None else None
         else:
@@ -414,23 +409,26 @@ class Editor:
                 self.display_window() 
             key = self.get_input() 
             self.message = '' 
-            if key == 0x11:
-                if self.changed != ' ':
-                    res = self.line_edit("Content changed! Quit without saving (y/N)? ", "N")
-                    if not res or res[0].upper() != 'Y':
-                        continue
-                self.goto(self.height, 0)
-                self.clear_to_eol()
-                return None
-            elif key == 0x05:
-                self.set_screen_parms()
-                self.row = min(self.height - 1, self.row)
-                if sys.implementation.name == "micropython":
-                    gc.collect()
-                    self.message = "{} Bytes Memory available".format(gc.mem_free())
-            elif self.handle_cursor_keys(key):
-                pass
-            else: self.handle_edit_key(key)
+            try:
+                if key == 0x11:
+                    if self.changed != ' ':
+                        res = self.line_edit("Content changed! Quit without saving (y/N)? ", "N")
+                        if not res or res[0].upper() != 'Y':
+                            continue
+                    self.goto(self.height, 0)
+                    self.clear_to_eol()
+                    return None
+                elif key == 0x05:
+                    self.set_screen_parms()
+                    self.row = min(self.height - 1, self.row)
+                    if sys.implementation.name == "micropython":
+                        gc.collect()
+                        self.message = "{} Bytes Memory available".format(gc.mem_free())
+                elif self.handle_cursor_keys(key):
+                    pass
+                else: self.handle_edit_key(key)
+            except Exception as err:
+                self.message = "Internal error: {}".format(err)
     def get_file(self, fname):
         try:
                 with open(fname) as f:

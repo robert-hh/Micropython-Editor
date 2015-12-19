@@ -104,11 +104,13 @@ class Editor:
     def scroll_up(self, scrolling):
         self.scrbuf[scrolling:] = self.scrbuf[:-scrolling]
         self.scrbuf[:scrolling] = [''] * scrolling
+        self.cursor(False)
         self.goto(0, 0)
         self.wr("\x1bM" * scrolling)
     def scroll_down(self, scrolling):
         self.scrbuf[:-scrolling] = self.scrbuf[scrolling:]
         self.scrbuf[-scrolling:] = [''] * scrolling
+        self.cursor(False)
         self.goto(self.height - 1, 0)
         self.wr("\x1bD " * scrolling)
     def set_screen_parms(self):
@@ -291,8 +293,8 @@ class Editor:
                 except:
                     pass
         elif key == 0x01: 
-            self.autoindent = 'y' if self.autoindent != 'y' else 'n' 
-            self.autoindent = 'y' if self.autoindent != 'y' else 'n' 
+            
+            
             pat = self.line_edit("Case Sensitive Search {}, Autoindent {}, Tab Size {}, Write Tabs {}: ".format(self.case, self.autoindent, self.tab_size, self.write_tabs), "")
             try:
                 res = [i.strip().lower() for i in pat.split(",")]
@@ -320,7 +322,14 @@ class Editor:
                 self.top_line = min(self.top_line + 3, self.total_lines - 1)
                 self.cur_line = max(self.cur_line, self.top_line)
                 self.scroll_down(3)
+        elif key == 0x14: 
+            self.cur_line = 0
+        elif key == 0x02: 
+            self.cur_line = self.total_lines - 1
+            self.row = self.height - 1 
         elif key == 0xfffe:
+            if self.col >= len(self.content[self.cur_line]): 
+                return True
             opening = "([{<"
             closing = ")]}>"
             level = 0
@@ -360,11 +369,6 @@ class Editor:
                                 level += 1
                         if i > 0: 
                             pos = len(self.content[i - 1]) - 1
-        elif key == 0x14: 
-            self.cur_line = 0
-        elif key == 0x02: 
-            self.cur_line = self.total_lines - 1
-            self.row = self.height - 1 
         elif key == 0x0c:
             self.mark = self.cur_line if self.mark == None else None
         else:
@@ -573,25 +577,28 @@ class Editor:
                 self.display_window() 
             key = self.get_input() 
             self.message = '' 
-            if key == 0x11:
-                if self.changed != ' ':
-                    res = self.line_edit("Content changed! Quit without saving (y/N)? ", "N")
-                    if not res or res[0].upper() != 'Y':
-                        continue
-                self.mouse_reporting(False) 
-                self.scroll_region(0)
-                self.goto(self.height, 0)
-                self.clear_to_eol()
-                return None
-            elif key == 0x05:
-                self.set_screen_parms()
-                self.row = min(self.height - 1, self.row)
-                if sys.implementation.name == "micropython":
-                    gc.collect()
-                    self.message = "{} Bytes Memory available".format(gc.mem_free())
-            elif self.handle_cursor_keys(key):
-                pass
-            else: self.handle_edit_key(key)
+            try:
+                if key == 0x11:
+                    if self.changed != ' ':
+                        res = self.line_edit("Content changed! Quit without saving (y/N)? ", "N")
+                        if not res or res[0].upper() != 'Y':
+                            continue
+                    self.mouse_reporting(False) 
+                    self.scroll_region(0)
+                    self.goto(self.height, 0)
+                    self.clear_to_eol()
+                    return None
+                elif key == 0x05:
+                    self.set_screen_parms()
+                    self.row = min(self.height - 1, self.row)
+                    if sys.implementation.name == "micropython":
+                        gc.collect()
+                        self.message = "{} Bytes Memory available".format(gc.mem_free())
+                elif self.handle_cursor_keys(key):
+                    pass
+                else: self.handle_edit_key(key)
+            except Exception as err:
+                self.message = "Internal error: {}".format(err)
     def packtabs(self, s):
         from _io import StringIO
         sb = StringIO()

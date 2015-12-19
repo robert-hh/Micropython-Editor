@@ -291,12 +291,14 @@ class Editor:
     def scroll_up(self, scrolling):
         self.scrbuf[scrolling:] = self.scrbuf[:-scrolling]
         self.scrbuf[:scrolling] = [''] * scrolling
+        self.cursor(False)
         self.goto(0, 0)
         self.wr("\x1bM" * scrolling)
 
     def scroll_down(self, scrolling):
         self.scrbuf[:-scrolling] = self.scrbuf[scrolling:]
         self.scrbuf[-scrolling:] = [''] * scrolling
+        self.cursor(False)
         self.goto(self.height - 1, 0)
         self.wr("\x1bD " * scrolling)
 #endif
@@ -509,10 +511,10 @@ class Editor:
                     self.row = self.height >> 1
                 except:
                     pass
-        elif key == KEY_TOGGLE: ## Toggle Autoindent/Statusline/Search case
-            self.autoindent = 'y' if self.autoindent != 'y' else 'n' ## toggle
 #ifndef BASIC
-            self.autoindent = 'y' if self.autoindent != 'y' else 'n' ## toggle again
+        elif key == KEY_TOGGLE: ## Toggle Autoindent/Statusline/Search case
+            ##self.autoindent = 'y' if self.autoindent != 'y' else 'n' ## toggle
+            ##self.autoindent = 'y' if self.autoindent != 'y' else 'n' ## toggle again
             pat = self.line_edit("Case Sensitive Search {}, Autoindent {}, Tab Size {}, Write Tabs {}: ".format(self.case, self.autoindent, self.tab_size, self.write_tabs), "")
             try:
                 res =  [i.strip().lower() for i in pat.split(",")]
@@ -540,9 +542,16 @@ class Editor:
                 self.top_line = min(self.top_line + 3, self.total_lines - 1)
                 self.cur_line = max(self.cur_line, self.top_line)
                 self.scroll_down(3)
+        elif key == KEY_FIRST: ## first line
+            self.cur_line = 0
+        elif key == KEY_LAST: ## last line
+            self.cur_line = self.total_lines - 1
+            self.row = self.height - 1 ## will be fixed if required
 #endif
 #ifdef BRACKET
         elif key == KEY_MATCH:
+            if self.col >= len(self.content[self.cur_line]): ## beyond EOL
+                return True
             opening = "([{<"
             closing = ")]}>"
             level = 0
@@ -558,13 +567,13 @@ class Editor:
                             if level == 0: ## match found
                                 self.cur_line = i
                                 self.col = c
-                                return True  ## return here instead of ml-breaking 
+                                return True  ## return here instead of ml-breaking
                             else:
                                 level -= 1
                         elif self.content[i][c] == srch:
                             level += 1
                     pos = 0 ## next line starts at 0
-            else: 
+            else:
                 i = closing.find(srch)
                 if i >= 0: ## at closing bracket, look back
                     pos -= 1
@@ -583,11 +592,6 @@ class Editor:
                         if i > 0: ## prev line, if any, starts at the end
                             pos = len(self.content[i - 1]) - 1
 #endif
-        elif key == KEY_FIRST: ## first line
-            self.cur_line = 0
-        elif key == KEY_LAST: ## last line
-            self.cur_line = self.total_lines - 1
-            self.row = self.height - 1 ## will be fixed if required
         elif key == KEY_MARK:
             self.mark = self.cur_line if self.mark == None else None
         else:
@@ -603,9 +607,9 @@ class Editor:
                 self.undo_zero -= 1
             self.undo.append((lnum, span, text, key, self.col))
 
-    def delete_lines(self, yank): ## copy marked lines (opt) and delete them 
+    def delete_lines(self, yank): ## copy marked lines (opt) and delete them
         lrange = self.line_range()
-        if yank: 
+        if yank:
             self.yank_buffer = self.content[lrange[0]:lrange[1]]
         self.undo_add(lrange[0], self.content[lrange[0]:lrange[1]], 0, 0) ## undo inserts
         del self.content[lrange[0]:lrange[1]]
@@ -820,34 +824,37 @@ class Editor:
             key = self.get_input()  ## Get Char of Fct-key code
             self.message = '' ## clear message
 
-            if key == KEY_QUIT:
-                if self.changed != ' ':
-                    res = self.line_edit("Content changed! Quit without saving (y/N)? ", "N")
-                    if not res or res[0].upper() != 'Y':
-                        continue
+            try:
+                if key == KEY_QUIT:
+                    if self.changed != ' ':
+                        res = self.line_edit("Content changed! Quit without saving (y/N)? ", "N")
+                        if not res or res[0].upper() != 'Y':
+                            continue
 ## Do not leave cursor in the middle of screen
 #ifndef BASIC
-                self.mouse_reporting(False) ## disable mouse reporting, enable scrolling
+                    self.mouse_reporting(False) ## disable mouse reporting, enable scrolling
 #endif
 #ifdef SCROLL
-                self.scroll_region(0)
+                    self.scroll_region(0)
 #endif
-                self.goto(self.height, 0)
-                self.clear_to_eol()
-                return None
-            elif key == KEY_REDRAW:
-                self.set_screen_parms()
-                self.row = min(self.height - 1, self.row)
+                    self.goto(self.height, 0)
+                    self.clear_to_eol()
+                    return None
+                elif key == KEY_REDRAW:
+                    self.set_screen_parms()
+                    self.row = min(self.height - 1, self.row)
 #ifdef LINUX
-                if sys.platform in ("linux", "darwin") and sys.implementation.name == "cpython":
-                    signal.signal(signal.SIGWINCH, Editor.signal_handler)
+                    if sys.platform in ("linux", "darwin") and sys.implementation.name == "cpython":
+                        signal.signal(signal.SIGWINCH, Editor.signal_handler)
 #endif
-                if sys.implementation.name == "micropython":
-                    gc.collect()
-                    self.message = "{} Bytes Memory available".format(gc.mem_free())
-            elif  self.handle_cursor_keys(key):
-                pass
-            else: self.handle_edit_key(key)
+                    if sys.implementation.name == "micropython":
+                        gc.collect()
+                        self.message = "{} Bytes Memory available".format(gc.mem_free())
+                elif  self.handle_cursor_keys(key):
+                    pass
+                else: self.handle_edit_key(key)
+            except Exception as err:
+                self.message = "Internal error: {}".format(err)
 
 ## packtabs: replace sequence of space by tab
 #ifndef BASIC
