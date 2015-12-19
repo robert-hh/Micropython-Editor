@@ -31,13 +31,8 @@
         self.message = ' ' ## force status once
         return len(match.group(0))
 
-    def push_msg(self, msg): ## push cursor, Write a message, pop cursor
-        self.wr("\x1b[s")  ## Push cursor
-        self.wr(msg)
-        self.wr("\x1b[u")  ## Pop Cursor
-        ## alternative: replace the three line above by: self.wr(msg + "\b" * len(msg))
-
     def line_edit(self, prompt, default):  ## better one: added cursor keys and backsp, delete
+        push_msg = lambda msg: self.wr(msg + "\b" * len(msg)) ## Write a message and move cursor back
         self.goto(self.height, 0)
         self.hilite(True)
         self.wr(prompt)
@@ -68,22 +63,49 @@
             elif key == KEY_END:
                 self.wr(res[pos:])
                 pos = len(res)
+            elif key == KEY_DELETE: ## Delete
+                if pos < len(res):
+                    res = res[:pos] + res[pos+1:]
+                    push_msg(res[pos:] + ' ') ## update tail
             elif key == KEY_BACKSPACE: ## Backspace
                 if pos > 0:
                     res = res[:pos-1] + res[pos:]
                     self.wr("\b")
                     pos -= 1
-                    self.push_msg(res[pos:] + ' ') ## update tail
-            elif key == KEY_DELETE: ## Delete
-                if pos < len(res):
-                    res = res[:pos] + res[pos+1:]
-                    self.push_msg(res[pos:] + ' ') ## update tail
+                    push_msg(res[pos:] + ' ') ## update tail
             elif key >= 0x20: ## char to be inserted
                 if len(prompt) + len(res) < self.width - 2:
                     res = res[:pos] + chr(key) + res[pos:]
                     self.wr(res[pos])
                     pos += 1
-                    self.push_msg(res[pos:]) ## update tail
+                    push_msg(res[pos:]) ## update tail
+
+    def line_edit(self, prompt, default):  ## simple one: only 4 fcts
+        self.goto(self.height, 0)
+        self.hilite(1)
+        self.wr(prompt)
+        self.wr(default)
+        self.clear_to_eol()
+        res = default
+        while True:
+            key = self.get_input()  ## Get Char of Fct.
+            if key in (KEY_ENTER, KEY_TAB): ## Finis
+                self.hilite(0)
+                return res
+            elif key == KEY_QUIT: ## Abort
+                self.hilite(0)
+                return None
+            elif key == KEY_BACKSPACE: ## Backspace
+                if (len(res) > 0):
+                    res = res[:len(res)-1]
+                    self.wr('\b \b')
+            elif key == KEY_DELETE: ## Delete prev. Entry
+                self.wr('\b \b' * len(res))
+                res = ''
+            elif key >= 0x20: ## char to be added at the end
+                if len(prompt) + len(res) < self.width - 2:
+                    res += chr(key)
+                    self.wr(chr(key))
 
     def expandtabs(self, s, tabsize = 8):
         import _io

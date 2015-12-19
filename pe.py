@@ -4,7 +4,7 @@ class Editor:
     b"\x1b[A" : 0x0b,
     b"\x1b[B" : 0x0d,
     b"\x1b[D" : 0x1f,
-    b"\x1b[C" : 0x0f,
+    b"\x1b[C" : 0x1e,
     b"\x1b[H" : 0x10, 
     b"\x1bOH" : 0x10, 
     b"\x1b[1~": 0x10, 
@@ -36,12 +36,13 @@ class Editor:
     b"\x0c" : 0x0c, 
     b"\x14" : 0x14, 
     b"\x02" : 0x02, 
-    b"\x1b[M" : 0x1b,
     b"\x01" : 0x01, 
+    b"\x0f" : 0x0f, 
+    b"\x1b[M" : 0x1b,
     b"\x1b[1;5H": 0x14,
     b"\x1b[1;5F": 0x02,
     b"\x1b[3;5~": 0x18, 
-    b"\x0f" : 0x1e, 
+    b"\x0b" : 0xfffe,
     }
     def __init__(self, tab_size, undo_limit):
         self.top_line = self.cur_line = self.row = self.col = self.margin = 0
@@ -121,7 +122,6 @@ class Editor:
         (self.height, self.width) = [int(i, 10) for i in pos[2:].split(b';')]
         self.height -= 1
         self.scrbuf = [(False,"\x00")] * self.height 
-        self.scroll_region(self.height)
     def get_input(self): 
         while True:
             in_buffer = self.rd()
@@ -191,8 +191,8 @@ class Editor:
         return (len(line) - len(line.lstrip(" ")) if pos == None else 
                 len(line[:pos]) - len(line[:pos].rstrip(" ")))
     def line_range(self):
-            return ((self.mark, self.cur_line + 1) if self.mark < self.cur_line else
-                    (self.cur_line, self.mark + 1))
+        return ((self.mark, self.cur_line + 1) if self.mark < self.cur_line else
+                (self.cur_line, self.mark + 1))
     def line_edit(self, prompt, default): 
         self.goto(self.height, 0)
         self.hilite(1)
@@ -238,14 +238,12 @@ class Editor:
         self.col = match + spos
         self.cur_line = line
         return len(pattern)
-    def cursor_down(self):
-        if self.cur_line < self.total_lines - 1:
-            self.cur_line += 1
-            if self.cur_line == self.top_line + self.height:
-                self.scroll_down(1)
     def handle_cursor_keys(self, key): 
         if key == 0x0d:
-            self.cursor_down()
+            if self.cur_line < self.total_lines - 1:
+                self.cur_line += 1
+                if self.cur_line == self.top_line + self.height:
+                    self.scroll_down(1)
         elif key == 0x0b:
             if self.cur_line > 0:
                 self.cur_line -= 1
@@ -259,10 +257,12 @@ class Editor:
                     self.scroll_up(1)
             else:
                 self.col -= 1
-        elif key == 0x0f:
+        elif key == 0x1e:
             if self.col >= len(self.content[self.cur_line]) and self.cur_line < self.total_lines - 1:
-                self.cursor_down()
                 self.col = 0
+                self.cur_line += 1
+                if self.cur_line == self.top_line + self.height:
+                    self.scroll_down(1)
             else:
                 self.col += 1
         elif key == 0x10:
@@ -290,6 +290,20 @@ class Editor:
                     self.row = self.height >> 1
                 except:
                     pass
+        elif key == 0x01: 
+            self.autoindent = 'y' if self.autoindent != 'y' else 'n' 
+            self.autoindent = 'y' if self.autoindent != 'y' else 'n' 
+            pat = self.line_edit("Case Sensitive Search {}, Autoindent {}, Tab Size {}, Write Tabs {}: ".format(self.case, self.autoindent, self.tab_size, self.write_tabs), "")
+            try:
+                res = [i.strip().lower() for i in pat.split(",")]
+                if res[0]: self.case = 'y' if res[0][0] == 'y' else 'n'
+                if res[1]: self.autoindent = 'y' if res[1][0] == 'y' else 'n'
+                if res[2]:
+                    try: self.tab_size = int(res[2])
+                    except: pass
+                if res[3]: self.write_tabs = 'y' if res[3][0] == 'y' else 'n'
+            except:
+                pass
         elif key == 0x1b: 
             if self.mouse_y < self.height:
                 self.col = self.mouse_x + self.margin
@@ -306,23 +320,53 @@ class Editor:
                 self.top_line = min(self.top_line + 3, self.total_lines - 1)
                 self.cur_line = max(self.cur_line, self.top_line)
                 self.scroll_down(3)
-        elif key == 0x01: 
-            pat = self.line_edit("Case Sensitive Search {}, Autoindent {}, Tab Size {}, Write Tabs {}: ".format(self.case, self.autoindent, self.tab_size, self.write_tabs), "")
-            try:
-                res = [i.strip().lower() for i in pat.split(",")]
-                if res[0]: self.case = 'y' if res[0][0] == 'y' else 'n'
-                if res[1]: self.autoindent = 'y' if res[1][0] == 'y' else 'n'
-                if res[2]:
-                    try: self.tab_size = int(res[2])
-                    except: pass
-                if res[3]: self.write_tabs = 'y' if res[3][0] == 'y' else 'n'
-            except:
-                pass
+        elif key == 0xfffe:
+            opening = "([{<"
+            closing = ")]}>"
+            level = 0
+            pos = self.col
+            srch = self.content[self.cur_line][pos]
+            i = opening.find(srch)
+            if i >= 0: 
+                pos += 1
+                match = closing[i]
+                for i in range(self.cur_line, self.total_lines):
+                    for c in range(pos, len(self.content[i])):
+                        if self.content[i][c] == match:
+                            if level == 0: 
+                                self.cur_line = i
+                                self.col = c
+                                return True 
+                            else:
+                                level -= 1
+                        elif self.content[i][c] == srch:
+                            level += 1
+                    pos = 0 
+            else:
+                i = closing.find(srch)
+                if i >= 0: 
+                    pos -= 1
+                    match = opening[i]
+                    for i in range(self.cur_line, -1, -1):
+                        for c in range(pos, -1, -1):
+                            if self.content[i][c] == match:
+                                if level == 0: 
+                                    self.cur_line = i
+                                    self.col = c
+                                    return True 
+                                else:
+                                    level -= 1
+                            elif self.content[i][c] == srch:
+                                level += 1
+                        if i > 0: 
+                            pos = len(self.content[i - 1]) - 1
         elif key == 0x14: 
             self.cur_line = 0
         elif key == 0x02: 
             self.cur_line = self.total_lines - 1
             self.row = self.height - 1 
+        elif key == 0x0c:
+            self.mark = self.cur_line if self.mark == None else None
         else:
             return False
         return True
@@ -334,9 +378,10 @@ class Editor:
                 del self.undo[0]
                 self.undo_zero -= 1
             self.undo.append((lnum, span, text, key, self.col))
-    def delete_lines(self, yank):
+    def delete_lines(self, yank): 
         lrange = self.line_range()
-        if yank: self.yank_buffer = self.content[lrange[0]:lrange[1]]
+        if yank:
+            self.yank_buffer = self.content[lrange[0]:lrange[1]]
         self.undo_add(lrange[0], self.content[lrange[0]:lrange[1]], 0, 0) 
         del self.content[lrange[0]:lrange[1]]
         if self.content == []: 
@@ -412,22 +457,23 @@ class Editor:
                     self.col -= ni
         elif key == 0x12:
             count = 0
-            pat = self.line_edit("Find: ", self.find_pattern)
+            pat = self.line_edit("Replace: ", self.find_pattern)
             if pat:
-                rpat = self.line_edit("Replace with: ", self.replc_pattern)
-                if rpat != None:
+                rpat = self.line_edit("With: ", self.replc_pattern)
+                if rpat != None: 
                     self.replc_pattern = rpat
                     q = ''
+                    cur_line = self.cur_line 
                     if self.mark != None: 
-                        lrange = self.line_range()
-                        self.cur_line = lrange[0]
-                    else:
-                        lrange = (self.cur_line, self.total_lines)
-                    while True:
-                        ni = self.find_in_file(pat, self.col, lrange[1])
-                        if ni:
+                        (self.cur_line, end_line) = self.line_range()
+                        self.col = 0
+                    else: 
+                        end_line = self.total_lines
+                    self.message = "Replace (yes/No/all/quit) ? "
+                    while True: 
+                        ni = self.find_in_file(pat, self.col, end_line)
+                        if ni: 
                             if q != 'a':
-                                self.message = "Replace (yes/No/all/quit) ? "
                                 self.display_window()
                                 key = self.get_input() 
                                 q = chr(key).lower()
@@ -440,10 +486,11 @@ class Editor:
                                 count += 1
                             else: 
                                 self.col += 1
-                        else:
+                        else: 
                             break
+                    self.cur_line = cur_line 
                     self.message = "'{}' replaced {} times".format(pat, count)
-        elif key == 0x1e:
+        elif key == 0x0f:
             fname = self.line_edit("Insert File: ", "")
             if fname:
                 (content, self.message) = self.get_file(fname)
@@ -451,8 +498,6 @@ class Editor:
                     self.undo_add(self.cur_line, None, 0, -len(content))
                     self.content[self.cur_line:self.cur_line] = content
                     self.total_lines = len(self.content)
-        elif key == 0x0c:
-            self.mark = self.cur_line if self.mark == None else None
         elif key == 0x18: 
             if self.mark != None:
                 self.delete_lines(True)
@@ -460,6 +505,7 @@ class Editor:
             if self.mark != None:
                 lrange = self.line_range()
                 self.yank_buffer = self.content[lrange[0]:lrange[1]]
+                self.mark = None
         elif key == 0x16: 
             if self.yank_buffer:
                 if self.mark != None:
@@ -468,16 +514,16 @@ class Editor:
                 self.content[self.cur_line:self.cur_line] = self.yank_buffer 
                 self.total_lines += len(self.yank_buffer)
         elif key == 0x13:
-            if False: pass
-            elif self.mark != None:
-                fname = self.line_edit("Save Mark: ", "")
-                lrange = self.line_range()
-            else:
-                fname = self.fname
-                if fname == None:
-                    fname = ""
-                fname = self.line_edit("Save File: ", fname)
-                lrange = (0, self.total_lines)
+            if True:
+                if self.mark != None:
+                    fname = self.line_edit("Save Mark: ", "")
+                    lrange = self.line_range()
+                else:
+                    fname = self.fname
+                    if fname == None:
+                        fname = ""
+                    fname = self.line_edit("Save File: ", fname)
+                    lrange = (0, self.total_lines)
             if fname:
                 try:
                     with open("tmpfile.pye", "w") as f:
@@ -509,6 +555,7 @@ class Editor:
                     del self.content[action[0]:action[0] - action[1]]
                 self.total_lines = len(self.content) 
                 self.changed = ' ' if len(self.undo) == self.undo_zero else '*'
+                self.mark = None
         elif key >= 0x20: 
             self.mark = None
             self.undo_add(self.cur_line, [l], 0x20 if key == 0x20 else 0x41)
@@ -520,6 +567,7 @@ class Editor:
         self.total_lines = len(self.content)
         self.set_screen_parms()
         self.mouse_reporting(True) 
+        self.scroll_region(self.height)
         while True:
             if self.not_pending(): 
                 self.display_window() 
@@ -590,8 +638,7 @@ def pye(content = None, tab_size = 4, undo = 50, device = 0, baud = 115200):
             print (e.message)
             return
     elif type(content) == list and len(content) > 0 and type(content[0]) == str:
-        
-        e.content = content
+        e.content = content 
     e.init_tty(device, baud)
     e.edit_loop()
     e.deinit_tty()

@@ -18,7 +18,6 @@ class Editor:
     b"\x7f" : 0x08, 
     b"\x1b[3~": 0x7f,
     b"\x1b[Z" : 0x15, 
-    b"\x0b" : 0xfffe,
     }
     def __init__(self, tab_size, undo_limit):
         self.top_line = self.cur_line = self.row = self.col = self.margin = 0
@@ -34,30 +33,17 @@ class Editor:
         self.autoindent = "y"
         self.yank_buffer = []
         self.mark = None
-    if sys.platform == "pyboard":
-        def wr(self,s):
-            ns = 0
-            while ns < len(s): 
-                res = self.serialcomm.write(s[ns:])
-                if res != None:
-                    ns += res
+    if sys.platform == "WiPy":
+        def wr(self, s):
+            sys.stdout.write(s)
         def not_pending(self):
-            return not self.serialcomm.any()
+            return True
         def rd(self):
-            while not self.serialcomm.any():
-                pass
-            return self.serialcomm.read(1)
-        def init_tty(self, device, baud):
-            import pyb
-            self.sdev = device
-            if self.sdev:
-                self.serialcomm = pyb.UART(device, baud)
-            else:
-                self.serialcomm = pyb.USB_VCP()
-                self.serialcomm.setinterrupt(-1)
-        def deinit_tty(self):
-            if not self.sdev:
-                self.serialcomm.setinterrupt(3)
+            while True:
+                try:
+                    return sys.stdin.read(1).encode()
+                except:
+                    pass
     def goto(self, row, col):
         self.wr("\x1b[{};{}H".format(row + 1, col + 1))
     def clear_to_eol(self):
@@ -222,46 +208,6 @@ class Editor:
                     pass
         elif key == 0x01: 
             self.autoindent = 'y' if self.autoindent != 'y' else 'n' 
-        elif key == 0xfffe:
-            opening = "([{<"
-            closing = ")]}>"
-            level = 0
-            pos = self.col
-            srch = self.content[self.cur_line][pos]
-            i = opening.find(srch)
-            if i >= 0: 
-                pos += 1
-                match = closing[i]
-                for i in range(self.cur_line, self.total_lines):
-                    for c in range(pos, len(self.content[i])):
-                        if self.content[i][c] == match:
-                            if level == 0: 
-                                self.cur_line = i
-                                self.col = c
-                                return True 
-                            else:
-                                level -= 1
-                        elif self.content[i][c] == srch:
-                            level += 1
-                    pos = 0 
-            else:
-                i = closing.find(srch)
-                if i >= 0: 
-                    pos -= 1
-                    match = opening[i]
-                    for i in range(self.cur_line, -1, -1):
-                        for c in range(pos, -1, -1):
-                            if self.content[i][c] == match:
-                                if level == 0: 
-                                    self.cur_line = i
-                                    self.col = c
-                                    return True 
-                                else:
-                                    level -= 1
-                            elif self.content[i][c] == srch:
-                                level += 1
-                        if i > 0: 
-                            pos = len(self.content[i - 1]) - 1
         elif key == 0x14: 
             self.cur_line = 0
         elif key == 0x02: 
@@ -467,7 +413,5 @@ def pye(content = None, tab_size = 4, undo = 50, device = 0, baud = 115200):
             return
     elif type(content) == list and len(content) > 0 and type(content[0]) == str:
         e.content = content 
-    e.init_tty(device, baud)
     e.edit_loop()
-    e.deinit_tty()
     return e.content if (e.fname == None) else e.fname

@@ -7,8 +7,8 @@ A small text editor written in Python running on PYBoard and WiPy, allowing to e
 - Use USB_VCP/Telnet or UART for input and output.
 - Changed the read keyboard function to comply with slow byte-by-byte input on serial lines.
 - Added support for Tab, BackTab, Save, Del and Backspace joining lines, Find, Replace, Goto Line, Undo, Get file, Auto-Indent, Set Flags, Copy/Delete & Paste, Indent, Un-Indent
-- handling tab (0x09) on reading & writing files,
-- Added a status line, line number column and single line prompts for
+- Handling tab (0x09) on reading & writing files,
+- Added a status line, and single line prompts for Quit, Save, Find, Replace, Goto, Get file and Flag settings.
 - Support of the basic mouse functions scrolling up/down and setting the cursor (not WiPy).
 
 The editor assumes a VT100 terminal. It works in Insert mode. Cursor Keys, Home, End, PgUp, PgDn, Del and Backspace work as you would expect. The additional functions like FIND etc. are available with Ctrl-Keys. On reading files, tab characters are expanded to spaces with a tab size of 8, and trailing white space on a line will be discarded. The orginal state of tabs will not be restored when the file is written. Optionally, tabs can be written when saving the file, replacing spaces with tabs when possible. The screen size is determined, when the editor is started or when the Redraw-key (Ctrl-E) is hit.
@@ -19,7 +19,6 @@ The editor works also well in a Linux or MAC terminal environment, with both pyt
 
 - pye.py: Source file with comments and code for PyBoard, WiPy and Linux micropython/python3. Runs on PyBoard as well, but the file size is much larger than the stripped down version.
 - pye2.py: a variant of pye.py which does not change the cursor column during vertical moves.
-- pye3.py: a variant of pye.py which tries to keep the cursor column during vertical moves as good as possible.
 - Pyboard Editor.pdf: A short documentation
 - README.md: This one
 - pe.py: Condensed source file for PyBoard with all functions
@@ -29,7 +28,7 @@ The editor works also well in a Linux or MAC terminal environment, with both pyt
 a) find_in_file() supporting regular expressions,
 b) line_edit() supporting the cursor left/right/home/end keys, and
 c) expandtabs() and packtabs() with a second argument for tabsize (not for pye, but maybe useful)
-- strip.sh: sample Shell script which creates the different variants out of pye.py using cpp
+- strip.sh: sample Shell script which creates the different variants out of pye.py using cpp, including variants of wipye.py with either speed up scrolling or support replace or support got bracket.
 
 **Short Version History**
 
@@ -118,6 +117,12 @@ c) expandtabs() and packtabs() with a second argument for tabsize (not for pye, 
 
 **1.11** Minor fixes
 - Change the way a marked area is highlighted from reverse to a different background color. That works well for black chars on yellow background (code 43). For white chars on black background, the setting for background color in the function hilite() has to be changed, e.g. to blue (code 44).
-- Save file to a temporary file first, and rename it to the target name when successfully written.
-- Lazy screen update: defer screen update, until all chars from the keyboard are processed.
-- Use os.unlink() instead of os.remove(), because remove is not suported by unix micropython
+- Save to a temporary file first, and rename it to the target name when successfully written.
+- Lazy screen update: defer screen update, until all chars from the keyboard are processed. Not provided for WiPY, even if needed there most. WiPy has no way to tell if more chars are waiting in the input or at least a read with timeout.
+
+**1.12** Bracket Match and Minor changes
+- Ctrl-K causes the cursor set to the matching bracket, if any. Pretty raw, not elegant. Brackets in comments and strings are counting as well.
+- On Copy the mark will be cleared, since it is assumed that the just copied lines will not be overwritten.
+- Ctrl-A at least toggles autoindent in the minimal version.
+- Separate cpp options for including scroll optimization, replace or bracket match into the minimal version. Changes in strip.sh script to generate the minimal wipye version too.
+- Some editorial changes and fixign of tyops.
