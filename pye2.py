@@ -13,7 +13,7 @@
 ##   Copy/Delete & Paste, Indent, Un-Indent
 ## - Added mouse support for pointing and scrolling (not WiPy)
 ## - handling tab (0x09) on reading & writing files,
-## - Added a status line, line number column and single line prompts for
+## - Added a status line and single line prompts for
 ##   Quit, Save, Find, Replace, Flags and Goto
 ## - moved main into a function with some optional parameters
 ##
@@ -115,7 +115,7 @@ class Editor:
     b"\x1b[4~": KEY_END,  ## Putty
     b"\x1b[5~": KEY_PGUP,
     b"\x1b[6~": KEY_PGDN,
-    b"\x03"   : KEY_DUP, ## Ctrl-C
+    b"\x03"   : KEY_QUIT, ## Ctrl-C
     b"\r"     : KEY_ENTER,
     b"\x7f"   : KEY_BACKSPACE, ## Ctrl-? (127)
     b"\x1b[3~": KEY_DELETE,
@@ -187,20 +187,18 @@ class Editor:
                         Editor.winch = False
                         return b'\x05'
 
-        def not_pending(self):
+        def rd_any(self):
             if sys.implementation.name == "cpython":
                 import select
-                return select.select([self.sdev], [], [], 0)[0] == []
+                return select.select([self.sdev], [], [], 0)[0] != []
             else:
-                return True
+                return False
 
         def init_tty(self, device, baud):
             self.org_termios = termios.tcgetattr(device)
             tty.setraw(device)
             self.sdev = device
             Editor.winch = False
-            if sys.implementation.name == "cpython":
-                signal.signal(signal.SIGWINCH, Editor.signal_handler)
 
         def deinit_tty(self):
             import termios
@@ -226,8 +224,8 @@ class Editor:
                 pass
             return self.serialcomm.read(1)
 
-        def not_pending(self):
-            return not self.serialcomm.any()
+        def rd_any(self):
+            return self.serialcomm.any()
 
         def init_tty(self, device, baud):
             import pyb
@@ -254,8 +252,8 @@ class Editor:
                 except:
                     pass
 
-        def not_pending(self):
-            return True
+        def rd_any(self):
+            return False
 
 ##        def init_tty(self, device, baud):
 ##            pass
@@ -419,7 +417,7 @@ class Editor:
             elif key == KEY_DELETE: ## Delete prev. Entry
                 self.wr('\b \b' * len(res))
                 res = ''
-            elif key >= 0x20: ## char to be added at the end
+            elif 0x20 <= key < 0xfff0: ## char to be added at the end
                 if len(prompt) + len(res) < self.width - 2:
                     res += chr(key)
                     self.wr(chr(key))
@@ -498,23 +496,18 @@ class Editor:
         elif key == KEY_GOTO: ## goto line
             line = self.line_edit("Goto Line: ", "")
             if line:
-                try:
-                    self.cur_line = int(line) - 1
-                    self.row = self.height >> 1
-                except:
-                    pass
-#ifndef BASIC
+                self.cur_line = int(line) - 1
+                self.row = self.height >> 1
         elif key == KEY_TOGGLE: ## Toggle Autoindent/Statusline/Search case
-            ##self.autoindent = 'y' if self.autoindent != 'y' else 'n'
-            ##self.autoindent = 'y' if self.autoindent != 'y' else 'n'
+            self.autoindent = 'y' if self.autoindent != 'y' else 'n'
+#ifndef BASIC
+            self.autoindent = 'y' if self.autoindent != 'y' else 'n'
             pat = self.line_edit("Case Sensitive Search {}, Autoindent {}, Tab Size {}, Write Tabs {}: ".format(self.case, self.autoindent, self.tab_size, self.write_tabs), "")
             try:
                 res =  [i.strip().lower() for i in pat.split(",")]
                 if res[0]: self.case       = 'y' if res[0][0] == 'y' else 'n'
                 if res[1]: self.autoindent = 'y' if res[1][0] == 'y' else 'n'
-                if res[2]:
-                    try: self.tab_size = int(res[2])
-                    except: pass
+                if res[2]: self.tab_size = int(res[2])
                 if res[3]: self.write_tabs = 'y' if res[3][0] == 'y' else 'n'
             except:
                 pass
@@ -609,26 +602,32 @@ class Editor:
         self.cur_line = lrange[0]
         self.mark = None ## unset line mark
 
-    def handle_edit_key(self, key): ## keys which change content
+    def handle_edit_keys(self, key): ## keys which change content
         from os import rename, unlink
         l = self.content[self.cur_line]
         jut = self.col - len(l) ## <0: before text end, =0 at text end, >0 beyond text end
-        if key == KEY_ENTER:
-            self.undo_add(self.cur_line, [l], 0, 2)
-            self.content[self.cur_line] = l[:self.col]
-            ni = 0
-            if self.autoindent == "y": ## Autoindent
-                ni = min(self.spaces(l), self.col)  ## query indentation
-#ifndef BASIC
-                r = l.partition("\x23")[0].rstrip() ## \x23 == #
-                if r and r[-1] == ':' and self.col >= len(r): ## look for : as the last non-space before comment
-                    ni += self.tab_size
-#endif
-            self.cur_line += 1
-            self.content[self.cur_line:self.cur_line] = [' ' * ni + l[self.col:]] if jut < 0 else [""]
-            self.total_lines += 1
-            self.col = ni
-            self.mark = None ## unset line mark
+        if key == KEY_DELETE:
+            if self.mark != None:
+                self.delete_lines(False)
+            elif jut < 0:
+                self.undo_add(self.cur_line, [l], KEY_DELETE)
+                self.content[self.cur_line] = l[:self.col] + l[self.col + 1:]
+            elif (self.cur_line + 1) < self.total_lines: ## test for last line
+                self.undo_add(self.cur_line, [l, self.content[self.cur_line + 1]], 0)
+                if jut > 0: ## Landfill needed
+                    l += ' ' * jut
+                self.content[self.cur_line] = l + self.content.pop(self.cur_line + 1)
+                self.total_lines -= 1
+        elif 0x20 <= key < 0xfff0: ## char to be added
+            self.mark = None
+            if jut >= 0:
+                if key != 0x20:
+                    self.undo_add(self.cur_line, [l], 0x41)
+                    self.content[self.cur_line] = l + ' ' * jut + chr(key)
+            else:
+                self.undo_add(self.cur_line, [l], 0x20 if key == 0x20 else 0x41)
+                self.content[self.cur_line] = l[:self.col] + chr(key) + l[self.col:]
+            self.col += 1
         elif key == KEY_BACKSPACE:
             if self.mark != None:
                 self.delete_lines(False)
@@ -645,18 +644,22 @@ class Editor:
                 self.cur_line -= 1
                 self.total_lines -= 1
 #endif
-        elif key == KEY_DELETE:
-            if self.mark != None:
-                self.delete_lines(False)
-            elif jut < 0:
-                self.undo_add(self.cur_line, [l], KEY_DELETE)
-                self.content[self.cur_line] = l[:self.col] + l[self.col + 1:]
-            elif (self.cur_line + 1) < self.total_lines: ## test for last line
-                self.undo_add(self.cur_line, [l, self.content[self.cur_line + 1]], 0)
-                if jut > 0: ## Landfill needed
-                    l += ' ' * jut
-                self.content[self.cur_line] = l + self.content.pop(self.cur_line + 1)
-                self.total_lines -= 1
+        elif key == KEY_ENTER:
+            self.undo_add(self.cur_line, [l], 0, 2)
+            self.content[self.cur_line] = l[:self.col]
+            ni = 0
+            if self.autoindent == "y": ## Autoindent
+                ni = min(self.spaces(l), self.col)  ## query indentation
+#ifndef BASIC
+                r = l.partition("\x23")[0].rstrip() ## \x23 == #
+                if r and r[-1] == ':' and self.col >= len(r): ## look for : as the last non-space before comment
+                    ni += self.tab_size
+#endif
+            self.cur_line += 1
+            self.content[self.cur_line:self.cur_line] = [' ' * ni + l[self.col:]] if jut < 0 else [""]
+            self.total_lines += 1
+            self.col = ni
+            self.mark = None ## unset line mark
         elif key == KEY_TAB:
             if self.mark != None:
                 lrange = self.line_range()
@@ -756,31 +759,17 @@ class Editor:
                 if self.mark != None:
                     fname = self.line_edit("Save Mark: ", "")
                     lrange = self.line_range()
+                    self.put_file(fname, lrange[0], lrange[1])
                 else:
 #endif
                     fname = self.fname
                     if fname == None:
                         fname = ""
                     fname = self.line_edit("Save File: ", fname)
-                    lrange = (0, self.total_lines)
-            if fname:
-                try:
-                    with open("tmpfile.pye", "w") as f:
-                        for l in self.content[lrange[0]:lrange[1]]:
-#ifndef BASIC
-                            if self.write_tabs == 'y':
-                                f.write(self.packtabs(l) + '\n')
-                            else:
-#endif
-                                f.write(l + '\n')
-                    try:    unlink(fname)
-                    except: pass
-                    rename("tmpfile.pye", fname)
+                    self.put_file(fname, 0, self.total_lines)
                     self.changed = ' ' ## clear change flag
                     self.undo_zero = len(self.undo) ## remember state
                     self.fname = fname ## remember (new) name
-                except Exception as err:
-                    self.message = 'Could not save {}, {!r}'.format(fname, err)
         elif key == KEY_UNDO:
             if len(self.undo) > 0:
                 action = self.undo.pop(-1) ## get action from stack
@@ -797,36 +786,38 @@ class Editor:
                 self.total_lines = len(self.content) ## brute force
                 self.changed = ' ' if len(self.undo) == self.undo_zero else '*'
                 self.mark = None
-        elif key >= 0x20: ## character to be added
-            self.mark = None
-            if jut >= 0:
-                if key != 0x20:
-                    self.undo_add(self.cur_line, [l], 0x41)
-                    self.content[self.cur_line] = l + ' ' * jut + chr(key)
-            else:
-                self.undo_add(self.cur_line, [l], 0x20 if key == 0x20 else 0x41)
-                self.content[self.cur_line] = l[:self.col] + chr(key) + l[self.col:]
-            self.col += 1
 
     def edit_loop(self): ## main editing loop
 
         if self.content == []: ## check for empty content
             self.content = [""]
         self.total_lines = len(self.content)
-        self.set_screen_parms()
 #ifndef BASIC
         self.mouse_reporting(True) ## enable mouse reporting
 #endif
-#ifdef SCROLL
-        self.scroll_region(self.height)
-#endif
-        while True:
-            if self.not_pending(): ## skip update if a char is waiting
-                self.display_window()  ## Update & display window
-            key = self.get_input()  ## Get Char of Fct-key code
-            self.message = '' ## clear message
+        key = KEY_REDRAW
 
+        while True:
             try:
+                if key == KEY_REDRAW:
+                    self.set_screen_parms()
+                    self.row = min(self.height - 1, self.row)
+#ifdef SCROLL
+                    self.scroll_region(self.height)
+#endif
+#ifdef LINUX
+                    if sys.platform in ("linux", "darwin") and sys.implementation.name == "cpython":
+                        signal.signal(signal.SIGWINCH, Editor.signal_handler)
+#endif
+                    if sys.implementation.name == "micropython":
+                        gc.collect()
+                        self.message = "{} Bytes Memory available".format(gc.mem_free())
+
+                if not self.rd_any(): ## skip update if a char is waiting
+                    self.display_window()  ## Update & display window
+                key = self.get_input()  ## Get Char of Fct-key code
+                self.message = '' ## clear message
+
                 if key == KEY_QUIT:
                     if self.changed != ' ':
                         res = self.line_edit("Content changed! Quit without saving (y/N)? ", "N")
@@ -842,21 +833,11 @@ class Editor:
                     self.goto(self.height, 0)
                     self.clear_to_eol()
                     return None
-                elif key == KEY_REDRAW:
-                    self.set_screen_parms()
-                    self.row = min(self.height - 1, self.row)
-#ifdef LINUX
-                    if sys.platform in ("linux", "darwin") and sys.implementation.name == "cpython":
-                        signal.signal(signal.SIGWINCH, Editor.signal_handler)
-#endif
-                    if sys.implementation.name == "micropython":
-                        gc.collect()
-                        self.message = "{} Bytes Memory available".format(gc.mem_free())
                 elif  self.handle_cursor_keys(key):
                     pass
-                else: self.handle_edit_key(key)
-            except:
-                self.message = "Oops!"
+                else: self.handle_edit_keys(key)
+            except Exception as err:
+                self.message = "{}".format(err)
 
 ## packtabs: replace sequence of space by tab
 #ifndef BASIC
@@ -888,6 +869,21 @@ class Editor:
         for i in range(len(content)):  ## strip and convert
             content[i] = expandtabs(content[i].rstrip('\r\n\t '))
         return (content, "")
+## write file
+    def put_file(self, fname, start, stop):
+        from os import rename, unlink
+        if fname:
+            with open("tmpfile.pye", "w") as f:
+                for l in self.content[start:stop]:
+#ifndef BASIC
+                    if self.write_tabs == 'y':
+                        f.write(self.packtabs(l) + '\n')
+                    else:
+#endif
+                        f.write(l + '\n')
+            try:    unlink(fname)
+            except: pass
+            rename("tmpfile.pye", fname)
 ## expandtabs: hopefully sometimes replaced by the built-in function
 def expandtabs(s):
     from _io import StringIO

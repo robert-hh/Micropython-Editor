@@ -34,9 +34,9 @@ c) expandtabs() and packtabs() with a second argument for tabsize (not for pye, 
 
 **1.0** Initial release with all the basic functions
 
-**1.1** Same function set, but simplified keyboard mapping. 
+**1.1** Same function set, but simplified keyboard mapping.
 - Removed the duplicated definitions for cursor motion keys.
-- Allowed both \r and \n for ENTER, and both \x08 and \x7f for BACKSPACE, which avoid some hazzle with terminal settings. 
+- Allowed both \r and \n for ENTER, and both \x08 and \x7f for BACKSPACE, which avoid some hazzle with terminal settings.
 - Removed auto-indent from the minimal version.
 
 **1.2** Mouse support added, as well as some other minor changes.
@@ -61,16 +61,16 @@ c) expandtabs() and packtabs() with a second argument for tabsize (not for pye, 
 - Support for WiPy added. WiPy runs only the minimal version.
 - Aligned function set of the minimal version, in order to comply with WiPy. Dropped Mouse support, GET file, Line number column, and write tabs; but included Tab, Backtab, the buffer functions Yank, Dup & ZAP and scrolling optimization.
 - LEFT and RIGHT move to the adjacent line if needed
-- When used with Linux **and** CPython, a terminal window resize cause redrawing the screen content. The REDRAW key (Ctrl-E) stays functional and is required for all other use cases, when the window size is changed. 
+- When used with Linux **and** CPython, a terminal window resize cause redrawing the screen content. The REDRAW key (Ctrl-E) stays functional and is required for all other use cases, when the window size is changed.
 - HOME toggles again between start-of-line and start-of-text. END moves always to end-of-line
-- Dropped context sensitive behaviour of Tab, Backtab, Backspace and Delete. Too confusing. 
+- Dropped context sensitive behaviour of Tab, Backtab, Backspace and Delete. Too confusing.
 - Dropped the line number column, and made the status line permanent in all modes.
 - Rearranged the code such that any platform related sections are grouped together.
 
 **1.6** WiPy fixes and further trimming:
 - Making rarely used small functions inline again, which saves some space. Important for WiPy.
 - Catch Ctrl-C on WiPy. Not really nice yet, since the next input byte is lost.
-- Tab Size can be set with the Ctrl-A command (if available). 
+- Tab Size can be set with the Ctrl-A command (if available).
 - Simplified Linux main(). No calling options any more.
 - Always ask when leaving w/o saving after the content was changed.
 
@@ -99,7 +99,7 @@ c) expandtabs() and packtabs() with a second argument for tabsize (not for pye, 
 **1.8** Clean Copy & Paste, Indent, Un-Indent
 - Added a Mark Line key for Line Delete, Line Copy, Indent and Un-Indent
 - Changed Line Delete, Line Copy and Buffer Insert into a cleaner Copy & Paste mode
-- Added a cleaner Indent and Un-Indent method; for WiPy too 
+- Added a cleaner Indent and Un-Indent method; for WiPy too
 - Removed the attempt to recover from out-of-memory situations: did not work.
 - Still runs on WiPy, but really at it's limit
 
@@ -121,8 +121,15 @@ c) expandtabs() and packtabs() with a second argument for tabsize (not for pye, 
 - Lazy screen update: defer screen update, until all chars from the keyboard are processed. Not provided for WiPY, even if needed there most. WiPy has no way to tell if more chars are waiting in the input or at least a read with timeout.
 
 **1.12** Bracket Match and Minor changes
-- Ctrl-K causes the cursor set to the matching bracket, if any. Pretty raw, not elegant. Brackets in comments and strings are counting as well.
+- Ctrl-K causes the cursor set to the matching bracket, if any. Pretty raw, not elegant. 
+Brackets in comments and strings are counting as well.
 - On Copy the mark will be cleared, since it is assumed that the just copied lines will not be overwritten.
 - High level try/except catching internal errors (mostly coding errors)
 - Separate cpp options for including scroll optimization, replace or bracket match into the minimal version. Changes in strip.sh script to generate the minimal wipye version too.
-- Some editorial changes and fixign of tyops.
+- Some editorial changes and fixing of typos.
+
+
+**1.12b** Fixing a inconsistency in the Save command
+- Fixing a inconsistency in the Save command, which caused the change flag being reset when writing just a block
+- Squeezing a few lines out of the source code
+

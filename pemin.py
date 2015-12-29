@@ -41,8 +41,8 @@ class Editor:
                 res = self.serialcomm.write(s[ns:])
                 if res != None:
                     ns += res
-        def not_pending(self):
-            return not self.serialcomm.any()
+        def rd_any(self):
+            return self.serialcomm.any()
         def rd(self):
             while not self.serialcomm.any():
                 pass
@@ -165,7 +165,7 @@ class Editor:
             elif key == 0x7f: 
                 self.wr('\b \b' * len(res))
                 res = ''
-            elif key >= 0x20: 
+            elif 0x20 <= key < 0xfff0: 
                 if len(prompt) + len(res) < self.width - 2:
                     res += chr(key)
                     self.wr(chr(key))
@@ -216,11 +216,10 @@ class Editor:
         elif key == 0x07: 
             line = self.line_edit("Goto Line: ", "")
             if line:
-                try:
-                    self.cur_line = int(line) - 1
-                    self.row = self.height >> 1
-                except:
-                    pass
+                self.cur_line = int(line) - 1
+                self.row = self.height >> 1
+        elif key == 0x01: 
+            self.autoindent = 'y' if self.autoindent != 'y' else 'n' 
         elif key == 0xfffe:
             if self.col < len(l): 
                 opening = "([{<"
@@ -236,8 +235,7 @@ class Editor:
                         for c in range(pos, len(self.content[i])):
                             if self.content[i][c] == match:
                                 if level == 0: 
-                                    self.cur_line = i
-                                    self.col = c
+                                    self.cur_line, self.col = i, c
                                     return True 
                                 else:
                                     level -= 1
@@ -253,8 +251,7 @@ class Editor:
                             for c in range(pos, -1, -1):
                                 if self.content[i][c] == match:
                                     if level == 0: 
-                                        self.cur_line = i
-                                        self.col = c
+                                        self.cur_line, self.col = i, c
                                         return True 
                                     else:
                                         level -= 1
@@ -286,10 +283,31 @@ class Editor:
         self.total_lines = len(self.content)
         self.cur_line = lrange[0]
         self.mark = None 
-    def handle_edit_key(self, key): 
-        from os import rename, unlink
+    def handle_edit_keys(self, key): 
         l = self.content[self.cur_line]
-        if key == 0x0a:
+        if key == 0x7f: 
+            if self.mark != None:
+                self.delete_lines(False)
+            elif self.col < len(l):
+                self.undo_add(self.cur_line, [l], 0x7f)
+                self.content[self.cur_line] = l[:self.col] + l[self.col + 1:]
+            elif (self.cur_line + 1) < self.total_lines: 
+                self.undo_add(self.cur_line, [l, self.content[self.cur_line + 1]], 0)
+                self.content[self.cur_line] = l + self.content.pop(self.cur_line + 1)
+                self.total_lines -= 1
+        elif 0x20 <= key < 0xfff0: 
+            self.mark = None
+            self.undo_add(self.cur_line, [l], 0x20 if key == 0x20 else 0x41)
+            self.content[self.cur_line] = l[:self.col] + chr(key) + l[self.col:]
+            self.col += 1
+        elif key == 0x08:
+            if self.mark != None:
+                self.delete_lines(False)
+            elif self.col > 0:
+                self.undo_add(self.cur_line, [l], 0x08)
+                self.content[self.cur_line] = l[:self.col - 1] + l[self.col:]
+                self.col -= 1
+        elif key == 0x0a:
             self.mark = None
             self.undo_add(self.cur_line, [l], 0, 2)
             self.content[self.cur_line] = l[:self.col]
@@ -300,23 +318,6 @@ class Editor:
             self.content[self.cur_line:self.cur_line] = [' ' * ni + l[self.col:]]
             self.total_lines += 1
             self.col = ni
-        elif key == 0x08:
-            if self.mark != None:
-                self.delete_lines(False)
-            elif self.col > 0:
-                self.undo_add(self.cur_line, [l], 0x08)
-                self.content[self.cur_line] = l[:self.col - 1] + l[self.col:]
-                self.col -= 1
-        elif key == 0x7f:
-            if self.mark != None:
-                self.delete_lines(False)
-            elif self.col < len(l):
-                self.undo_add(self.cur_line, [l], 0x7f)
-                self.content[self.cur_line] = l[:self.col] + l[self.col + 1:]
-            elif (self.cur_line + 1) < self.total_lines: 
-                self.undo_add(self.cur_line, [l, self.content[self.cur_line + 1]], 0)
-                self.content[self.cur_line] = l + self.content.pop(self.cur_line + 1)
-                self.total_lines -= 1
         elif key == 0x09:
             if self.mark != None:
                 lrange = self.line_range()
@@ -364,20 +365,10 @@ class Editor:
                     if fname == None:
                         fname = ""
                     fname = self.line_edit("Save File: ", fname)
-                    lrange = (0, self.total_lines)
-            if fname:
-                try:
-                    with open("tmpfile.pye", "w") as f:
-                        for l in self.content[lrange[0]:lrange[1]]:
-                                f.write(l + '\n')
-                    try: unlink(fname)
-                    except: pass
-                    rename("tmpfile.pye", fname)
+                    self.put_file(fname, 0, self.total_lines)
                     self.changed = ' ' 
                     self.undo_zero = len(self.undo) 
                     self.fname = fname 
-                except Exception as err:
-                    self.message = 'Could not save {}, {!r}'.format(fname, err)
         elif key == 0x1a:
             if len(self.undo) > 0:
                 action = self.undo.pop(-1) 
@@ -394,22 +385,23 @@ class Editor:
                 self.total_lines = len(self.content) 
                 self.changed = ' ' if len(self.undo) == self.undo_zero else '*'
                 self.mark = None
-        elif key >= 0x20: 
-            self.mark = None
-            self.undo_add(self.cur_line, [l], 0x20 if key == 0x20 else 0x41)
-            self.content[self.cur_line] = l[:self.col] + chr(key) + l[self.col:]
-            self.col += 1
     def edit_loop(self): 
         if self.content == []: 
             self.content = [""]
         self.total_lines = len(self.content)
-        self.set_screen_parms()
+        key = 0x05
         while True:
-            if self.not_pending(): 
-                self.display_window() 
-            key = self.get_input() 
-            self.message = '' 
             try:
+                if key == 0x05:
+                    self.set_screen_parms()
+                    self.row = min(self.height - 1, self.row)
+                    if sys.implementation.name == "micropython":
+                        gc.collect()
+                        self.message = "{} Bytes Memory available".format(gc.mem_free())
+                if not self.rd_any(): 
+                    self.display_window() 
+                key = self.get_input() 
+                self.message = '' 
                 if key == 0x11:
                     if self.changed != ' ':
                         res = self.line_edit("Content changed! Quit without saving (y/N)? ", "N")
@@ -418,17 +410,11 @@ class Editor:
                     self.goto(self.height, 0)
                     self.clear_to_eol()
                     return None
-                elif key == 0x05:
-                    self.set_screen_parms()
-                    self.row = min(self.height - 1, self.row)
-                    if sys.implementation.name == "micropython":
-                        gc.collect()
-                        self.message = "{} Bytes Memory available".format(gc.mem_free())
                 elif self.handle_cursor_keys(key):
                     pass
-                else: self.handle_edit_key(key)
+                else: self.handle_edit_keys(key)
             except Exception as err:
-                self.message = "Internal error: {}".format(err)
+                self.message = "{}".format(err)
     def get_file(self, fname):
         try:
                 with open(fname) as f:
@@ -439,6 +425,15 @@ class Editor:
         for i in range(len(content)): 
             content[i] = expandtabs(content[i].rstrip('\r\n\t '))
         return (content, "")
+    def put_file(self, fname, start, stop):
+        from os import rename, unlink
+        if fname:
+            with open("tmpfile.pye", "w") as f:
+                for l in self.content[start:stop]:
+                        f.write(l + '\n')
+            try: unlink(fname)
+            except: pass
+            rename("tmpfile.pye", fname)
 def expandtabs(s):
     from _io import StringIO
     if '\t' in s:
