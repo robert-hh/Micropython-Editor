@@ -48,8 +48,7 @@ class Editor:
         self.top_line = self.cur_line = self.row = self.col = self.margin = 0
         self.tab_size = tab_size
         self.changed = " "
-        self.message = self.find_pattern = ""
-        self.fname = None
+        self.message = self.find_pattern = self.fname = ""
         self.content = [""]
         self.undo = []
         self.undo_limit = max(undo_limit, 0)
@@ -525,17 +524,16 @@ class Editor:
             if True:
                 if self.mark != None:
                     fname = self.line_edit("Save Mark: ", "")
-                    lrange = self.line_range()
-                    self.put_file(fname, lrange[0], lrange[1])
+                    if fname:
+                        lrange = self.line_range()
+                        self.put_file(fname, lrange[0], lrange[1])
                 else:
-                    fname = self.fname
-                    if fname == None:
-                        fname = ""
-                    fname = self.line_edit("Save File: ", fname)
-                    self.put_file(fname, 0, self.total_lines)
-                    self.changed = ' ' 
-                    self.undo_zero = len(self.undo) 
-                    self.fname = fname 
+                    fname = self.line_edit("Save File: ", self.fname)
+                    if fname:
+                        self.put_file(fname, 0, self.total_lines)
+                        self.changed = ' ' 
+                        self.undo_zero = len(self.undo) 
+                        self.fname = fname 
         elif key == 0x1a:
             if len(self.undo) > 0:
                 action = self.undo.pop(-1) 
@@ -609,16 +607,15 @@ class Editor:
         return (content, "")
     def put_file(self, fname, start, stop):
         from os import rename, unlink
-        if fname:
-            with open("tmpfile.pye", "w") as f:
-                for l in self.content[start:stop]:
-                    if self.write_tabs == 'y':
-                        f.write(self.packtabs(l) + '\n')
-                    else:
-                        f.write(l + '\n')
-            try: unlink(fname)
-            except: pass
-            rename("tmpfile.pye", fname)
+        with open("tmpfile.pye", "w") as f:
+            for l in self.content[start:stop]:
+                if self.write_tabs == 'y':
+                    f.write(self.packtabs(l) + '\n')
+                else:
+                    f.write(l + '\n')
+        try: unlink(fname)
+        except: pass
+        rename("tmpfile.pye", fname)
 def expandtabs(s):
     from _io import StringIO
     if '\t' in s:
@@ -649,4 +646,4 @@ def pye(content = None, tab_size = 4, undo = 50, device = 0, baud = 115200):
     e.init_tty(device, baud)
     e.edit_loop()
     e.deinit_tty()
-    return e.content if (e.fname == None) else e.fname
+    return e.content if (e.fname == "") else e.fname

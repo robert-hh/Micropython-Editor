@@ -24,8 +24,7 @@ class Editor:
         self.top_line = self.cur_line = self.row = self.col = self.margin = 0
         self.tab_size = tab_size
         self.changed = " "
-        self.message = self.find_pattern = ""
-        self.fname = None
+        self.message = self.find_pattern = self.fname = ""
         self.content = [""]
         self.undo = []
         self.undo_limit = max(undo_limit, 0)
@@ -348,14 +347,12 @@ class Editor:
                 self.total_lines += len(self.yank_buffer)
         elif key == 0x13:
             if True:
-                    fname = self.fname
-                    if fname == None:
-                        fname = ""
-                    fname = self.line_edit("Save File: ", fname)
-                    self.put_file(fname, 0, self.total_lines)
-                    self.changed = ' ' 
-                    self.undo_zero = len(self.undo) 
-                    self.fname = fname 
+                    fname = self.line_edit("Save File: ", self.fname)
+                    if fname:
+                        self.put_file(fname, 0, self.total_lines)
+                        self.changed = ' ' 
+                        self.undo_zero = len(self.undo) 
+                        self.fname = fname 
         elif key == 0x1a:
             if len(self.undo) > 0:
                 action = self.undo.pop(-1) 
@@ -414,13 +411,12 @@ class Editor:
         return (content, "")
     def put_file(self, fname, start, stop):
         from os import rename, unlink
-        if fname:
-            with open("tmpfile.pye", "w") as f:
-                for l in self.content[start:stop]:
-                        f.write(l + '\n')
-            try: unlink(fname)
-            except: pass
-            rename("tmpfile.pye", fname)
+        with open("tmpfile.pye", "w") as f:
+            for l in self.content[start:stop]:
+                    f.write(l + '\n')
+        try: unlink(fname)
+        except: pass
+        rename("tmpfile.pye", fname)
 def expandtabs(s):
     from _io import StringIO
     if '\t' in s:
@@ -448,4 +444,4 @@ def pye(content = None, tab_size = 4, undo = 50, device = 0, baud = 115200):
     elif type(content) == list and len(content) > 0 and type(content[0]) == str:
         e.content = content 
     e.edit_loop()
-    return e.content if (e.fname == None) else e.fname
+    return e.content if (e.fname == "") else e.fname
