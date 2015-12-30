@@ -128,8 +128,11 @@ Brackets in comments and strings are counting as well.
 - Separate cpp options for including scroll optimization, replace or bracket match into the minimal version. Changes in strip.sh script to generate the minimal wipye version too.
 - Some editorial changes and fixing of typos.
 
-
 **1.12b** Fixing a inconsistency in the Save command
 - Fixing a inconsistency in the Save command, which caused the change flag being reset when writing just a block
 - Squeezing a few lines out of the source code
+
+**1.12c** Speed up pasting again
+- Speeded up pasting again. Slowing down pasting was caused by a in-function import statement.
+- Squeezing another few lines out of the source code by combining two functions, which were anyhow called one after the other, resulting in a enourmous long function handling the keyboard input.
 
