@@ -16,7 +16,7 @@ class Editor:
     b"\x03" : 0x11, 
     b"\r" : 0x0a,
     b"\x7f" : 0x08, 
-    b"\x1b[3~": 0x7f,
+    b"\x1b[3~": 0xfffc,
     b"\x1b[Z" : 0x15, 
     b"\x11" : 0x11, 
     b"\n" : 0x0a,
@@ -211,7 +211,7 @@ class Editor:
                 if (len(res) > 0):
                     res = res[:len(res)-1]
                     self.wr('\b \b')
-            elif key == 0x7f: 
+            elif key == 0xfffc: 
                 self.wr('\b \b' * len(res))
                 res = ''
             elif 0x20 <= key < 0xfff0: 
@@ -237,7 +237,26 @@ class Editor:
         self.col = match + spos
         self.cur_line = line
         return len(pattern)
-    def handle_cursor_keys(self, key): 
+    def undo_add(self, lnum, text, key, span = 1):
+        self.changed = '*'
+        if self.undo_limit > 0 and (
+           len(self.undo) == 0 or key == 0 or self.undo[-1][3] != key or self.undo[-1][0] != lnum):
+            if len(self.undo) >= self.undo_limit: 
+                del self.undo[0]
+                self.undo_zero -= 1
+            self.undo.append((lnum, span, text, key, self.col))
+    def delete_lines(self, yank): 
+        lrange = self.line_range()
+        if yank:
+            self.yank_buffer = self.content[lrange[0]:lrange[1]]
+        self.undo_add(lrange[0], self.content[lrange[0]:lrange[1]], 0, 0) 
+        del self.content[lrange[0]:lrange[1]]
+        if self.content == []: 
+            self.content = [""]
+        self.total_lines = len(self.content)
+        self.cur_line = lrange[0]
+        self.mark = None 
+    def handle_edit_keys(self, key): 
         l = self.content[self.cur_line]
         if key == 0x0d:
             if self.cur_line < self.total_lines - 1:
@@ -265,6 +284,11 @@ class Editor:
                     self.scroll_down(1)
             else:
                 self.col += 1
+        elif 0x20 <= key < 0xfff0: 
+            self.mark = None
+            self.undo_add(self.cur_line, [l], 0x20 if key == 0x20 else 0x41)
+            self.content[self.cur_line] = l[:self.col] + chr(key) + l[self.col:]
+            self.col += 1
         elif key == 0x10:
             self.col = self.spaces(l) if self.col == 0 else 0
         elif key == 0x03:
@@ -361,45 +385,16 @@ class Editor:
                                 pos = len(self.content[i - 1]) - 1
         elif key == 0x0c:
             self.mark = self.cur_line if self.mark == None else None
-        else:
-            return False
-        return True
-    def undo_add(self, lnum, text, key, span = 1):
-        self.changed = '*'
-        if self.undo_limit > 0 and (
-           len(self.undo) == 0 or key == 0 or self.undo[-1][3] != key or self.undo[-1][0] != lnum):
-            if len(self.undo) >= self.undo_limit: 
-                del self.undo[0]
-                self.undo_zero -= 1
-            self.undo.append((lnum, span, text, key, self.col))
-    def delete_lines(self, yank): 
-        lrange = self.line_range()
-        if yank:
-            self.yank_buffer = self.content[lrange[0]:lrange[1]]
-        self.undo_add(lrange[0], self.content[lrange[0]:lrange[1]], 0, 0) 
-        del self.content[lrange[0]:lrange[1]]
-        if self.content == []: 
-            self.content = [""]
-        self.total_lines = len(self.content)
-        self.cur_line = lrange[0]
-        self.mark = None 
-    def handle_edit_keys(self, key): 
-        l = self.content[self.cur_line]
-        if key == 0x7f: 
+        elif key == 0xfffc: 
             if self.mark != None:
                 self.delete_lines(False)
             elif self.col < len(l):
-                self.undo_add(self.cur_line, [l], 0x7f)
+                self.undo_add(self.cur_line, [l], 0xfffc)
                 self.content[self.cur_line] = l[:self.col] + l[self.col + 1:]
             elif (self.cur_line + 1) < self.total_lines: 
                 self.undo_add(self.cur_line, [l, self.content[self.cur_line + 1]], 0)
                 self.content[self.cur_line] = l + self.content.pop(self.cur_line + 1)
                 self.total_lines -= 1
-        elif 0x20 <= key < 0xfff0: 
-            self.mark = None
-            self.undo_add(self.cur_line, [l], 0x20 if key == 0x20 else 0x41)
-            self.content[self.cur_line] = l[:self.col] + chr(key) + l[self.col:]
-            self.col += 1
         elif key == 0x08:
             if self.mark != None:
                 self.delete_lines(False)
@@ -570,8 +565,6 @@ class Editor:
                     self.goto(self.height, 0)
                     self.clear_to_eol()
                     return None
-                elif self.handle_cursor_keys(key):
-                    pass
                 else: self.handle_edit_keys(key)
             except Exception as err:
                 self.message = "{}".format(err)
