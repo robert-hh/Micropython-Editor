@@ -121,7 +121,7 @@ c) expandtabs() and packtabs() with a second argument for tabsize (not for pye, 
 - Lazy screen update: defer screen update, until all chars from the keyboard are processed. Not provided for WiPY, even if needed there most. WiPy has no way to tell if more chars are waiting in the input or at least a read with timeout.
 
 **1.12** Bracket Match and Minor changes
-- Ctrl-K causes the cursor set to the matching bracket, if any. Pretty raw, not elegant. 
+- Ctrl-K causes the cursor set to the matching bracket, if any. Pretty raw, not elegant.
 Brackets in comments and strings are counting as well.
 - On Copy the mark will be cleared, since it is assumed that the just copied lines will not be overwritten.
 - High level try/except catching internal errors (mostly coding errors)
@@ -133,6 +133,13 @@ Brackets in comments and strings are counting as well.
 - Squeezing a few lines out of the source code
 
 **1.12c** Speed up pasting again
-- Speeded up pasting again. Slowing down pasting was caused by a in-function import statement.
-- Squeezing another few lines out of the source code by combining two functions, which were anyhow called one after the other, resulting in a enourmous long function handling the keyboard input.
+- Speed up pasting again. Slowing down pasting was caused by a in-function import statement in V1.11.
+- Squeezing another few lines out of the source code by combining two functions, which were
+anyhow called one after the other, resulting in a enormous long function handling the keyboard input.
+
+**1.12d** Split undo of Indent/Un-Indent
+- Split undo for Indent and Un-Indent
+- Fixed a minor inconvenience when going left at the line start (sqeezed too much in v1.12b)
+- Move a few lines around, such that keys which are more probable for fast repeats are checked for earlier.
+- Some editorial changes
 

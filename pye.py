@@ -18,16 +18,16 @@
 ## - moved main into a function with some optional parameters
 ##
 #ifndef BASIC
-#define SCROLL 1
 #define REPLACE 1
 #define BRACKET 1
 #endif
 import sys, gc
 #ifdef LINUX
 if sys.platform in ("linux", "darwin"):
-    import os, signal, tty, termios
+    import os, signal, tty, termios, select
 #endif
 #ifdef DEFINES
+#define KEY_NONE        0
 #define KEY_UP          0x0b
 #define KEY_DOWN        0x0d
 #define KEY_LEFT        0x1f
@@ -39,7 +39,6 @@ if sys.platform in ("linux", "darwin"):
 #define KEY_QUIT        0x11
 #define KEY_ENTER       0x0a
 #define KEY_BACKSPACE   0x08
-#define KEY_DELETE      0xfffc
 #define KEY_WRITE       0x13
 #define KEY_TAB         0x09
 #define KEY_BACKTAB     0x15
@@ -60,9 +59,12 @@ if sys.platform in ("linux", "darwin"):
 #define KEY_UNDO        0x1a
 #define KEY_GET         0x0f
 #define KEY_MARK        0x0c
-#define KEY_MATCH       0xfffe
-#define KEY_INDENT      0xffff
+#define KEY_DELETE      0x7f
+#define KEY_MATCH       0xfffd
+#define KEY_INDENT      0xfffe
+#define KEY_UNDENT      0xffff
 #else
+KEY_NONE      = 0
 KEY_UP        = 0x0b
 KEY_DOWN      = 0x0d
 KEY_LEFT      = 0x1f
@@ -74,7 +76,7 @@ KEY_PGDN      = 0x19
 KEY_QUIT      = 0x11
 KEY_ENTER     = 0x0a
 KEY_BACKSPACE = 0x08
-KEY_DELETE    = 0xfffc
+KEY_DELETE    = 0x7f
 KEY_WRITE     = 0x13
 KEY_TAB       = 0x09
 KEY_BACKTAB   = 0x15
@@ -95,8 +97,9 @@ KEY_REPLC     = 0x12
 KEY_TOGGLE    = 0x01
 KEY_GET       = 0x0f
 KEY_MARK      = 0x0c
-KEY_MATCH     = 0xfffe
-KEY_INDENT    = 0xffff
+KEY_MATCH     = 0xfffd
+KEY_INDENT    = 0xfffe
+KEY_UNDENT    = 0xffff
 #endif
 
 class Editor:
@@ -151,22 +154,31 @@ class Editor:
     b"\x0b"   : KEY_MATCH,## Ctrl-K
 #endif
     }
+## symbols that may be shared between instances of Editor    
+    yank_buffer = []
+    find_pattern = ""
+#ifdef REPLACE
+    replc_pattern = ""
+#endif
+#ifndef BASIC
+    height = 24
+    width = 80
+    scrbuf = []
+#endif
 
     def __init__(self, tab_size, undo_limit):
         self.top_line = self.cur_line = self.row = self.col = self.margin = 0
         self.tab_size = tab_size
         self.changed = " "
-        self.message = self.find_pattern = self.fname = ""
+        self.message = self.fname = ""
         self.content = [""]
         self.undo = []
         self.undo_limit = max(undo_limit, 0)
         self.undo_zero = 0
         self.case = "n"
         self.autoindent = "y"
-        self.yank_buffer = []
         self.mark = None
 #ifndef BASIC
-        self.replc_pattern = ""
         self.write_tabs = "n"
 #endif
 #ifdef LINUX
@@ -179,7 +191,6 @@ class Editor:
 
         def rd_any(self):
             if sys.implementation.name == "cpython":
-                import select
                 return select.select([self.sdev], [], [], 0)[0] != []
             else:
                 return False
@@ -200,7 +211,6 @@ class Editor:
             Editor.winch = False
 
         def deinit_tty(self):
-            import termios
             termios.tcsetattr(self.sdev, termios.TCSANOW, self.org_termios)
 
         @staticmethod
@@ -445,7 +455,7 @@ class Editor:
     def undo_add(self, lnum, text, key, span = 1):
         self.changed = '*'
         if self.undo_limit > 0 and (
-           len(self.undo) == 0 or key == 0 or self.undo[-1][3] != key or self.undo[-1][0] != lnum):
+           len(self.undo) == 0 or key == KEY_NONE or self.undo[-1][3] != key or self.undo[-1][0] != lnum):
             if len(self.undo) >= self.undo_limit: ## drop oldest undo, if full
                 del self.undo[0]
                 self.undo_zero -= 1
@@ -455,7 +465,7 @@ class Editor:
         lrange = self.line_range()
         if yank:
             self.yank_buffer = self.content[lrange[0]:lrange[1]]
-        self.undo_add(lrange[0], self.content[lrange[0]:lrange[1]], 0, 0) ## undo inserts
+        self.undo_add(lrange[0], self.content[lrange[0]:lrange[1]], KEY_NONE, 0) ## undo inserts
         del self.content[lrange[0]:lrange[1]]
         if self.content == []: ## if all was wiped
             self.content = [""]
@@ -487,9 +497,11 @@ class Editor:
 #ifndef BASIC
             if self.col == 0 and self.cur_line > 0:
                 self.cur_line -= 1
-                self.col = len(l)
+                self.col = len(self.content[self.cur_line])
+#ifdef SCROLL
                 if self.cur_line < self.top_line:
                     self.scroll_up(1)
+#endif
             else:
 #endif
                 self.col -= 1
@@ -498,11 +510,38 @@ class Editor:
             if self.col >= len(l) and self.cur_line < self.total_lines - 1:
                 self.col = 0
                 self.cur_line += 1
+#ifdef SCROLL
                 if self.cur_line == self.top_line + self.height:
                     self.scroll_down(1)
+#endif
             else:
 #endif
                 self.col += 1
+        elif key == KEY_DELETE:
+            if self.mark != None:
+                self.delete_lines(False)
+            elif self.col < len(l):
+                self.undo_add(self.cur_line, [l], KEY_DELETE)
+                self.content[self.cur_line] = l[:self.col] + l[self.col + 1:]
+            elif (self.cur_line + 1) < self.total_lines: ## test for last line
+                self.undo_add(self.cur_line, [l, self.content[self.cur_line + 1]], KEY_NONE)
+                self.content[self.cur_line] = l + self.content.pop(self.cur_line + 1)
+                self.total_lines -= 1
+        elif key == KEY_BACKSPACE:
+            if self.mark != None:
+                self.delete_lines(False)
+            elif self.col > 0:
+                self.undo_add(self.cur_line, [l], KEY_BACKSPACE)
+                self.content[self.cur_line] = l[:self.col - 1] + l[self.col:]
+                self.col -= 1
+#ifndef BASIC
+            elif self.cur_line > 0: # at the start of a line, but not the first
+                self.undo_add(self.cur_line - 1, [self.content[self.cur_line - 1], l], KEY_NONE)
+                self.col = len(self.content[self.cur_line - 1])
+                self.content[self.cur_line - 1] += self.content.pop(self.cur_line)
+                self.cur_line -= 1
+                self.total_lines -= 1
+#endif
         elif 0x20 <= key < 0xfff0: ## character to be added
             self.mark = None
             self.undo_add(self.cur_line, [l], 0x20 if key == 0x20 else 0x41)
@@ -553,12 +592,16 @@ class Editor:
             if self.top_line > 0:
                 self.top_line = max(self.top_line - 3, 0)
                 self.cur_line = min(self.cur_line, self.top_line + self.height - 1)
+#ifdef SCROLL
                 self.scroll_up(3)
+#endif
         elif key == KEY_SCRLDN: ##
             if self.top_line + self.height < self.total_lines:
                 self.top_line = min(self.top_line + 3, self.total_lines - 1)
                 self.cur_line = max(self.cur_line, self.top_line)
+#ifdef SCROLL
                 self.scroll_down(3)
+#endif
         elif key == KEY_FIRST: ## first line
             self.cur_line = 0
         elif key == KEY_LAST: ## last line
@@ -608,34 +651,9 @@ class Editor:
 #endif
         elif key == KEY_MARK:
             self.mark = self.cur_line if self.mark == None else None
-        elif key == KEY_DELETE:  ## must be first, since 0x7f is in std char range
-            if self.mark != None:
-                self.delete_lines(False)
-            elif self.col < len(l):
-                self.undo_add(self.cur_line, [l], KEY_DELETE)
-                self.content[self.cur_line] = l[:self.col] + l[self.col + 1:]
-            elif (self.cur_line + 1) < self.total_lines: ## test for last line
-                self.undo_add(self.cur_line, [l, self.content[self.cur_line + 1]], 0)
-                self.content[self.cur_line] = l + self.content.pop(self.cur_line + 1)
-                self.total_lines -= 1
-        elif key == KEY_BACKSPACE:
-            if self.mark != None:
-                self.delete_lines(False)
-            elif self.col > 0:
-                self.undo_add(self.cur_line, [l], KEY_BACKSPACE)
-                self.content[self.cur_line] = l[:self.col - 1] + l[self.col:]
-                self.col -= 1
-#ifndef BASIC
-            elif self.cur_line > 0: # at the start of a line, but not the first
-                self.undo_add(self.cur_line - 1, [self.content[self.cur_line - 1], l], 0)
-                self.col = len(self.content[self.cur_line - 1])
-                self.content[self.cur_line - 1] += self.content.pop(self.cur_line)
-                self.cur_line -= 1
-                self.total_lines -= 1
-#endif
         elif key == KEY_ENTER:
             self.mark = None
-            self.undo_add(self.cur_line, [l], 0, 2)
+            self.undo_add(self.cur_line, [l], KEY_NONE, 2)
             self.content[self.cur_line] = l[:self.col]
             ni = 0
             if self.autoindent == "y": ## Autoindent
@@ -664,7 +682,7 @@ class Editor:
         elif key == KEY_BACKTAB:
             if self.mark != None:
                 lrange = self.line_range()
-                self.undo_add(lrange[0], self.content[lrange[0]:lrange[1]], KEY_INDENT, lrange[1] - lrange[0]) ## undo replaces
+                self.undo_add(lrange[0], self.content[lrange[0]:lrange[1]], KEY_UNDENT, lrange[1] - lrange[0]) ## undo replaces
                 for i in range(lrange[0],lrange[1]):
                     ns = self.spaces(self.content[i])
                     if ns > 0:
@@ -701,7 +719,7 @@ class Editor:
                             if q == 'q' or key == KEY_QUIT:
                                 break
                             elif q in ('a','y'):
-                                self.undo_add(self.cur_line, [self.content[self.cur_line]], 0)
+                                self.undo_add(self.cur_line, [self.content[self.cur_line]], KEY_NONE)
                                 self.content[self.cur_line] = self.content[self.cur_line][:self.col] + rpat + self.content[self.cur_line][self.col + ni:]
                                 self.col += len(rpat)
                                 count += 1
@@ -718,8 +736,12 @@ class Editor:
             if fname:
                 (content, self.message) = self.get_file(fname)
                 if content:
-                    self.undo_add(self.cur_line, None, 0, -len(content))
-                    self.content[self.cur_line:self.cur_line] = content
+                    self.undo_add(self.cur_line, None, KEY_NONE, -len(content))
+                    if self.content == [""]: ## empty, insert whole file
+                        self.content = content
+                        if not self.fname: self.fname = fname
+                    else:
+                        self.content[self.cur_line:self.cur_line] = content
                     self.total_lines = len(self.content)
 #endif
         elif key == KEY_YANK:  # delete line or line(s) into buffer
@@ -734,7 +756,7 @@ class Editor:
             if self.yank_buffer:
                 if self.mark != None:
                     self.delete_lines(False)
-                self.undo_add(self.cur_line, None, 0, -len(self.yank_buffer))
+                self.undo_add(self.cur_line, None, KEY_NONE, -len(self.yank_buffer))
                 self.content[self.cur_line:self.cur_line] = self.yank_buffer # insert lines
                 self.total_lines += len(self.yank_buffer)
         elif key == KEY_WRITE:
@@ -766,6 +788,10 @@ class Editor:
                         self.content += action[2]
                 else: ## delete lines
                     del self.content[action[0]:action[0] - action[1]]
+#ifndef BASIC                    
+                    if self.content == []: ## if all was wiped
+                        self.content = [""]
+#endif
                 self.total_lines = len(self.content) ## brute force
                 self.changed = ' ' if len(self.undo) == self.undo_zero else '*'
                 self.mark = None
@@ -854,7 +880,7 @@ class Editor:
 
 ## write file
     def put_file(self, fname, start, stop):
-        from os import rename, unlink
+        import os
         with open("tmpfile.pye", "w") as f:
             for l in self.content[start:stop]:
 #ifndef BASIC
@@ -863,9 +889,9 @@ class Editor:
                 else:
 #endif
                     f.write(l + '\n')
-        try:    unlink(fname)
+        try:    os.unlink(fname)
         except: pass
-        rename("tmpfile.pye", fname)
+        os.rename("tmpfile.pye", fname)
 
 ## expandtabs: hopefully sometimes replaced by the built-in function
 def expandtabs(s):

@@ -16,7 +16,7 @@ class Editor:
     b"\x03" : 0x11, 
     b"\r" : 0x0a,
     b"\x7f" : 0x08, 
-    b"\x1b[3~": 0xfffc,
+    b"\x1b[3~": 0x7f,
     b"\x1b[Z" : 0x15, 
     b"\x11" : 0x11, 
     b"\n" : 0x0a,
@@ -42,22 +42,26 @@ class Editor:
     b"\x1b[1;5H": 0x14,
     b"\x1b[1;5F": 0x02,
     b"\x1b[3;5~": 0x18, 
-    b"\x0b" : 0xfffe,
+    b"\x0b" : 0xfffd,
     }
+    yank_buffer = []
+    find_pattern = ""
+    replc_pattern = ""
+    height = 24
+    width = 80
+    scrbuf = []
     def __init__(self, tab_size, undo_limit):
         self.top_line = self.cur_line = self.row = self.col = self.margin = 0
         self.tab_size = tab_size
         self.changed = " "
-        self.message = self.find_pattern = self.fname = ""
+        self.message = self.fname = ""
         self.content = [""]
         self.undo = []
         self.undo_limit = max(undo_limit, 0)
         self.undo_zero = 0
         self.case = "n"
         self.autoindent = "y"
-        self.yank_buffer = []
         self.mark = None
-        self.replc_pattern = ""
         self.write_tabs = "n"
     if sys.platform == "pyboard":
         def wr(self,s):
@@ -211,7 +215,7 @@ class Editor:
                 if (len(res) > 0):
                     res = res[:len(res)-1]
                     self.wr('\b \b')
-            elif key == 0xfffc: 
+            elif key == 0x7f: 
                 self.wr('\b \b' * len(res))
                 res = ''
             elif 0x20 <= key < 0xfff0: 
@@ -271,7 +275,7 @@ class Editor:
         elif key == 0x1f:
             if self.col == 0 and self.cur_line > 0:
                 self.cur_line -= 1
-                self.col = len(l)
+                self.col = len(self.content[self.cur_line])
                 if self.cur_line < self.top_line:
                     self.scroll_up(1)
             else:
@@ -284,6 +288,29 @@ class Editor:
                     self.scroll_down(1)
             else:
                 self.col += 1
+        elif key == 0x7f:
+            if self.mark != None:
+                self.delete_lines(False)
+            elif self.col < len(l):
+                self.undo_add(self.cur_line, [l], 0x7f)
+                self.content[self.cur_line] = l[:self.col] + l[self.col + 1:]
+            elif (self.cur_line + 1) < self.total_lines: 
+                self.undo_add(self.cur_line, [l, self.content[self.cur_line + 1]], 0)
+                self.content[self.cur_line] = l + self.content.pop(self.cur_line + 1)
+                self.total_lines -= 1
+        elif key == 0x08:
+            if self.mark != None:
+                self.delete_lines(False)
+            elif self.col > 0:
+                self.undo_add(self.cur_line, [l], 0x08)
+                self.content[self.cur_line] = l[:self.col - 1] + l[self.col:]
+                self.col -= 1
+            elif self.cur_line > 0: 
+                self.undo_add(self.cur_line - 1, [self.content[self.cur_line - 1], l], 0)
+                self.col = len(self.content[self.cur_line - 1])
+                self.content[self.cur_line - 1] += self.content.pop(self.cur_line)
+                self.cur_line -= 1
+                self.total_lines -= 1
         elif 0x20 <= key < 0xfff0: 
             self.mark = None
             self.undo_add(self.cur_line, [l], 0x20 if key == 0x20 else 0x41)
@@ -344,7 +371,7 @@ class Editor:
         elif key == 0x02: 
             self.cur_line = self.total_lines - 1
             self.row = self.height - 1 
-        elif key == 0xfffe:
+        elif key == 0xfffd:
             if self.col < len(l): 
                 opening = "([{<"
                 closing = ")]}>"
@@ -385,29 +412,6 @@ class Editor:
                                 pos = len(self.content[i - 1]) - 1
         elif key == 0x0c:
             self.mark = self.cur_line if self.mark == None else None
-        elif key == 0xfffc: 
-            if self.mark != None:
-                self.delete_lines(False)
-            elif self.col < len(l):
-                self.undo_add(self.cur_line, [l], 0xfffc)
-                self.content[self.cur_line] = l[:self.col] + l[self.col + 1:]
-            elif (self.cur_line + 1) < self.total_lines: 
-                self.undo_add(self.cur_line, [l, self.content[self.cur_line + 1]], 0)
-                self.content[self.cur_line] = l + self.content.pop(self.cur_line + 1)
-                self.total_lines -= 1
-        elif key == 0x08:
-            if self.mark != None:
-                self.delete_lines(False)
-            elif self.col > 0:
-                self.undo_add(self.cur_line, [l], 0x08)
-                self.content[self.cur_line] = l[:self.col - 1] + l[self.col:]
-                self.col -= 1
-            elif self.cur_line > 0: 
-                self.undo_add(self.cur_line - 1, [self.content[self.cur_line - 1], l], 0)
-                self.col = len(self.content[self.cur_line - 1])
-                self.content[self.cur_line - 1] += self.content.pop(self.cur_line)
-                self.cur_line -= 1
-                self.total_lines -= 1
         elif key == 0x0a:
             self.mark = None
             self.undo_add(self.cur_line, [l], 0, 2)
@@ -425,7 +429,7 @@ class Editor:
         elif key == 0x09:
             if self.mark != None:
                 lrange = self.line_range()
-                self.undo_add(lrange[0], self.content[lrange[0]:lrange[1]], 0xffff, lrange[1] - lrange[0]) 
+                self.undo_add(lrange[0], self.content[lrange[0]:lrange[1]], 0xfffe, lrange[1] - lrange[0]) 
                 for i in range(lrange[0],lrange[1]):
                     if len(self.content[i]) > 0:
                         self.content[i] = ' ' * (self.tab_size - self.spaces(self.content[i]) % self.tab_size) + self.content[i]
@@ -489,7 +493,11 @@ class Editor:
                 (content, self.message) = self.get_file(fname)
                 if content:
                     self.undo_add(self.cur_line, None, 0, -len(content))
-                    self.content[self.cur_line:self.cur_line] = content
+                    if self.content == [""]: 
+                        self.content = content
+                        if not self.fname: self.fname = fname
+                    else:
+                        self.content[self.cur_line:self.cur_line] = content
                     self.total_lines = len(self.content)
         elif key == 0x18: 
             if self.mark != None:
@@ -523,7 +531,7 @@ class Editor:
         elif key == 0x1a:
             if len(self.undo) > 0:
                 action = self.undo.pop(-1) 
-                if action[3] != 0xffff:
+                if action[3] != 0xfffe:
                     self.cur_line = action[0]
                     self.col = action[4]
                 if action[1] >= 0: 
@@ -533,6 +541,8 @@ class Editor:
                         self.content += action[2]
                 else: 
                     del self.content[action[0]:action[0] - action[1]]
+                    if self.content == []: 
+                        self.content = [""]
                 self.total_lines = len(self.content) 
                 self.changed = ' ' if len(self.undo) == self.undo_zero else '*'
                 self.mark = None
@@ -590,16 +600,16 @@ class Editor:
             content[i] = expandtabs(content[i].rstrip('\r\n\t '))
         return (content, "")
     def put_file(self, fname, start, stop):
-        from os import rename, unlink
+        import os
         with open("tmpfile.pye", "w") as f:
             for l in self.content[start:stop]:
                 if self.write_tabs == 'y':
                     f.write(self.packtabs(l) + '\n')
                 else:
                     f.write(l + '\n')
-        try: unlink(fname)
+        try: os.unlink(fname)
         except: pass
-        rename("tmpfile.pye", fname)
+        os.rename("tmpfile.pye", fname)
 def expandtabs(s):
     from _io import StringIO
     if '\t' in s:
