@@ -21,12 +21,140 @@
 #ifndef BASIC
 #define REPLACE 1
 #define BRACKET 1
+#define MOUSE 1
 #endif
+
 import sys, gc
 #ifdef LINUX
 if sys.platform in ("linux", "darwin"):
     import os, signal, tty, termios, select
 #endif
+
+class VTxx:  ## Terminal related class
+
+#ifdef LINUX
+    if sys.platform in ("linux", "darwin"):
+        def wr(self,s):
+            if isinstance(s, str):
+                s = bytes(s, "utf-8")
+            os.write(1, s)
+
+        def rd_any(self):
+            if sys.implementation.name == "cpython":
+                return select.select([self.sdev], [], [], 0)[0] != []
+            else:
+                return False
+
+        def rd(self):
+            while True:
+                try: ## WINCH causes interrupt
+                    return os.read(self.sdev,1)
+                except:
+                    if VTxx.winch: ## simulate REDRAW key
+                        VTxx.winch = False
+                        return b'\x05'
+
+        def init_tty(self, device, baud):
+            self.org_termios = termios.tcgetattr(device)
+            tty.setraw(device)
+            self.sdev = device
+            self.winch = False
+
+        def deinit_tty(self):
+            termios.tcsetattr(self.sdev, termios.TCSANOW, self.org_termios)
+
+        @staticmethod
+        def signal_handler(sig, frame):
+            signal.signal(signal.SIGWINCH, signal.SIG_IGN)
+            VTxx.winch = True
+            return True
+#endif
+#ifdef PYBOARD
+    if sys.platform == "pyboard":
+        def wr(self, s):
+            ns = 0
+            while ns < len(s): # complicated but needed, since USB_VCP.write() has issues
+                res = self.serialcomm.write(s[ns:])
+                if res != None:
+                    ns += res
+
+        def rd_any(self):
+            return self.serialcomm.any()
+
+        def rd(self):
+            while not self.serialcomm.any():
+                pass
+            return self.serialcomm.read(1)
+
+        def init_tty(self, device, baud):
+            import pyb
+            self.sdev = device
+            if self.sdev:
+                self.serialcomm = pyb.UART(device, baud)
+            else:
+                self.serialcomm = pyb.USB_VCP()
+                self.serialcomm.setinterrupt(-1)
+
+        def deinit_tty(self):
+            if not self.sdev:
+                self.serialcomm.setinterrupt(3)
+#endif
+#ifdef WIPY
+    if sys.platform == "WiPy":
+        def wr(self, s):
+            sys.stdout.write(s)
+
+        def rd_any(self):
+            return False
+
+        def rd(self):
+            while True:
+                try:
+                    return sys.stdin.read(1).encode()
+                except:
+                    pass
+
+##        def init_tty(self, device, baud):
+##            pass
+
+##        def deinit_tty(self):
+##            pass
+#endif
+    def goto(self, row, col):
+        self.wr("\x1b[{};{}H".format(row + 1, col + 1))
+
+    def hilite(self, mode):
+        if mode == 1: ## used for the status line
+            self.wr(b"\x1b[1;47m")
+        elif mode == 2: ## used for the marked area
+            self.wr(b"\x1b[43m")
+        else:         ## plain text
+            self.wr(b"\x1b[0m")
+
+    def clear_to_eol(self):
+        self.wr(b"\x1b[0K")
+
+    def cursor(self, onoff):
+        self.wr(b"\x1b[?25h" if onoff else b"\x1b[?25l")
+#ifdef MOUSE
+    def mouse_reporting(self, onoff):
+        self.wr('\x1b[?9h' if onoff else '\x1b[?9l') ## enable/disable mouse reporting
+#endif
+#ifdef SCROLL
+    def scroll_region(self, stop):
+        self.wr('\x1b[1;{}r'.format(stop) if stop else '\x1b[r') ## set scrolling range
+#endif
+    def get_screen_size(self):
+        self.wr('\x1b[999;999H\x1b[6n')
+        pos = b''
+        char = self.rd() ## expect ESC[yyy;xxxR
+        while char != b'R':
+            pos += char
+            char = self.rd()
+        return [int(i, 10) for i in pos[2:].split(b';')]
+
+scr = VTxx()  ## set class instance for tty
+
 #ifdef DEFINES
 #define KEY_NONE        0
 #define KEY_UP          0x0b
@@ -177,163 +305,35 @@ class Editor:
         self.case = "n"
         self.autoindent = "y"
         self.mark = None
+        self.height, self.width = scr.get_screen_size()
+        self.height -= 1
 
 #ifndef BASIC
         self.write_tabs = "n"
 #endif
-#ifdef LINUX
-    sdev = 0
-    org_termios = 0
-
-    if sys.platform in ("linux", "darwin"):
-
-        def wr(self,s):
-            if isinstance(s, str):
-                s = bytes(s, "utf-8")
-            os.write(1, s)
-
-        def rd_any(self):
-            if sys.implementation.name == "cpython":
-                return select.select([self.sdev], [], [], 0)[0] != []
-            else:
-                return False
-
-        def rd(self):
-            while True:
-                try: ## WINCH causes interrupt
-                    return os.read(self.sdev,1)
-                except:
-                    if Editor.winch: ## simulate REDRAW key
-                        Editor.winch = False
-                        return b'\x05'
-
-        def init_tty(self, device, baud):
-            Editor.org_termios = termios.tcgetattr(device)
-            tty.setraw(device)
-            Editor.sdev = device
-            Editor.winch = False
-
-        def deinit_tty(self):
-            termios.tcsetattr(Editor.sdev, termios.TCSANOW, Editor.org_termios)
-
-        @staticmethod
-        def signal_handler(sig, frame):
-            signal.signal(signal.SIGWINCH, signal.SIG_IGN)
-            Editor.winch = True
-            return True
-#endif
-#ifdef PYBOARD
-    serialcomm = 0
-    sdev = 0
-
-    if sys.platform == "pyboard":
-        def wr(self,s):
-            ns = 0
-            while ns < len(s): # complicated but needed, since USB_VCP.write() has issues
-                res = self.serialcomm.write(s[ns:])
-                if res != None:
-                    ns += res
-
-        def rd_any(self):
-            return self.serialcomm.any()
-
-        def rd(self):
-            while not self.serialcomm.any():
-                pass
-            return self.serialcomm.read(1)
-
-        def init_tty(self, device, baud):
-            import pyb
-            Editor.sdev = device
-            if Editor.sdev:
-                Editor.serialcomm = pyb.UART(device, baud)
-            else:
-                Editor.serialcomm = pyb.USB_VCP()
-                Editor.serialcomm.setinterrupt(-1)
-
-        def deinit_tty(self):
-            if not Editor.sdev:
-                Editor.serialcomm.setinterrupt(3)
-#endif
-#ifdef WIPY
-    if sys.platform == "WiPy":
-        def wr(self, s):
-            sys.stdout.write(s)
-
-        def rd_any(self):
-            return False
-
-        def rd(self):
-            while True:
-                try:
-                    return sys.stdin.read(1).encode()
-                except:
-                    pass
-
-##        def init_tty(self, device, baud):
-##            pass
-
-##        def deinit_tty(self):
-##            pass
-#endif
-    def goto(self, row, col):
-        self.wr("\x1b[{};{}H".format(row + 1, col + 1))
-
-    def clear_to_eol(self):
-        self.wr(b"\x1b[0K")
-
-    def cursor(self, onoff):
-        self.wr(b"\x1b[?25h" if onoff else b"\x1b[?25l")
-
-    def hilite(self, mode):
-        if mode == 1: ## used for the status line
-            self.wr(b"\x1b[1;47m")
-        elif mode == 2: ## used for the marked area
-            self.wr(b"\x1b[43m")
-        else:         ## plain text
-            self.wr(b"\x1b[0m")
-
-#ifndef BASIC
-    def mouse_reporting(self, onoff):
-        self.wr('\x1b[?9h' if onoff else '\x1b[?9l') ## enable/disable mouse reporting
-#endif
 #ifdef SCROLL
-    def scroll_region(self, stop):
-        self.wr('\x1b[1;{}r'.format(stop) if stop else '\x1b[r') ## set scrolling range
-
     def scroll_up(self, scrolling):
         Editor.scrbuf[scrolling:] = Editor.scrbuf[:-scrolling]
         Editor.scrbuf[:scrolling] = [''] * scrolling
-        self.goto(0, 0)
-        self.wr("\x1bM" * scrolling)
+        scr.goto(0, 0)
+        scr.wr("\x1bM" * scrolling)
 
     def scroll_down(self, scrolling):
         Editor.scrbuf[:-scrolling] = Editor.scrbuf[scrolling:]
         Editor.scrbuf[-scrolling:] = [''] * scrolling
-        self.goto(Editor.height - 1, 0)
-        self.wr("\x1bD " * scrolling)
+        scr.goto(self.height - 1, 0)
+        scr.wr("\x1bD " * scrolling)
 #endif
-    def get_screen_size(self):
-        self.wr('\x1b[999;999H\x1b[6n')
-        pos = b''
-        char = self.rd() ## expect ESC[yyy;xxxR
-        while char != b'R':
-            pos += char
-            char = self.rd()
-        return [int(i, 10) for i in pos[2:].split(b';')]
-
     def redraw(self, flag):
-        self.cursor(False)
-        Editor.height, Editor.width = self.get_screen_size()
-        Editor.height -= 1
-        Editor.scrbuf = [(False,"\x00")] * Editor.height ## force delete
-        self.row = min(Editor.height - 1, self.row)
+        scr.cursor(False)
+        Editor.scrbuf = [(False,"\x00")] * self.height ## force delete
+        self.row = min(self.height - 1, self.row)
 #ifdef SCROLL
-        self.scroll_region(Editor.height)
+        scr.scroll_region(self.height)
 #endif
 #ifdef LINUX
         if sys.platform in ("linux", "darwin") and sys.implementation.name == "cpython":
-            signal.signal(signal.SIGWINCH, Editor.signal_handler)
+            signal.signal(signal.SIGWINCH, scr.signal_handler)
 #endif
         if sys.implementation.name == "micropython":
             gc.collect()
@@ -342,10 +342,10 @@ class Editor:
 
     def get_input(self):  ## read from interface/keyboard one byte each and match against function keys
         while True:
-            in_buffer = self.rd()
+            in_buffer = scr.rd()
             if in_buffer == b'\x1b': ## starting with ESC, must be fct
                 while True:
-                    in_buffer += self.rd()
+                    in_buffer += scr.rd()
                     c = chr(in_buffer[-1])
                     if c == '~' or (c.isalpha() and c != 'O'):
                         break
@@ -353,11 +353,11 @@ class Editor:
                 c = self.KEYMAP[in_buffer]
                 if c != KEY_MOUSE:
                     return c
-#ifndef BASIC
+#ifdef MOUSE
                 else: ## special for mice
-                    self.mouse_fct = ord((self.rd())) ## read 3 more chars
-                    self.mouse_x = ord(self.rd()) - 33
-                    self.mouse_y = ord(self.rd()) - 33
+                    self.mouse_fct = ord((scr.rd())) ## read 3 more chars
+                    self.mouse_x = ord(scr.rd()) - 33
+                    self.mouse_y = ord(scr.rd()) - 33
                     if self.mouse_fct == 0x61:
                         return KEY_SCRLDN
                     elif self.mouse_fct == 0x60:
@@ -373,47 +373,47 @@ class Editor:
         self.cur_line = min(self.total_lines - 1, max(self.cur_line, 0))
         self.col = max(0, min(self.col, len(self.content[self.cur_line])))
 ## Check if Column is out of view, and align margin if needed
-        if self.col >= Editor.width + self.margin:
-            self.margin = self.col - Editor.width + (Editor.width >> 2)
+        if self.col >= self.width + self.margin:
+            self.margin = self.col - self.width + (self.width >> 2)
         elif self.col < self.margin:
-            self.margin = max(self.col - (Editor.width >> 2), 0)
+            self.margin = max(self.col - (self.width >> 2), 0)
 ## if cur_line is out of view, align top_line to the given row
-        if not (self.top_line <= self.cur_line < self.top_line + Editor.height): # Visible?
+        if not (self.top_line <= self.cur_line < self.top_line + self.height): # Visible?
             self.top_line = max(self.cur_line - self.row, 0)
 ## in any case, align row to top_line and cur_line
         self.row = self.cur_line - self.top_line
 ## update_screen
-        self.cursor(False)
+        scr.cursor(False)
         i = self.top_line
-        for c in range(Editor.height):
+        for c in range(self.height):
             if i == self.total_lines: ## at empty bottom screen part
                 if Editor.scrbuf[c] != (False,''):
-                    self.goto(c, 0)
-                    self.clear_to_eol()
+                    scr.goto(c, 0)
+                    scr.clear_to_eol()
                     Editor.scrbuf[c] = (False,'')
             else:
                 l = (self.mark != None and (
                     (self.mark <= i <= self.cur_line) or (self.cur_line <= i <= self.mark)),
-                     self.content[i][self.margin:self.margin + Editor.width])
+                     self.content[i][self.margin:self.margin + self.width])
                 if l != Editor.scrbuf[c]: ## line changed, print it
-                    self.goto(c, 0)
-                    if l[0]: self.hilite(2)
-                    self.wr(l[1])
-                    if len(l[1]) < Editor.width:
-                        self.clear_to_eol()
-                    if l[0]: self.hilite(0)
+                    scr.goto(c, 0)
+                    if l[0]: scr.hilite(2)
+                    scr.wr(l[1])
+                    if len(l[1]) < self.width:
+                        scr.clear_to_eol()
+                    if l[0]: scr.hilite(0)
                     Editor.scrbuf[c] = l
                 i += 1
 ## display Status-Line
-        self.goto(Editor.height, 0)
-        self.hilite(1)
-        self.wr("{}{} Row: {}/{} Col: {}  {}".format(
+        scr.goto(self.height, 0)
+        scr.hilite(1)
+        scr.wr("{}{} Row: {}/{} Col: {}  {}".format(
             self.changed, self.fname, self.cur_line + 1, self.total_lines,
-            self.col + 1, self.message[:Editor.width - 25 - len(self.fname)]))
-        self.clear_to_eol() ## once moved up for mate/xfce4-terminal issue with scroll region
-        self.hilite(0)
-        self.goto(self.row, self.col - self.margin)
-        self.cursor(True)
+            self.col + 1, self.message[:self.width - 25 - len(self.fname)]))
+        scr.clear_to_eol() ## once moved up for mate/xfce4-terminal issue with scroll region
+        scr.hilite(0)
+        scr.goto(self.row, self.col - self.margin)
+        scr.cursor(True)
 
     def spaces(self, line, pos = None): ## count spaces
         return (len(line) - len(line.lstrip(" ")) if pos == None else ## at line start
@@ -425,31 +425,31 @@ class Editor:
 
 
     def line_edit(self, prompt, default):  ## simple one: only 4 fcts
-        self.goto(Editor.height, 0)
-        self.hilite(1)
-        self.wr(prompt)
-        self.wr(default)
-        self.clear_to_eol()
+        scr.goto(self.height, 0)
+        scr.hilite(1)
+        scr.wr(prompt)
+        scr.wr(default)
+        scr.clear_to_eol()
         res = default
         while True:
             key = self.get_input()  ## Get Char of Fct.
             if key in (KEY_ENTER, KEY_TAB): ## Finis
-                self.hilite(0)
+                scr.hilite(0)
                 return res
             elif key == KEY_QUIT: ## Abort
-                self.hilite(0)
+                scr.hilite(0)
                 return None
             elif key == KEY_BACKSPACE: ## Backspace
                 if (len(res) > 0):
                     res = res[:len(res)-1]
-                    self.wr('\b \b')
+                    scr.wr('\b \b')
             elif key == KEY_DELETE: ## Delete prev. Entry
-                self.wr('\b \b' * len(res))
+                scr.wr('\b \b' * len(res))
                 res = ''
             elif 0x20 <= key < 0xfff0: ## character to be added
-                if len(prompt) + len(res) < Editor.width - 2:
+                if len(prompt) + len(res) < self.width - 2:
                     res += chr(key)
-                    self.wr(chr(key))
+                    scr.wr(chr(key))
 
     def find_in_file(self, pattern, pos, end):
         Editor.find_pattern = pattern # remember it
@@ -502,7 +502,7 @@ class Editor:
 #endif
                 self.cur_line += 1
 #ifdef SCROLL
-                if self.cur_line == self.top_line + Editor.height:
+                if self.cur_line == self.top_line + self.height:
                     self.scroll_down(1)
 #endif
         elif key == KEY_UP:
@@ -532,7 +532,7 @@ class Editor:
                 self.col = 0
                 self.cur_line += 1
 #ifdef SCROLL
-                if self.cur_line == self.top_line + Editor.height:
+                if self.cur_line == self.top_line + self.height:
                     self.scroll_down(1)
 #endif
             else:
@@ -573,23 +573,23 @@ class Editor:
         elif key == KEY_END:
             self.col = len(l)
         elif key == KEY_PGUP:
-            self.cur_line -= Editor.height
+            self.cur_line -= self.height
         elif key == KEY_PGDN:
-            self.cur_line += Editor.height
+            self.cur_line += self.height
         elif key == KEY_FIND:
             pat = self.line_edit("Find: ", Editor.find_pattern)
             if pat:
                 self.find_in_file(pat, self.col, self.total_lines)
-                self.row = Editor.height >> 1
+                self.row = self.height >> 1
         elif key == KEY_FIND_AGAIN:
             if Editor.find_pattern:
                 self.find_in_file(Editor.find_pattern, self.col + 1, self.total_lines)
-                self.row = Editor.height >> 1
+                self.row = self.height >> 1
         elif key == KEY_GOTO: ## goto line
             line = self.line_edit("Goto Line: ", "")
             if line:
                 self.cur_line = int(line) - 1
-                self.row = Editor.height >> 1
+                self.row = self.height >> 1
         elif key == KEY_TOGGLE: ## Toggle Autoindent/Statusline/Search case
             self.autoindent = 'y' if self.autoindent != 'y' else 'n' ## toggle
 #ifndef BASIC
@@ -602,8 +602,15 @@ class Editor:
                 if res[3]: self.write_tabs = 'y' if res[3][0] == 'y' else 'n'
             except:
                 pass
+        elif key == KEY_FIRST: ## first line
+            self.cur_line = 0
+        elif key == KEY_LAST: ## last line
+            self.cur_line = self.total_lines - 1
+            self.row = self.height - 1 ## will be fixed if required
+#endif
+#ifdef MOUSE
         elif key == KEY_MOUSE: ## Set Cursor
-            if self.mouse_y < Editor.height:
+            if self.mouse_y < self.height:
                 self.col = self.mouse_x + self.margin
                 self.cur_line = self.mouse_y + self.top_line
                 if self.mouse_fct in (0x22, 0x30): ## Right/Ctrl button on Mouse
@@ -611,22 +618,17 @@ class Editor:
         elif key == KEY_SCRLUP: ##
             if self.top_line > 0:
                 self.top_line = max(self.top_line - 3, 0)
-                self.cur_line = min(self.cur_line, self.top_line + Editor.height - 1)
+                self.cur_line = min(self.cur_line, self.top_line + self.height - 1)
 #ifdef SCROLL
                 self.scroll_up(3)
 #endif
         elif key == KEY_SCRLDN: ##
-            if self.top_line + Editor.height < self.total_lines:
+            if self.top_line + self.height < self.total_lines:
                 self.top_line = min(self.top_line + 3, self.total_lines - 1)
                 self.cur_line = max(self.cur_line, self.top_line)
 #ifdef SCROLL
                 self.scroll_down(3)
 #endif
-        elif key == KEY_FIRST: ## first line
-            self.cur_line = 0
-        elif key == KEY_LAST: ## last line
-            self.cur_line = self.total_lines - 1
-            self.row = Editor.height - 1 ## will be fixed if required
 #endif
 #ifdef BRACKET
         elif key == KEY_MATCH:
@@ -790,6 +792,8 @@ class Editor:
                     self.changed = ''
                 self.mark = None
         elif key == KEY_REDRAW:
+            (self.height, self.width) = scr.get_screen_size()
+            self.height -= 1
             self.redraw(True)
 
     def edit_loop(self): ## main editing loop
@@ -800,7 +804,7 @@ class Editor:
 
         while True:
             try:
-                if not self.rd_any(): ## skip update if a char is waiting
+                if not scr.rd_any(): ## skip update if a char is waiting
                     self.display_window()  ## Update & display window
                 key = self.get_input()  ## Get Char of Fct-key code
                 self.message = '' ## clear message
@@ -810,7 +814,12 @@ class Editor:
                         res = self.line_edit("Content changed! Quit without saving (y/N)? ", "N")
                         if not res or res[0].upper() != 'Y':
                             continue
-                    return (key, "")
+#ifdef SCROLL
+                    scr.scroll_region(0)
+#endif
+                    scr.goto(self.height, 0)
+                    scr.clear_to_eol()
+                    return key, ""
                 elif key == KEY_NEXT:
                     return (key, "")
                 elif key == KEY_GET:
@@ -884,6 +893,12 @@ def expandtabs(s):
         return s
 
 def pye(*content, tab_size = 4, undo = 50, device = 0, baud = 115200):
+#if defined(PYBOARD) || defined(LINUX)
+    scr.init_tty(device, baud)
+#endif
+#ifdef MOUSE
+    scr.mouse_reporting(True) ## enable mouse reporting
+#endif
 ## prepare content
     gc.collect() ## all (memory) is mine
     if content:
@@ -900,12 +915,6 @@ def pye(*content, tab_size = 4, undo = 50, device = 0, baud = 115200):
         slot = [Editor(tab_size, undo)]
     index = 0
 ## edit
-#if defined(PYBOARD) || defined(LINUX)
-    slot[0].init_tty(device, baud)
-#endif
-#ifndef BASIC
-    slot[0].mouse_reporting(True) ## enable mouse reporting
-#endif
     while True:
         key,f = slot[index].edit_loop()
         if key == KEY_QUIT:
@@ -921,18 +930,13 @@ def pye(*content, tab_size = 4, undo = 50, device = 0, baud = 115200):
         elif key == KEY_NEXT:
             index = (index + 1) % len(slot)
 ## All windows closed, clean up
-#ifdef SCROLL
-    slot[0].scroll_region(0)
-#endif
-    slot[0].goto(slot[0].height, 0)
-    slot[0].clear_to_eol()
-#ifndef BASIC
-    slot[0].mouse_reporting(False) ## disable mouse reporting
+    slot[0].undo, Editor.yank_buffer = [],[]
+#ifdef MOUSE
+    scr.mouse_reporting(False) ## disable mouse reporting
 #endif
 #if defined(PYBOARD) || defined(LINUX)
-    slot[0].deinit_tty()
+    scr.deinit_tty()
 #endif
-    slot[0].undo, Editor.yank_buffer = [],[]
 ## close
     return slot[0].content if (slot[0].fname == "") else slot[0].fname
 

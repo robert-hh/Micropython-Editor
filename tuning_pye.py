@@ -33,7 +33,7 @@
 
     def line_edit(self, prompt, default):  ## better one: added cursor keys and backsp, delete
         push_msg = lambda msg: self.wr(msg + "\b" * len(msg)) ## Write a message and move cursor back
-        self.goto(self.height, 0)
+        self.goto(Editor.height, 0)
         self.hilite(True)
         self.wr(prompt)
         self.wr(default)
@@ -81,7 +81,7 @@
                     push_msg(res[pos:]) ## update tail
 
     def line_edit(self, prompt, default):  ## simple one: only 4 fcts
-        self.goto(self.height, 0)
+        self.goto(Editor.height, 0)
         self.hilite(1)
         self.wr(prompt)
         self.wr(default)
@@ -138,7 +138,7 @@
             return s
 
     def cls(self):
-        Editor.wr(b"\x1b[2J")
+        self.wr(b"\x1b[2J")
 
 
 

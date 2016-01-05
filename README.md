@@ -29,6 +29,7 @@ a) find_in_file() supporting regular expressions,
 b) line_edit() supporting the cursor left/right/home/end keys, and
 c) expandtabs() and packtabs() with a second argument for tabsize (not for pye, but maybe useful)
 - strip.sh: sample Shell script which creates the different variants out of pye.py using cpp, including variants of wipye.py with either speed up scrolling or support replace or support got bracket.
+- pye_vt.py: a variant of pye.py, where all directly screen related functions are placed into a separate class. That's a better style, however it uses more memory.
 
 **Short Version History**
 
@@ -142,4 +143,10 @@ anyhow called one after the other, resulting in a enormous long function handlin
 - Fixed a minor inconvenience when going left at the line start (sqeezed too much in v1.12b)
 - Move a few lines around, such that keys which are more probable for fast repeats are checked for earlier.
 - Some editorial changes
+
+**2.0** Edit muliple files
+- Support for editing mutiple files and copy/paste between them
+- Ctrl-W steps through the list of files/buffers
+- Ctrl-O opens a new file/buffer. 
+
 
