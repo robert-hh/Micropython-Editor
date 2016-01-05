@@ -145,7 +145,7 @@ anyhow called one after the other, resulting in a enormous long function handlin
 - Some editorial changes
 
 **2.0** Edit muliple files
-- Support for editing mutiple files and copy/paste between them
+- Support for editing mutiple files at once and copy/paste between them
 - Ctrl-W steps through the list of files/buffers
 - Ctrl-O opens a new file/buffer. 
 
