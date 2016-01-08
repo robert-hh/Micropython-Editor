@@ -141,7 +141,7 @@ anyhow called one after the other, resulting in a enormous long function handlin
 **1.12d** Split undo of Indent/Un-Indent
 - Split undo for Indent and Un-Indent
 - Fixed a minor inconvenience when going left at the line start (sqeezed too much in v1.12b)
-- Move a few lines around, such that keys which are more probable for fast repeats are checked for earlier.
+- Move a few lines around, such that keys which are more likely used with fast repeats are checked for earlier.
 - Some editorial changes
 
 **2.0** Edit muliple files
@@ -149,4 +149,12 @@ anyhow called one after the other, resulting in a enormous long function handlin
 - Ctrl-W steps through the list of files/buffers
 - Ctrl-O opens a new file/buffer. 
 
+**2.1** Some shrinking for WiPy
+- Make Indent/Un-Indent optional in the WiPy version, to allow all variants to get compile w/o running out of memory. 
+The final code saving is just a few hundred bytes, so it's still not clear to me why these few extra lines dont't fit.
+- Fixing a glitch which added an extra line when un-doing the delete of all lines
+- Some shifting around of code lines
+- Making the MOUSE support an extra option
+- Removed the extra indent after ':' as the last char on the line. More confusing than helpful.
+- Update of the doc file
 

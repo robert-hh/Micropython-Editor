@@ -21,6 +21,8 @@
 #ifndef BASIC
 #define REPLACE 1
 #define BRACKET 1
+#define INDENT 1
+#define MOUSE 1
 #endif
 import sys, gc
 #ifdef LINUX
@@ -36,7 +38,7 @@ if sys.platform in ("linux", "darwin"):
 #define KEY_HOME        0x10
 #define KEY_END         0x03
 #define KEY_PGUP        0xfff1
-#define KEY_PGDN        0xfff3
+#define KEY_PGDN        0xfff2
 #define KEY_QUIT        0x11
 #define KEY_ENTER       0x0a
 #define KEY_BACKSPACE   0x08
@@ -127,6 +129,7 @@ class Editor:
     b"\x1b[Z" : KEY_BACKTAB, ## Shift Tab
 #ifndef BASIC
 ## keys of BASIC functions mapped onto themselves
+## may be imitted from KEYMAP
     b"\x11"   : KEY_QUIT, ## Ctrl-Q
     b"\n"     : KEY_ENTER,
     b"\x08"   : KEY_BACKSPACE,
@@ -147,22 +150,28 @@ class Editor:
     b"\x02"   : KEY_LAST,  ## Ctrl-B
     b"\x01"   : KEY_TOGGLE, ## Ctrl-A
     b"\x17"   : KEY_NEXT, ## Ctrl-W
-## other keys
     b"\x0f"   : KEY_GET, ## Ctrl-O
-    b"\x1b[M" : KEY_MOUSE,
-    b"\x1b[1;5H": KEY_FIRST,
-    b"\x1b[1;5F": KEY_LAST,
+## other keys
+    b"\x1b[1;5H": KEY_FIRST, ## Ctrl-Home
+    b"\x1b[1;5F": KEY_LAST, ## Ctrl-End
     b"\x1b[3;5~": KEY_YANK, ## Ctrl-Del
 #endif
 #ifdef BRACKET
     b"\x0b"   : KEY_MATCH,## Ctrl-K
 #endif
+#ifdef MOUSE
+    b"\x1b[M" : KEY_MOUSE,
+#endif
     }
-## symbols that may be shared between instances of Editor
+## symbols that are shared between instances of Editor
     yank_buffer = []
     find_pattern = ""
 #ifdef REPLACE
     replc_pattern = ""
+#endif
+#ifndef BASIC
+    case = "n"
+    write_tabs = "n"
 #endif
 
     def __init__(self, tab_size, undo_limit):
@@ -174,17 +183,9 @@ class Editor:
         self.undo = []
         self.undo_limit = max(undo_limit, 0)
         self.undo_zero = 0
-        self.case = "n"
         self.autoindent = "y"
         self.mark = None
-
-#ifndef BASIC
-        self.write_tabs = "n"
-#endif
 #ifdef LINUX
-    sdev = 0
-    org_termios = 0
-
     if sys.platform in ("linux", "darwin"):
 
         def wr(self,s):
@@ -207,12 +208,14 @@ class Editor:
                         Editor.winch = False
                         return b'\x05'
 
+        @staticmethod
         def init_tty(self, device, baud):
             Editor.org_termios = termios.tcgetattr(device)
             tty.setraw(device)
             Editor.sdev = device
             Editor.winch = False
 
+        @staticmethod
         def deinit_tty(self):
             termios.tcsetattr(Editor.sdev, termios.TCSANOW, Editor.org_termios)
 
@@ -223,9 +226,6 @@ class Editor:
             return True
 #endif
 #ifdef PYBOARD
-    serialcomm = 0
-    sedv = 0
-
     if sys.platform == "pyboard":
         def wr(self,s):
             ns = 0
@@ -242,6 +242,7 @@ class Editor:
                 pass
             return self.serialcomm.read(1)
 
+        @staticmethod
         def init_tty(self, device, baud):
             import pyb
             Editor.sdev = device
@@ -251,6 +252,7 @@ class Editor:
                 Editor.serialcomm = pyb.USB_VCP()
                 Editor.serialcomm.setinterrupt(-1)
 
+        @staticmethod
         def deinit_tty(self):
             if not Editor.sdev:
                 Editor.serialcomm.setinterrupt(3)
@@ -270,9 +272,11 @@ class Editor:
                 except:
                     pass
 
+##        @staticmethod
 ##        def init_tty(self, device, baud):
 ##            pass
 
+##        @staticmethod
 ##        def deinit_tty(self):
 ##            pass
 #endif
@@ -293,7 +297,7 @@ class Editor:
         else:         ## plain text
             self.wr(b"\x1b[0m")
 
-#ifndef BASIC
+#ifdef MOUSE
     def mouse_reporting(self, onoff):
         self.wr('\x1b[?9h' if onoff else '\x1b[?9l') ## enable/disable mouse reporting
 #endif
@@ -331,6 +335,9 @@ class Editor:
 #ifdef SCROLL
         self.scroll_region(Editor.height)
 #endif
+#ifdef MOUSE
+        self.mouse_reporting(True) ## enable mouse reporting
+#endif
 #ifdef LINUX
         if sys.platform in ("linux", "darwin") and sys.implementation.name == "cpython":
             signal.signal(signal.SIGWINCH, Editor.signal_handler)
@@ -353,7 +360,7 @@ class Editor:
                 c = self.KEYMAP[in_buffer]
                 if c != KEY_MOUSE:
                     return c
-#ifndef BASIC
+#ifdef MOUSE
                 else: ## special for mice
                     self.mouse_fct = ord((self.rd())) ## read 3 more chars
                     self.mouse_x = ord(self.rd()) - 33
@@ -408,7 +415,7 @@ class Editor:
         self.hilite(1)
         self.wr("{}{} Row: {}/{} Col: {}  {}".format(
             self.changed, self.fname, self.cur_line + 1, self.total_lines,
-            self.col + 1, self.message[:Editor.width - 25 - len(self.fname)]))
+            self.col + 1, self.message)[:self.width - 1])
         self.clear_to_eol() ## once moved up for mate/xfce4-terminal issue with scroll region
         self.hilite(0)
         self.goto(self.row, self.col - self.margin)
@@ -452,16 +459,21 @@ class Editor:
 
     def find_in_file(self, pattern, pos, end):
         Editor.find_pattern = pattern # remember it
-        if self.case != "y":
+        if True:
+#ifndef BASIC
+            pass
+        if Editor.case != "y":
+#endif
             pattern = pattern.lower()
         spos = pos
         for line in range(self.cur_line, end):
-            if self.case != "y":
-                match = self.content[line][spos:].lower().find(pattern)
+            if True:
 #ifndef BASIC
-            else:
-                match = self.content[line][spos:].find(pattern)
+                if Editor.case == "y":
+                    match = self.content[line][spos:].find(pattern)
+                else:
 #endif
+                    match = self.content[line][spos:].lower().find(pattern)
             if match >= 0:
                 break
             spos = 0
@@ -479,7 +491,7 @@ class Editor:
             if len(self.undo) >= self.undo_limit: ## drop oldest undo, if full
                 del self.undo[0]
                 self.undo_zero -= 1
-            self.undo.append((lnum, span, text, key, self.col))
+            self.undo.append([lnum, span, text, key, self.col])
 
     def delete_lines(self, yank): ## copy marked lines (opt) and delete them
         lrange = self.line_range()
@@ -488,7 +500,8 @@ class Editor:
         self.undo_add(lrange[0], self.content[lrange[0]:lrange[1]], KEY_NONE, 0) ## undo inserts
         del self.content[lrange[0]:lrange[1]]
         if self.content == []: ## if all was wiped
-            self.content = [""]
+            self.content = [""] ## add a line
+            self.undo[-1][1] = 1 ## tell undo to overwrite this single line
         self.total_lines = len(self.content)
         self.cur_line = lrange[0]
         self.mark = None ## unset line mark
@@ -566,7 +579,8 @@ class Editor:
                 self.content[self.cur_line] = l + ' ' * jut + chr(key)
             self.col += 1
         elif key == KEY_HOME:
-            self.col = self.spaces(l) if self.col == 0 else 0
+            ni = self.spaces(l)
+            self.col = ni if self.col != ni else 0
         elif key == KEY_END:
             self.col = len(l)
         elif key == KEY_PGUP:
@@ -587,18 +601,27 @@ class Editor:
             if line:
                 self.cur_line = int(line) - 1
                 self.row = Editor.height >> 1
+        elif key == KEY_FIRST: ## first line
+            self.cur_line = 0
+        elif key == KEY_LAST: ## last line
+            self.cur_line = self.total_lines - 1
+            self.row = Editor.height - 1 ## will be fixed if required
         elif key == KEY_TOGGLE: ## Toggle Autoindent/Statusline/Search case
-            self.autoindent = 'y' if self.autoindent != 'y' else 'n' ## toggle
+            if True:
 #ifndef BASIC
-            pat = self.line_edit("Case Sensitive Search {}, Autoindent {}, Tab Size {}, Write Tabs {}: ".format(self.case, self.autoindent, self.tab_size, self.write_tabs), "")
-            try:
-                res =  [i.strip().lower() for i in pat.split(",")]
-                if res[0]: self.case       = 'y' if res[0][0] == 'y' else 'n'
-                if res[1]: self.autoindent = 'y' if res[1][0] == 'y' else 'n'
-                if res[2]: self.tab_size = int(res[2])
-                if res[3]: self.write_tabs = 'y' if res[3][0] == 'y' else 'n'
-            except:
-                pass
+                pat = self.line_edit("Case Sensitive Search {}, Autoindent {}, Tab Size {}, Write Tabs {}: ".format(Editor.case, self.autoindent, self.tab_size, Editor.write_tabs), "")
+                try:
+                    res =  [i.strip().lower() for i in pat.split(",")]
+                    if res[0]: Editor.case       = 'y' if res[0][0] == 'y' else 'n'
+                    if res[1]: self.autoindent = 'y' if res[1][0] == 'y' else 'n'
+                    if res[2]: self.tab_size = int(res[2])
+                    if res[3]: Editor.write_tabs = 'y' if res[3][0] == 'y' else 'n'
+                except:
+                    pass
+            else:
+#endif
+                self.autoindent = 'y' if self.autoindent != 'y' else 'n' ## toggle
+#ifdef MOUSE
         elif key == KEY_MOUSE: ## Set Cursor
             if self.mouse_y < Editor.height:
                 self.col = self.mouse_x + self.margin
@@ -619,11 +642,6 @@ class Editor:
 #ifdef SCROLL
                 self.scroll_down(3)
 #endif
-        elif key == KEY_FIRST: ## first line
-            self.cur_line = 0
-        elif key == KEY_LAST: ## last line
-            self.cur_line = self.total_lines - 1
-            self.row = Editor.height - 1 ## will be fixed if required
 #endif
 #ifdef BRACKET
         elif key == KEY_MATCH:
@@ -675,37 +693,31 @@ class Editor:
             ni = 0
             if self.autoindent == "y": ## Autoindent
                 ni = min(self.spaces(l), self.col)  ## query indentation
-#ifndef BASIC
-                r = l.partition("\x23")[0].rstrip() ## \x23 == #
-                if r and r[-1] == ':' and self.col >= len(r): ## look for : as the last non-space before comment
-                    ni += self.tab_size
-#endif
             self.cur_line += 1
             self.content[self.cur_line:self.cur_line] = [' ' * ni + l[self.col:]] if jut < 0 else [""]
             self.total_lines += 1
             self.col = ni
         elif key == KEY_TAB:
-            if self.mark != None:
-                lrange = self.line_range()
-                self.undo_add(lrange[0], self.content[lrange[0]:lrange[1]], KEY_INDENT, lrange[1] - lrange[0]) ## undo replaces
-                for i in range(lrange[0],lrange[1]):
-                    if len(self.content[i]) > 0:
-                        self.content[i] = ' ' * (self.tab_size - self.spaces(self.content[i]) % self.tab_size) + self.content[i]
-            else:
+#ifdef INDENT
+            if self.mark == None:
+#endif
                 ni = self.tab_size - self.col % self.tab_size ## determine spaces to add
                 if jut < 0:
                     self.undo_add(self.cur_line, [l], KEY_TAB)
                     self.content[self.cur_line] = l[:self.col] + ' ' * ni + l[self.col:]
                 self.col += ni
-        elif key == KEY_BACKTAB:
-            if self.mark != None:
-                lrange = self.line_range()
-                self.undo_add(lrange[0], self.content[lrange[0]:lrange[1]], KEY_UNDENT, lrange[1] - lrange[0]) ## undo replaces
-                for i in range(lrange[0],lrange[1]):
-                    ns = self.spaces(self.content[i])
-                    if ns > 0:
-                        self.content[i] = self.content[i][(ns - 1) % self.tab_size + 1:]
+#ifdef INDENT
             else:
+                lrange = self.line_range()
+                self.undo_add(lrange[0], self.content[lrange[0]:lrange[1]], KEY_INDENT, lrange[1] - lrange[0]) ## undo replaces
+                for i in range(lrange[0],lrange[1]):
+                    if len(self.content[i]) > 0:
+                        self.content[i] = ' ' * (self.tab_size - self.spaces(self.content[i]) % self.tab_size) + self.content[i]
+#endif
+        elif key == KEY_BACKTAB:
+#ifdef INDENT
+            if self.mark == None:
+#endif
                 ni = (self.col - 1) % self.tab_size + 1
                 if jut < 0:
                     ni = min(ni, self.spaces(l, self.col)) ## determine spaces to drop
@@ -715,6 +727,15 @@ class Editor:
                         self.col -= ni
                 else:
                     self.col -= min(ni, jut)
+#ifdef INDENT
+            else:
+                lrange = self.line_range()
+                self.undo_add(lrange[0], self.content[lrange[0]:lrange[1]], KEY_UNDENT, lrange[1] - lrange[0]) ## undo replaces
+                for i in range(lrange[0],lrange[1]):
+                    ns = self.spaces(self.content[i])
+                    if ns > 0:
+                        self.content[i] = self.content[i][(ns - 1) % self.tab_size + 1:]
+#endif
 #ifdef REPLACE
         elif key == KEY_REPLC:
             count = 0
@@ -777,9 +798,9 @@ class Editor:
         elif key == KEY_UNDO:
             if len(self.undo) > 0:
                 action = self.undo.pop(-1) ## get action from stack
-                if action[3] != KEY_INDENT:
-                    self.cur_line = action[0]
-                    self.col = action[4]
+                if not action[3] in (KEY_INDENT, KEY_UNDENT):
+                    self.cur_line = action[0] ## wrong Bkspc of BOL
+                self.col = action[4]
                 if action[1] >= 0: ## insert or replace line
                     if action[0] < self.total_lines:
                         self.content[action[0]:action[0] + action[1]] = action[2] # insert lines
@@ -808,15 +829,22 @@ class Editor:
                 self.message = '' ## clear message
 
                 if key == KEY_QUIT:
-                    if self.changed != '':
+                    if self.changed:
                         res = self.line_edit("Content changed! Quit without saving (y/N)? ", "N")
                         if not res or res[0].upper() != 'Y':
                             continue
-                    return (key, "")
-                elif key == KEY_NEXT:
-                    return (key, "")
-                elif key == KEY_GET:
-                    return (key, self.line_edit("Open file: ", ""))
+#ifdef SCROLL
+                    self.scroll_region(0)
+#endif
+#ifdef MOUSE
+                    self.mouse_reporting(False) ## disable mouse reporting
+#endif
+                    self.goto(Editor.height, 0)
+                    self.clear_to_eol()
+                    self.undo = []
+                    return key
+                elif key in (KEY_NEXT, KEY_GET):
+                    return key
                 else: self.handle_edit_keys(key)
             except Exception as err:
                 self.message = "{!r}".format(err)
@@ -837,21 +865,24 @@ class Editor:
 #endif
 ## Read file into content
     def get_file(self, fname):
-        self.fname = fname
-        try:
+        if not fname:
+            fname = self.line_edit("Open file: ", "")
+        if fname:
+            self.fname = fname
+            try:
 #ifdef LINUX
-            if sys.implementation.name == "cpython":
-                with open(fname, errors="ignore") as f:
-                    self.content = f.readlines()
-            else:
+                if sys.implementation.name == "cpython":
+                    with open(fname, errors="ignore") as f:
+                        self.content = f.readlines()
+                else:
 #endif
-                with open(fname) as f:
-                    self.content = f.readlines()
-        except Exception as err:
-            self.content, self.message = [""], "{!r}".format(err)
-        else:
-            for i in range(len(self.content)):  ## strip and convert
-                self.content[i] = expandtabs(self.content[i].rstrip('\r\n\t '))
+                    with open(fname) as f:
+                        self.content = f.readlines()
+            except Exception as err:
+                self.content, self.message = [""], "{!r}".format(err)
+            else:
+                for i in range(len(self.content)):  ## strip and convert
+                    self.content[i] = expandtabs(self.content[i].rstrip('\r\n\t '))
 
 ## write file
     def put_file(self, fname):
@@ -859,7 +890,7 @@ class Editor:
         with open("tmpfile.pye", "w") as f:
             for l in self.content:
 #ifndef BASIC
-                if self.write_tabs == 'y':
+                if Editor.write_tabs == 'y':
                     f.write(self.packtabs(l) + '\n')
                 else:
 #endif
@@ -900,41 +931,29 @@ def pye(*content, tab_size = 4, undo = 50, device = 0, baud = 115200):
             index += 1
     else:
         slot = [Editor(tab_size, undo)]
-    index = 0
 ## edit
 #if defined(PYBOARD) || defined(LINUX)
-    slot[0].init_tty(device, baud)
+    Editor.init_tty(device, baud)
 #endif
-#ifndef BASIC
-    slot[0].mouse_reporting(True) ## enable mouse reporting
-#endif
+    index = 0
     while True:
-        key,f = slot[index].edit_loop()
+        index %= len(slot)
+        key = slot[index].edit_loop()  ## edit buffer
         if key == KEY_QUIT:
             if len(slot) == 1: ## the last man standing is kept
                 break
             del slot[index]
-            index %= len(slot)
         elif key == KEY_GET:
             slot.append(Editor(tab_size, undo))
             index = len(slot) - 1
-            if f:
-                slot[index].get_file(f)
+            slot[index].get_file(None)
         elif key == KEY_NEXT:
-            index = (index + 1) % len(slot)
+            index += 1
 ## All windows closed, clean up
-#ifdef SCROLL
-    slot[0].scroll_region(0)
-#endif
-    slot[0].goto(slot[0].height, 0)
-    slot[0].clear_to_eol()
-#ifndef BASIC
-    slot[0].mouse_reporting(False) ## disable mouse reporting
-#endif
 #if defined(PYBOARD) || defined(LINUX)
-    slot[0].deinit_tty()
+    Editor.deinit_tty()
 #endif
-    slot[0].undo, Editor.yank_buffer = [],[]
+    Editor.yank_buffer = []
 ## close
     return slot[0].content if (slot[0].fname == "") else slot[0].fname
 

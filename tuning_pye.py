@@ -2,8 +2,8 @@
 ## This is the regex version of find.
     def find_in_file(self, pattern, pos, end):
         import re
-        self.find_pattern = pattern ## remember it
-        if self.case != "y":
+        Editor.find_pattern = pattern ## remember it
+        if Editor.case != "y":
             pattern = pattern.lower()
         try:
             rex = re.compile(pattern)
@@ -12,7 +12,7 @@
             return False
         spos = pos
         for line in range(self.cur_line, end):
-            if self.case != "y":
+            if Editor.case != "y":
                 match = rex.search(self.content[line][spos:].lower())
             else:
                 match = rex.search(self.content[line][spos:])
@@ -23,7 +23,7 @@
             self.message = pattern + " not found"
             return 0
 ## micropython does not support span(), therefore a second simple find on the target line
-        if self.case != "y":
+        if Editor.case != "y":
             self.col = max(self.content[line][spos:].lower().find(match.group(0)), 0) + spos
         else:
             self.col = max(self.content[line][spos:].find(match.group(0)), 0) + spos

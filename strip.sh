@@ -1,5 +1,6 @@
 # !sh
 cpp -D BASIC -D WIPY -D DEFINES pye.py | sed "s/#.*$//" | sed "/^$/d" >wipye.py
+cpp -D BASIC -D WIPY -D DEFINES -D INDENT pye.py | sed "s/#.*$//" | sed "/^$/d" >wipye_indt.py
 cpp -D BASIC -D WIPY -D DEFINES -D REPLACE pye.py | sed "s/#.*$//" | sed "/^$/d" >wipye_rplc.py
 cpp -D BASIC -D WIPY -D DEFINES -D SCROLL pye.py | sed "s/#.*$//" | sed "/^$/d" >wipye_scrl.py
 cpp -D BASIC -D WIPY -D DEFINES -D BRACKET pye.py | sed "s/#.*$//" | sed "/^$/d" >wipye_brkt.py
