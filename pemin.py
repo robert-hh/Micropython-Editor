@@ -18,10 +18,10 @@ class Editor:
     b"\x7f" : 0x08, 
     b"\x1b[3~": 0x7f,
     b"\x1b[Z" : 0x15, 
-    b"\x0b" : 0xfffd,
     }
     yank_buffer = []
     find_pattern = ""
+    replc_pattern = ""
     def __init__(self, tab_size, undo_limit):
         self.top_line = self.cur_line = self.row = self.col = self.margin = 0
         self.tab_size = tab_size
@@ -88,8 +88,7 @@ class Editor:
         self.row = min(Editor.height - 1, self.row)
         if sys.implementation.name == "micropython":
             gc.collect()
-            if flag:
-                self.message = "{} Bytes Memory available".format(gc.mem_free())
+            if flag: self.message = "{} Bytes Memory available".format(gc.mem_free())
     def get_input(self): 
         while True:
             in_buffer = self.rd()
@@ -173,6 +172,11 @@ class Editor:
             elif key == 0x7f: 
                 self.wr('\b \b' * len(res))
                 res = ''
+            elif key == 0x16: 
+                if Editor.yank_buffer:
+                    self.wr('\b \b' * len(res))
+                    res = Editor.yank_buffer[0].strip()[:len(prompt) + Editor.width - 2]
+                    self.wr(res)
             elif 0x20 <= key < 0xfff0: 
                 if len(prompt) + len(res) < Editor.width - 2:
                     res += chr(key)
@@ -269,53 +273,9 @@ class Editor:
             if line:
                 self.cur_line = int(line) - 1
                 self.row = Editor.height >> 1
-        elif key == 0x14: 
-            self.cur_line = 0
-        elif key == 0x02: 
-            self.cur_line = self.total_lines - 1
-            self.row = Editor.height - 1 
         elif key == 0x01: 
             if True:
                 self.autoindent = 'y' if self.autoindent != 'y' else 'n' 
-        elif key == 0xfffd:
-            if self.col < len(l): 
-                opening = "([{<"
-                closing = ")]}>"
-                level = 0
-                pos = self.col
-                srch = l[pos]
-                i = opening.find(srch)
-                if i >= 0: 
-                    pos += 1
-                    match = closing[i]
-                    for i in range(self.cur_line, self.total_lines):
-                        for c in range(pos, len(self.content[i])):
-                            if self.content[i][c] == match:
-                                if level == 0: 
-                                    self.cur_line, self.col = i, c
-                                    return True 
-                                else:
-                                    level -= 1
-                            elif self.content[i][c] == srch:
-                                level += 1
-                        pos = 0 
-                else:
-                    i = closing.find(srch)
-                    if i >= 0: 
-                        pos -= 1
-                        match = opening[i]
-                        for i in range(self.cur_line, -1, -1):
-                            for c in range(pos, -1, -1):
-                                if self.content[i][c] == match:
-                                    if level == 0: 
-                                        self.cur_line, self.col = i, c
-                                        return True 
-                                    else:
-                                        level -= 1
-                                elif self.content[i][c] == srch:
-                                    level += 1
-                            if i > 0: 
-                                pos = len(self.content[i - 1]) - 1
         elif key == 0x0c:
             self.mark = self.cur_line if self.mark == None else None
         elif key == 0x0a:
@@ -330,19 +290,66 @@ class Editor:
             self.total_lines += 1
             self.col = ni
         elif key == 0x09:
+            if self.mark == None:
                 ni = self.tab_size - self.col % self.tab_size 
                 self.undo_add(self.cur_line, [l], 0x09)
                 self.content[self.cur_line] = l[:self.col] + ' ' * ni + l[self.col:]
                 self.col += ni
+            else:
+                lrange = self.line_range()
+                for i in range(lrange[0],lrange[1]):
+                    if len(self.content[i]) > 0:
+                        self.content[i] = ' ' * (self.tab_size - self.spaces(self.content[i]) % self.tab_size) + self.content[i]
         elif key == 0x15:
+            if self.mark == None:
                 ni = min((self.col - 1) % self.tab_size + 1, self.spaces(l, self.col)) 
                 if ni > 0:
                     self.undo_add(self.cur_line, [l], 0x15)
                     self.content[self.cur_line] = l[:self.col - ni] + l[self.col:]
                     self.col -= ni
+            else:
+                lrange = self.line_range()
+                for i in range(lrange[0],lrange[1]):
+                    ns = self.spaces(self.content[i])
+                    if ns > 0:
+                        self.content[i] = self.content[i][(ns - 1) % self.tab_size + 1:]
+        elif key == 0x12:
+            count = 0
+            pat = self.line_edit("Replace: ", Editor.find_pattern)
+            if pat:
+                rpat = self.line_edit("With: ", Editor.replc_pattern)
+                if rpat != None: 
+                    Editor.replc_pattern = rpat
+                    q = ''
+                    cur_line = self.cur_line 
+                    if self.mark != None: 
+                        (self.cur_line, end_line) = self.line_range()
+                        self.col = 0
+                    else: 
+                        end_line = self.total_lines
+                    self.message = "Replace (yes/No/all/quit) ? "
+                    while True: 
+                        ni = self.find_in_file(pat, self.col, end_line)
+                        if ni: 
+                            if q != 'a':
+                                self.display_window()
+                                key = self.get_input() 
+                                q = chr(key).lower()
+                            if q == 'q' or key == 0x11:
+                                break
+                            elif q in ('a','y'):
+                                self.undo_add(self.cur_line, [self.content[self.cur_line]], 0)
+                                self.content[self.cur_line] = self.content[self.cur_line][:self.col] + rpat + self.content[self.cur_line][self.col + ni:]
+                                self.col += len(rpat)
+                                count += 1
+                            else: 
+                                self.col += 1
+                        else: 
+                            break
+                    self.cur_line = cur_line 
+                    self.message = "'{}' replaced {} times".format(pat, count)
         elif key == 0x18: 
-            if self.mark != None:
-                self.delete_lines(True)
+            if self.mark != None: self.delete_lines(True)
         elif key == 0x04: 
             if self.mark != None:
                 lrange = self.line_range()
@@ -350,8 +357,7 @@ class Editor:
                 self.mark = None
         elif key == 0x16: 
             if Editor.yank_buffer:
-                if self.mark != None:
-                    self.delete_lines(False)
+                if self.mark != None: self.delete_lines(False)
                 self.undo_add(self.cur_line, None, 0, -len(Editor.yank_buffer))
                 self.content[self.cur_line:self.cur_line] = Editor.yank_buffer 
                 self.total_lines += len(Editor.yank_buffer)
@@ -376,8 +382,7 @@ class Editor:
                 else: 
                     del self.content[action[0]:action[0] - action[1]]
                 self.total_lines = len(self.content) 
-                if len(self.undo) == self.undo_zero:
-                    self.changed = ''
+                if len(self.undo) == self.undo_zero: self.changed = ''
                 self.mark = None
         elif key == 0x05:
             self.redraw(True)
@@ -387,36 +392,34 @@ class Editor:
         self.total_lines = len(self.content)
         self.redraw(self.message == "")
         while True:
-            try:
-                if not self.rd_any(): 
-                    self.display_window() 
-                key = self.get_input() 
-                self.message = '' 
-                if key == 0x11:
-                    if self.changed:
-                        res = self.line_edit("Content changed! Quit without saving (y/N)? ", "N")
-                        if not res or res[0].upper() != 'Y':
-                            continue
-                    self.goto(Editor.height, 0)
-                    self.clear_to_eol()
-                    self.undo = []
-                    return key
-                elif key in (0x17, 0x0f):
-                    return key
-                else: self.handle_edit_keys(key)
-            except Exception as err:
-                self.message = "{!r}".format(err)
+            if not self.rd_any(): 
+                self.display_window() 
+            key = self.get_input() 
+            self.message = '' 
+            if key == 0x11:
+                if self.changed:
+                    res = self.line_edit("Content changed! Quit without saving (y/N)? ", "N")
+                    if not res or res[0].upper() != 'Y':
+                        continue
+                self.goto(Editor.height, 0)
+                self.clear_to_eol()
+                self.undo = []
+                return key
+            elif key in (0x17, 0x0f):
+                return key
+            else: self.handle_edit_keys(key)
     def get_file(self, fname):
+        import os
         if not fname:
             fname = self.line_edit("Open file: ", "")
         if fname:
-            self.fname = fname
-            try:
+            if (os.stat(fname)[0] & 0x4000): 
+                self.content = sorted(os.listdir(fname))
+            else:
+                self.fname = fname
+                if True:
                     with open(fname) as f:
                         self.content = f.readlines()
-            except Exception as err:
-                self.content, self.message = [""], "{!r}".format(err)
-            else:
                 for i in range(len(self.content)): 
                     self.content[i] = expandtabs(self.content[i].rstrip('\r\n\t '))
     def put_file(self, fname):
@@ -444,33 +447,34 @@ def expandtabs(s):
         return s
 def pye(*content, tab_size = 4, undo = 50, device = 0, baud = 115200):
     gc.collect() 
+    slot = [Editor(tab_size, undo)]
     if content:
-        slot = []
         index = 0
         for f in content:
-            slot.append(Editor(tab_size, undo))
+            if index: slot.append(Editor(tab_size, undo))
             if type(f) == str and f: 
                 slot[index].get_file(f)
             elif type(f) == list and len(f) > 0 and type(f[0]) == str:
                 slot[index].content = f 
             index += 1
-    else:
-        slot = [Editor(tab_size, undo)]
     Editor.init_tty(device, baud)
     index = 0
     while True:
-        index %= len(slot)
-        key = slot[index].edit_loop() 
-        if key == 0x11:
-            if len(slot) == 1: 
-                break
-            del slot[index]
-        elif key == 0x0f:
-            slot.append(Editor(tab_size, undo))
-            index = len(slot) - 1
-            slot[index].get_file(None)
-        elif key == 0x17:
-            index += 1
+        try:
+            index %= len(slot)
+            key = slot[index].edit_loop() 
+            if key == 0x11:
+                if len(slot) == 1: 
+                    break
+                del slot[index]
+            elif key == 0x0f:
+                slot.append(Editor(tab_size, undo))
+                index = len(slot) - 1
+                slot[index].get_file(None)
+            elif key == 0x17:
+                index += 1
+        except Exception as err:
+            slot[index].message = "{!r}".format(err)
     Editor.deinit_tty()
     Editor.yank_buffer = []
     return slot[0].content if (slot[0].fname == "") else slot[0].fname

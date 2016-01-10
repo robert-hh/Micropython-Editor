@@ -73,7 +73,13 @@
                     self.wr("\b")
                     pos -= 1
                     push_msg(res[pos:] + ' ') ## update tail
-            elif key >= 0x20: ## char to be inserted
+            elif key == KEY_ZAP: ## Get from content
+                if Editor.yank_buffer:
+                    self.wr('\b' * pos + ' ' * len(res) + '\b' * len(res))
+                    res = Editor.yank_buffer[0].strip()
+                    self.wr(res)
+                    pos = len(res)
+            elif 0x20 <= key < 0xfff0: ## char to be inserted
                 if len(prompt) + len(res) < self.width - 2:
                     res = res[:pos] + chr(key) + res[pos:]
                     self.wr(res[pos])

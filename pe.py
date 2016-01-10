@@ -119,8 +119,7 @@ class Editor:
         self.mouse_reporting(True) 
         if sys.implementation.name == "micropython":
             gc.collect()
-            if flag:
-                self.message = "{} Bytes Memory available".format(gc.mem_free())
+            if flag: self.message = "{} Bytes Memory available".format(gc.mem_free())
     def get_input(self): 
         while True:
             in_buffer = self.rd()
@@ -214,6 +213,11 @@ class Editor:
             elif key == 0x7f: 
                 self.wr('\b \b' * len(res))
                 res = ''
+            elif key == 0x16: 
+                if Editor.yank_buffer:
+                    self.wr('\b \b' * len(res))
+                    res = Editor.yank_buffer[0].strip()[:len(prompt) + Editor.width - 2]
+                    self.wr(res)
             elif 0x20 <= key < 0xfff0: 
                 if len(prompt) + len(res) < Editor.width - 2:
                     res += chr(key)
@@ -475,8 +479,7 @@ class Editor:
                     self.cur_line = cur_line 
                     self.message = "'{}' replaced {} times".format(pat, count)
         elif key == 0x18: 
-            if self.mark != None:
-                self.delete_lines(True)
+            if self.mark != None: self.delete_lines(True)
         elif key == 0x04: 
             if self.mark != None:
                 lrange = self.line_range()
@@ -484,8 +487,7 @@ class Editor:
                 self.mark = None
         elif key == 0x16: 
             if Editor.yank_buffer:
-                if self.mark != None:
-                    self.delete_lines(False)
+                if self.mark != None: self.delete_lines(False)
                 self.undo_add(self.cur_line, None, 0, -len(Editor.yank_buffer))
                 self.content[self.cur_line:self.cur_line] = Editor.yank_buffer 
                 self.total_lines += len(Editor.yank_buffer)
@@ -510,8 +512,7 @@ class Editor:
                 else: 
                     del self.content[action[0]:action[0] - action[1]]
                 self.total_lines = len(self.content) 
-                if len(self.undo) == self.undo_zero:
-                    self.changed = ''
+                if len(self.undo) == self.undo_zero: self.changed = ''
                 self.mark = None
         elif key == 0x05:
             self.redraw(True)
@@ -521,48 +522,44 @@ class Editor:
         self.total_lines = len(self.content)
         self.redraw(self.message == "")
         while True:
-            try:
-                if not self.rd_any(): 
-                    self.display_window() 
-                key = self.get_input() 
-                self.message = '' 
-                if key == 0x11:
-                    if self.changed:
-                        res = self.line_edit("Content changed! Quit without saving (y/N)? ", "N")
-                        if not res or res[0].upper() != 'Y':
-                            continue
-                    self.mouse_reporting(False) 
-                    self.goto(Editor.height, 0)
-                    self.clear_to_eol()
-                    self.undo = []
-                    return key
-                elif key in (0x17, 0x0f):
-                    return key
-                else: self.handle_edit_keys(key)
-            except Exception as err:
-                self.message = "{!r}".format(err)
+            if not self.rd_any(): 
+                self.display_window() 
+            key = self.get_input() 
+            self.message = '' 
+            if key == 0x11:
+                if self.changed:
+                    res = self.line_edit("Content changed! Quit without saving (y/N)? ", "N")
+                    if not res or res[0].upper() != 'Y':
+                        continue
+                self.mouse_reporting(False) 
+                self.goto(Editor.height, 0)
+                self.clear_to_eol()
+                self.undo = []
+                return key
+            elif key in (0x17, 0x0f):
+                return key
+            else: self.handle_edit_keys(key)
     def packtabs(self, s):
         from _io import StringIO
         sb = StringIO()
         for i in range(0, len(s), 8):
             c = s[i:i + 8]
             cr = c.rstrip(" ")
-            if c != cr: 
-                sb.write(cr + "\t") 
-            else:
-                sb.write(c)
+            if c != cr: sb.write(cr + "\t") 
+            else: sb.write(c)
         return sb.getvalue()
     def get_file(self, fname):
+        import os
         if not fname:
             fname = self.line_edit("Open file: ", "")
         if fname:
-            self.fname = fname
-            try:
+            if (os.stat(fname)[0] & 0x4000): 
+                self.content = sorted(os.listdir(fname))
+            else:
+                self.fname = fname
+                if True:
                     with open(fname) as f:
                         self.content = f.readlines()
-            except Exception as err:
-                self.content, self.message = [""], "{!r}".format(err)
-            else:
                 for i in range(len(self.content)): 
                     self.content[i] = expandtabs(self.content[i].rstrip('\r\n\t '))
     def put_file(self, fname):
@@ -593,33 +590,34 @@ def expandtabs(s):
         return s
 def pye(*content, tab_size = 4, undo = 50, device = 0, baud = 115200):
     gc.collect() 
+    slot = [Editor(tab_size, undo)]
     if content:
-        slot = []
         index = 0
         for f in content:
-            slot.append(Editor(tab_size, undo))
+            if index: slot.append(Editor(tab_size, undo))
             if type(f) == str and f: 
                 slot[index].get_file(f)
             elif type(f) == list and len(f) > 0 and type(f[0]) == str:
                 slot[index].content = f 
             index += 1
-    else:
-        slot = [Editor(tab_size, undo)]
     Editor.init_tty(device, baud)
     index = 0
     while True:
-        index %= len(slot)
-        key = slot[index].edit_loop() 
-        if key == 0x11:
-            if len(slot) == 1: 
-                break
-            del slot[index]
-        elif key == 0x0f:
-            slot.append(Editor(tab_size, undo))
-            index = len(slot) - 1
-            slot[index].get_file(None)
-        elif key == 0x17:
-            index += 1
+        try:
+            index %= len(slot)
+            key = slot[index].edit_loop() 
+            if key == 0x11:
+                if len(slot) == 1: 
+                    break
+                del slot[index]
+            elif key == 0x0f:
+                slot.append(Editor(tab_size, undo))
+                index = len(slot) - 1
+                slot[index].get_file(None)
+            elif key == 0x17:
+                index += 1
+        except Exception as err:
+            slot[index].message = "{!r}".format(err)
     Editor.deinit_tty()
     Editor.yank_buffer = []
     return slot[0].content if (slot[0].fname == "") else slot[0].fname

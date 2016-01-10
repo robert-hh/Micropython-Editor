@@ -29,7 +29,7 @@ a) find_in_file() supporting regular expressions,
 b) line_edit() supporting the cursor left/right/home/end keys, and
 c) expandtabs() and packtabs() with a second argument for tabsize (not for pye, but maybe useful)
 - strip.sh: sample Shell script which creates the different variants out of pye.py using cpp, including variants of wipye.py with either speed up scrolling or support replace or support got bracket.
-- pye_vt.py: a variant of pye.py, where all directly screen related functions are placed into a separate class. That's a better style, however it uses more memory.
+- pye_vt.py: a variant of pye.py, where all directly screen related functions are placed into a separate class. That's a better style, however it uses more memory. This file is just given as exmaple and not maintained.
 
 **Short Version History**
 
@@ -150,11 +150,18 @@ anyhow called one after the other, resulting in a enormous long function handlin
 - Ctrl-O opens a new file/buffer. 
 
 **2.1** Some shrinking for WiPy
-- Make Indent/Un-Indent optional in the WiPy version, to allow all variants to get compile w/o running out of memory. 
+- Make Indent/Un-Indent optional in the WiPy version, to allow all variants to get compiled w/o running out of memory. 
 The final code saving is just a few hundred bytes, so it's still not clear to me why these few extra lines dont't fit.
 - Fixing a glitch which added an extra line when un-doing the delete of all lines
 - Some shifting around of code lines
 - Making the MOUSE support an extra option
 - Removed the extra indent after ':' as the last char on the line. More confusing than helpful.
 - Update of the doc file
+
+**2.2** Further cleaning and some slight improvements
+- Moved error catching one level up to the function pye(), catching load-file errors too.
+- If open file names a directory, the list of files is loaded to the edit buffer.
+- Ctrl-V in line edit mode gets the first line of the paste buffer.
+- The WiPy version does not support undo for Indent/Un-indent, even if Indent is enabled. It is too memory consuming at runtime. It's questionable whether this is needed at all.
+- And of course: update of the doc file
 
