@@ -185,6 +185,7 @@ class Editor:
         self.undo_zero = 0
         self.autoindent = "y"
         self.mark = None
+        self.straight = "y"
 #ifdef LINUX
     if sys.platform in ("linux", "darwin"):
 
@@ -376,6 +377,9 @@ class Editor:
 ## Force cur_line and col to be in the reasonable bounds
         self.cur_line = min(self.total_lines - 1, max(self.cur_line, 0))
 ## Check if Column is out of view, and align margin if needed
+        if self.straight != "y":
+            self.col = min(self.col, len(self.content[self.cur_line]))
+        if self.col <  0: self.col = 0
         if self.col >= Editor.width + self.margin:
             self.margin = self.col - Editor.width + (Editor.width >> 2)
         elif self.col < self.margin:
@@ -509,7 +513,7 @@ class Editor:
 
     def handle_edit_keys(self, key): ## keys which change content
         l = self.content[self.cur_line]
-        jut = self.col - len(l) ## <0: before text end, =0 at text end, >0 beyond text end
+        jut = self.col - len(l) ## <0: before text end, = 0 at text end, >0 beyond text end
         if key == KEY_DOWN:
 #ifdef SCROLL
             if self.cur_line < self.total_lines - 1:
@@ -539,9 +543,19 @@ class Editor:
 #endif
             else:
 #endif
-                if self.col > 0: self.col -= 1
+                self.col -= 1
         elif key == KEY_RIGHT:
-            self.col += 1
+#ifndef BASIC
+            if self.straight != "y" and self.col >= len(l) and self.cur_line < self.total_lines - 1:
+                self.col = 0
+                self.cur_line += 1
+#ifdef SCROLL
+                if self.cur_line == self.top_line + Editor.height:
+                    self.scroll_down(1)
+#endif
+            else:
+#endif
+                self.col += 1
         elif key == KEY_DELETE:
             if self.mark != None:
                 self.delete_lines(False)
@@ -558,7 +572,7 @@ class Editor:
             if self.mark != None:
                 self.delete_lines(False)
             elif self.col > 0:
-                if jut < 0: ## if on solid ground
+                if jut <= 0: ## if on solid ground
                     self.undo_add(self.cur_line, [l], KEY_BACKSPACE)
                     self.content[self.cur_line] = l[:self.col - 1] + l[self.col:]
                 self.col -= 1
@@ -572,11 +586,10 @@ class Editor:
 #endif
         elif 0x20 <= key < 0xfff0: ## character to be added
             self.mark = None
+            self.undo_add(self.cur_line, [l], 0x20 if key == 0x20 else 0x41)
             if jut < 0:
-                self.undo_add(self.cur_line, [l], 0x20 if key == 0x20 else 0x41)
                 self.content[self.cur_line] = l[:self.col] + chr(key) + l[self.col:]
-            elif key != 0x20:
-                self.undo_add(self.cur_line, [l], 0x41)
+            else:
                 self.content[self.cur_line] = l + ' ' * jut + chr(key)
             self.col += 1
         elif key == KEY_HOME:
@@ -612,13 +625,16 @@ class Editor:
         elif key == KEY_TOGGLE: ## Toggle Autoindent/Statusline/Search case
             if True:
 #ifndef BASIC
-                pat = self.line_edit("Case Sensitive Search {}, Autoindent {}, Tab Size {}, Write Tabs {}: ".format(Editor.case, self.autoindent, self.tab_size, Editor.write_tabs), "")
+                pat = self.line_edit(
+                "Case Sensitive Search {}, Autoindent {}, Tab Size {}, Write Tabs {}, Straight Cursor {}: ".format(
+                Editor.case, self.autoindent, self.tab_size, Editor.write_tabs, self.straight), "")
                 try:
                     res =  [i.strip().lower() for i in pat.split(",")]
                     if res[0]: Editor.case       = 'y' if res[0][0] == 'y' else 'n'
                     if res[1]: self.autoindent = 'y' if res[1][0] == 'y' else 'n'
                     if res[2]: self.tab_size = int(res[2])
                     if res[3]: Editor.write_tabs = 'y' if res[3][0] == 'y' else 'n'
+                    if res[4]: self.straight = 'y' if res[4][0] == 'y' else 'n'
                 except:
                     pass
             else:
@@ -697,7 +713,7 @@ class Editor:
             if self.autoindent == "y": ## Autoindent
                 ni = min(self.spaces(l), self.col)  ## query indentation
             self.cur_line += 1
-            self.content[self.cur_line:self.cur_line] = [' ' * ni + l[self.col:]] if jut < 0 else [""]
+            self.content[self.cur_line:self.cur_line] = [' ' * ni + l[self.col:]]
             self.total_lines += 1
             self.col = ni
         elif key == KEY_TAB:
@@ -705,9 +721,11 @@ class Editor:
             if self.mark == None:
 #endif
                 ni = self.tab_size - self.col % self.tab_size ## determine spaces to add
+                self.undo_add(self.cur_line, [l], KEY_TAB)
                 if jut < 0:
-                    self.undo_add(self.cur_line, [l], KEY_TAB)
                     self.content[self.cur_line] = l[:self.col] + ' ' * ni + l[self.col:]
+                else:
+                    self.content[self.cur_line] = l + ' ' * (jut + ni)
                 self.col += ni
 #ifdef INDENT
             else:
@@ -724,7 +742,7 @@ class Editor:
             if self.mark == None:
 #endif
                 ni = (self.col - 1) % self.tab_size + 1
-                if jut < 0:
+                if jut <= 0:
                     ni = min(ni, self.spaces(l, self.col)) ## determine spaces to drop
                     if ni > 0:
                         self.undo_add(self.cur_line, [l], KEY_BACKTAB)
@@ -783,7 +801,7 @@ class Editor:
         elif key == KEY_YANK:  # delete line or line(s) into buffer
             if self.mark != None: self.delete_lines(True)
         elif key == KEY_DUP:  # copy line(s) into buffer
-            if self.mark != None: 
+            if self.mark != None:
                 lrange = self.line_range()
                 Editor.yank_buffer = self.content[lrange[0]:lrange[1]]
                 self.mark = None
@@ -864,14 +882,18 @@ class Editor:
 #endif
 ## Read file into content
     def get_file(self, fname):
-        import os
+        from os import listdir, getcwd
+        try:    from uos import stat
+        except: from os import stat
+
         if not fname:
             fname = self.line_edit("Open file: ", "")
         if fname:
-            if (os.stat(fname)[0] & 0x4000):
-                self.content = sorted(os.listdir(fname))
+            self.fname = fname
+            if fname == '.': fname = getcwd()
+            if (stat(fname)[0] & 0x4000): ## Dir
+                self.content = ["Directory '{}'".format(fname), ""] + sorted(listdir(fname))
             else:
-                self.fname = fname
                 if True:
 #ifdef LINUX
                     pass
@@ -887,7 +909,7 @@ class Editor:
 
 ## write file
     def put_file(self, fname):
-        import os
+        from os import unlink, rename
         with open("tmpfile.pye", "w") as f:
             for l in self.content:
 #ifndef BASIC
@@ -896,9 +918,9 @@ class Editor:
                 else:
 #endif
                     f.write(l + '\n')
-        try:    os.unlink(fname)
+        try:    unlink(fname)
         except: pass
-        os.rename("tmpfile.pye", fname)
+        rename("tmpfile.pye", fname)
 
 ## expandtabs: hopefully sometimes replaced by the built-in function
 def expandtabs(s):
@@ -926,7 +948,8 @@ def pye(*content, tab_size = 4, undo = 50, device = 0, baud = 115200):
         for f in content:
             if index: slot.append(Editor(tab_size, undo))
             if type(f) == str and f: ## String = non-empty Filename
-                slot[index].get_file(f)
+                try: slot[index].get_file(f)
+                except: slot[index].message = "File not found"
             elif type(f) == list and len(f) > 0 and type(f[0]) == str:
                 slot[index].content = f ## non-empty list of strings -> edit
             index += 1

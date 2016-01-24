@@ -13,7 +13,7 @@ A small text editor written in Python running on PYBoard and WiPy, allowing to e
 
 The editor assumes a VT100 terminal. It works in Insert mode. Cursor Keys, Home, End, PgUp, PgDn, Del and Backspace work as you would expect. The additional functions like FIND etc. are available with Ctrl-Keys. On reading files, tab characters are expanded to spaces with a tab size of 8, and trailing white space on a line will be discarded. The orginal state of tabs will not be restored when the file is written. Optionally, tabs can be written when saving the file, replacing spaces with tabs when possible. The screen size is determined, when the editor is started or when the Redraw-key (Ctrl-E) is hit.
 
-The editor works also well in a Linux or MAC terminal environment, with both python3 and micropython. For that purpose, a small main() section is embedded, which when called with CPython also accepts data from a pipe or redirection.
+The editor works also well in a Linux or MAC terminal environment (and also in some terminal apps of Android - tested with Termux), with both python3 and micropython. For that purpose, a small main() section is embedded, which when called with CPython also accepts data from a pipe or redirection.
 
 **Files:**
 
@@ -28,7 +28,7 @@ The editor works also well in a Linux or MAC terminal environment, with both pyt
 a) find_in_file() supporting regular expressions,
 b) line_edit() supporting the cursor left/right/home/end keys, and
 c) expandtabs() and packtabs() with a second argument for tabsize (not for pye, but maybe useful)
-- strip.sh: sample Shell script which creates the different variants out of pye.py using cpp, including variants of wipye.py with either speed up scrolling or support replace or support got bracket.
+- strip.sh: sample Shell script which creates the different variants out of pye.py using cpp, including all variants of wipye.py with either speed up scrolling or support replace or support goto bracket or support indent/un-indent or support mouse.
 - pye_vt.py: a variant of pye.py, where all directly screen related functions are placed into a separate class. That's a better style, however it uses more memory. This file is just given as exmaple and not maintained.
 
 **Short Version History**
@@ -161,7 +161,13 @@ The final code saving is just a few hundred bytes, so it's still not clear to me
 **2.2** Further cleaning and some slight improvements
 - Moved error catching one level up to the function pye(), catching load-file errors too.
 - If open file names a directory, the list of files is loaded to the edit buffer.
-- Ctrl-V in line edit mode gets the first line of the paste buffer.
+- Ctrl-V in line edit mode inserts the first line of the paste buffer
 - The WiPy version does not support undo for Indent/Un-indent, even if Indent is enabled. It is too memory consuming at runtime. It's questionable whether this is needed at all.
 - And of course: update of the doc file
+
+**2.3** Minor fixes
+- Catched file not found errors when starting pye, introduced in version 2.2
+- Added a flag to pye2 such that it supports both vertical cursor movement types
+- use uos.stat with micropython, since os.stat is not supported on linux-micropython
+- When opening a directory, replace the name '.' by the result of os.getcwd(), avoiding error 22 of stat() call on PyBoard and WiPy
 

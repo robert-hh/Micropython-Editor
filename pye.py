@@ -460,7 +460,7 @@ class Editor:
                     res += chr(key)
                     self.wr(chr(key))
 
-    def find_in_file(self, pattern, pos, end):
+    def find_in_file(self, pattern, pos, end_line):
         Editor.find_pattern = pattern # remember it
         if True:
 #ifndef BASIC
@@ -469,7 +469,7 @@ class Editor:
 #endif
             pattern = pattern.lower()
         spos = pos
-        for line in range(self.cur_line, end):
+        for line in range(self.cur_line, end_line):
             if True:
 #ifndef BASIC
                 if Editor.case == "y":
@@ -863,14 +863,18 @@ class Editor:
 #endif
 ## Read file into content
     def get_file(self, fname):
-        import os
+        from os import listdir, getcwd
+        try:    from uos import stat
+        except: from os import stat
+
         if not fname:
             fname = self.line_edit("Open file: ", "")
         if fname:
-            if (os.stat(fname)[0] & 0x4000): ## Dir
-                self.content = sorted(os.listdir(fname))
+            self.fname = fname
+            if fname == '.': fname = getcwd()
+            if (stat(fname)[0] & 0x4000): ## Dir
+                self.content = ["Directory '{}'".format(fname), ""] + sorted(listdir(fname))
             else:
-                self.fname = fname
                 if True:
 #ifdef LINUX
                     pass
@@ -886,7 +890,7 @@ class Editor:
 
 ## write file
     def put_file(self, fname):
-        import os
+        from os import unlink, rename
         with open("tmpfile.pye", "w") as f:
             for l in self.content:
 #ifndef BASIC
@@ -895,9 +899,9 @@ class Editor:
                 else:
 #endif
                     f.write(l + '\n')
-        try:    os.unlink(fname)
+        try:    unlink(fname)
         except: pass
-        os.rename("tmpfile.pye", fname)
+        rename("tmpfile.pye", fname)
 
 ## expandtabs: hopefully sometimes replaced by the built-in function
 def expandtabs(s):
@@ -925,7 +929,8 @@ def pye(*content, tab_size = 4, undo = 50, device = 0, baud = 115200):
         for f in content:
             if index: slot.append(Editor(tab_size, undo))
             if type(f) == str and f: ## String = non-empty Filename
-                slot[index].get_file(f)
+                try: slot[index].get_file(f)
+                except: slot[index].message = "File not found"
             elif type(f) == list and len(f) > 0 and type(f[0]) == str:
                 slot[index].content = f ## non-empty list of strings -> edit
             index += 1
