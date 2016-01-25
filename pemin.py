@@ -409,27 +409,30 @@ class Editor:
                 return key
             else: self.handle_edit_keys(key)
     def get_file(self, fname):
-        import os
+        from os import listdir, getcwd
+        try: from uos import stat
+        except: from os import stat
         if not fname:
             fname = self.line_edit("Open file: ", "")
         if fname:
-            if (os.stat(fname)[0] & 0x4000): 
-                self.content = sorted(os.listdir(fname))
+            self.fname = fname
+            if fname == '.': fname = getcwd()
+            if (stat(fname)[0] & 0x4000): 
+                self.content = ["Directory '{}'".format(fname), ""] + sorted(listdir(fname))
             else:
-                self.fname = fname
                 if True:
                     with open(fname) as f:
                         self.content = f.readlines()
                 for i in range(len(self.content)): 
                     self.content[i] = expandtabs(self.content[i].rstrip('\r\n\t '))
     def put_file(self, fname):
-        import os
+        from os import unlink, rename
         with open("tmpfile.pye", "w") as f:
             for l in self.content:
                     f.write(l + '\n')
-        try: os.unlink(fname)
+        try: unlink(fname)
         except: pass
-        os.rename("tmpfile.pye", fname)
+        rename("tmpfile.pye", fname)
 def expandtabs(s):
     from _io import StringIO
     if '\t' in s:
@@ -453,7 +456,8 @@ def pye(*content, tab_size = 4, undo = 50, device = 0, baud = 115200):
         for f in content:
             if index: slot.append(Editor(tab_size, undo))
             if type(f) == str and f: 
-                slot[index].get_file(f)
+                try: slot[index].get_file(f)
+                except: slot[index].message = "File not found"
             elif type(f) == list and len(f) > 0 and type(f[0]) == str:
                 slot[index].content = f 
             index += 1

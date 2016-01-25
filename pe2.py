@@ -61,6 +61,7 @@ class Editor:
         self.undo_zero = 0
         self.autoindent = "y"
         self.mark = None
+        self.straight = "y"
     if sys.platform == "pyboard":
         def wr(self,s):
             ns = 0
@@ -147,6 +148,9 @@ class Editor:
                 return in_buffer[0]
     def display_window(self): 
         self.cur_line = min(self.total_lines - 1, max(self.cur_line, 0))
+        if self.straight != "y":
+            self.col = min(self.col, len(self.content[self.cur_line]))
+        if self.col < 0: self.col = 0
         if self.col >= Editor.width + self.margin:
             self.margin = self.col - Editor.width + (Editor.width >> 2)
         elif self.col < self.margin:
@@ -275,9 +279,13 @@ class Editor:
                 self.cur_line -= 1
                 self.col = len(self.content[self.cur_line])
             else:
-                if self.col > 0: self.col -= 1
+                self.col -= 1
         elif key == 0x1e:
-            self.col += 1
+            if self.straight != "y" and self.col >= len(l) and self.cur_line < self.total_lines - 1:
+                self.col = 0
+                self.cur_line += 1
+            else:
+                self.col += 1
         elif key == 0x7f:
             if self.mark != None:
                 self.delete_lines(False)
@@ -294,7 +302,7 @@ class Editor:
             if self.mark != None:
                 self.delete_lines(False)
             elif self.col > 0:
-                if jut < 0: 
+                if jut <= 0: 
                     self.undo_add(self.cur_line, [l], 0x08)
                     self.content[self.cur_line] = l[:self.col - 1] + l[self.col:]
                 self.col -= 1
@@ -306,11 +314,10 @@ class Editor:
                 self.total_lines -= 1
         elif 0x20 <= key < 0xfff0: 
             self.mark = None
+            self.undo_add(self.cur_line, [l], 0x20 if key == 0x20 else 0x41)
             if jut < 0:
-                self.undo_add(self.cur_line, [l], 0x20 if key == 0x20 else 0x41)
                 self.content[self.cur_line] = l[:self.col] + chr(key) + l[self.col:]
-            elif key != 0x20:
-                self.undo_add(self.cur_line, [l], 0x41)
+            else:
                 self.content[self.cur_line] = l + ' ' * jut + chr(key)
             self.col += 1
         elif key == 0x10:
@@ -343,13 +350,16 @@ class Editor:
             self.row = Editor.height - 1 
         elif key == 0x01: 
             if True:
-                pat = self.line_edit("Case Sensitive Search {}, Autoindent {}, Tab Size {}, Write Tabs {}: ".format(Editor.case, self.autoindent, self.tab_size, Editor.write_tabs), "")
+                pat = self.line_edit(
+                "Case Sensitive Search {}, Autoindent {}, Tab Size {}, Write Tabs {}, Straight Cursor {}: ".format(
+                Editor.case, self.autoindent, self.tab_size, Editor.write_tabs, self.straight), "")
                 try:
                     res = [i.strip().lower() for i in pat.split(",")]
                     if res[0]: Editor.case = 'y' if res[0][0] == 'y' else 'n'
                     if res[1]: self.autoindent = 'y' if res[1][0] == 'y' else 'n'
                     if res[2]: self.tab_size = int(res[2])
                     if res[3]: Editor.write_tabs = 'y' if res[3][0] == 'y' else 'n'
+                    if res[4]: self.straight = 'y' if res[4][0] == 'y' else 'n'
                 except:
                     pass
             else:
@@ -417,15 +427,17 @@ class Editor:
             if self.autoindent == "y": 
                 ni = min(self.spaces(l), self.col) 
             self.cur_line += 1
-            self.content[self.cur_line:self.cur_line] = [' ' * ni + l[self.col:]] if jut < 0 else [""]
+            self.content[self.cur_line:self.cur_line] = [' ' * ni + l[self.col:]]
             self.total_lines += 1
             self.col = ni
         elif key == 0x09:
             if self.mark == None:
                 ni = self.tab_size - self.col % self.tab_size 
+                self.undo_add(self.cur_line, [l], 0x09)
                 if jut < 0:
-                    self.undo_add(self.cur_line, [l], 0x09)
                     self.content[self.cur_line] = l[:self.col] + ' ' * ni + l[self.col:]
+                else:
+                    self.content[self.cur_line] = l + ' ' * (jut + ni)
                 self.col += ni
             else:
                 lrange = self.line_range()
@@ -436,7 +448,7 @@ class Editor:
         elif key == 0x15:
             if self.mark == None:
                 ni = (self.col - 1) % self.tab_size + 1
-                if jut < 0:
+                if jut <= 0:
                     ni = min(ni, self.spaces(l, self.col)) 
                     if ni > 0:
                         self.undo_add(self.cur_line, [l], 0x15)
@@ -557,30 +569,33 @@ class Editor:
             else: sb.write(c)
         return sb.getvalue()
     def get_file(self, fname):
-        import os
+        from os import listdir, getcwd
+        try: from uos import stat
+        except: from os import stat
         if not fname:
             fname = self.line_edit("Open file: ", "")
         if fname:
-            if (os.stat(fname)[0] & 0x4000):
-                self.content = sorted(os.listdir(fname))
+            self.fname = fname
+            if fname == '.': fname = getcwd()
+            if (stat(fname)[0] & 0x4000): 
+                self.content = ["Directory '{}'".format(fname), ""] + sorted(listdir(fname))
             else:
-                self.fname = fname
                 if True:
                     with open(fname) as f:
                         self.content = f.readlines()
                 for i in range(len(self.content)): 
                     self.content[i] = expandtabs(self.content[i].rstrip('\r\n\t '))
     def put_file(self, fname):
-        import os
+        from os import unlink, rename
         with open("tmpfile.pye", "w") as f:
             for l in self.content:
                 if Editor.write_tabs == 'y':
                     f.write(self.packtabs(l) + '\n')
                 else:
                     f.write(l + '\n')
-        try: os.unlink(fname)
+        try: unlink(fname)
         except: pass
-        os.rename("tmpfile.pye", fname)
+        rename("tmpfile.pye", fname)
 def expandtabs(s):
     from _io import StringIO
     if '\t' in s:
@@ -604,7 +619,8 @@ def pye(*content, tab_size = 4, undo = 50, device = 0, baud = 115200):
         for f in content:
             if index: slot.append(Editor(tab_size, undo))
             if type(f) == str and f: 
-                slot[index].get_file(f)
+                try: slot[index].get_file(f)
+                except: slot[index].message = "File not found"
             elif type(f) == list and len(f) > 0 and type(f[0]) == str:
                 slot[index].content = f 
             index += 1
