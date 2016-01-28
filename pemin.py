@@ -21,6 +21,7 @@ class Editor:
     }
     yank_buffer = []
     find_pattern = ""
+    case = "n"
     replc_pattern = ""
     def __init__(self, tab_size, undo_limit):
         self.top_line = self.cur_line = self.row = self.col = self.margin = 0
@@ -183,21 +184,20 @@ class Editor:
                     self.wr(chr(key))
     def find_in_file(self, pattern, pos, end):
         Editor.find_pattern = pattern 
-        if True:
+        if Editor.case != "y":
             pattern = pattern.lower()
         spos = pos
         for line in range(self.cur_line, end):
-            if True:
-                    match = self.content[line][spos:].lower().find(pattern)
-            if match >= 0:
-                break
+            if Editor.case != "y":
+                match = self.content[line][spos:].lower().find(pattern)
+            if match >= 0: 
+                self.col = match + spos
+                self.cur_line = line
+                return len(pattern)
             spos = 0
         else:
             self.message = "No match: " + pattern
-            return 0
-        self.col = match + spos
-        self.cur_line = line
-        return len(pattern)
+            return -1
     def undo_add(self, lnum, text, key, span = 1):
         self.changed = '*'
         if self.undo_limit > 0 and (
@@ -330,7 +330,7 @@ class Editor:
                     self.message = "Replace (yes/No/all/quit) ? "
                     while True: 
                         ni = self.find_in_file(pat, self.col, end_line)
-                        if ni: 
+                        if ni >= 0: 
                             if q != 'a':
                                 self.display_window()
                                 key = self.get_input() 
@@ -343,7 +343,7 @@ class Editor:
                                 self.col += len(rpat)
                                 count += 1
                             else: 
-                                self.col += 1
+                                 self.col += 1
                         else: 
                             break
                     self.cur_line = cur_line 
@@ -409,15 +409,14 @@ class Editor:
                 return key
             else: self.handle_edit_keys(key)
     def get_file(self, fname):
-        from os import listdir, getcwd
+        from os import listdir
         try: from uos import stat
         except: from os import stat
         if not fname:
             fname = self.line_edit("Open file: ", "")
         if fname:
             self.fname = fname
-            if fname == '.': fname = getcwd()
-            if (stat(fname)[0] & 0x4000): 
+            if fname in ('.', '..') or (stat(fname)[0] & 0x4000): 
                 self.content = ["Directory '{}'".format(fname), ""] + sorted(listdir(fname))
             else:
                 if True:

@@ -1,0 +1,157 @@
+The editor works in Insert mode. Cursor Keys, Home, End, PgUp and PgDn work
+as you would expect. Some functions are available with Ctrl-Keys. Keyboard Mapping:
+
+Key    Alternative  Function
+--------------------------------------------------------------------------
+Up                  Move the cursor up one line.
+Down                Move the cursor down one line.
+Left                Move the cursor left by one char;
+                    skipping over to the previous line at the BOL. (*)
+Right               Move the cursor right by one char;
+                    skipping over to the next line at the EOL. (*)
+PgUp                Move the cursor up by one screen height.
+PgDn                Move the cursor down by one screen height.
+Home                Go to start-of-line, if the Cursor is at start-of-text.
+                    Otherwise go to start-of-text.
+End                 Move to the end-of-line.
+Mouse Button 1      Set the cursor. In the WiPy version this is only supported,
+                    if -D MOUSE was set during code stripping.
+Mouse Button 2      Set/Clear the line mark. In the WiPy version this is only
+                    supported, if -D MOUSE was set during code stripping.
+Mouse Scroll Wheel  Scroll Up/Down the screen content by 3 lines per tick.
+                    The cursor stays visible and will be moved in the content
+                    if required. In the WiPy version this is only supported,
+                    if -D MOUSE was set during code stripping.
+Enter   \n          Insert a line break at the cursor position.
+                    Auto-indent is supported.
+Backspc. Ctrl-H     Delete the char left hand to the cursor.  If the mark
+                    is set, just delete the marked line range.
+                    At the beginning of the line Backspace joins the
+                    previous line. (*)
+Del                 Delete char under cursor. At the end of the line join the
+                    next line. If the mark is set, delete the marked line range.
+                    In line edit prompts, Del deletes the whole entry.
+Tab     Ctrl-I      Tab. Insert spaces at the cursor position up to the next
+                    tab location, moving the cursor. If the mark is set, indent
+                    the lines between the mark and cursor. In the WiPy version
+                    indent is only supported, if -D INDENT was set during code
+                    stripping.
+BackTab Ctrl-U      Back Tab. Remove spaces left to the cursor position up to
+                    the next tab location or the next non-space char, and moves
+                    the cursor.  If the mark is set, un-indent the lines
+                    between the mark and the cursor. In the WiPy version
+                    un-indent is only supported, if -D INDENT was set during
+                    code stripping.
+Ctrl-Q  Ctrl-C      Quit a file buffer or the line edit mode. If the edited text
+                    was changed, ask for confirmation. If the last buffer is
+                    closed, the editor will terminate too. Ctrl-C is not
+                    supported on WiPy (see note below).
+Ctrl-S              Save to file. The file name will be prompted for. The
+                    content will be written to a temporary file (“tmpfile.pye”)
+                    first and then this will be renamed. If the target file
+                    name is invalid, the original file is lost, but
+                    “tmpfile.pye” will have its content.
+Ctrl-E              Redraw the screen according to the actual screen parameters
+                    width, height. With MicroPython, as a side effect, garbage
+                    collection is performed and the available memory is shown.
+                    With Linux/CPython, window size changes result in an
+                    automatic redraw.
+Ctrl-F              Find text. The last search string is memorized, even across
+                    buffers. Search stops at the end. Whether the search is
+                    case sensitive or not, can be set by the Ctrl-A command.
+Ctrl-N              Repeat find starting at the column right to the cursor.
+Ctrl-R              Find and replace. If the mark is set, it affects the marked
+                    region only. In the WiPy version this is only supported, if
+                    -D REPLACE was set during code stripping.
+Ctrl-G              Go to Line. It prompts for the line number.
+Ctrl-B  Ctrl-End    Go to the last line (*)
+Ctrl-T  Ctrl-Home   Go to the first line (*)
+Ctrl-K              Go to the matching bracket, if any. The cursor has to be on
+                    a bracket symbol. Bracket pairs are (), [], {} and <>.
+                    Brackets in comments and strings are not discarded. In the
+                    WiPy version this is only supported, if -D BRACKET was set
+                    during code stripping.
+Ctrl-A              Settings. Sets the state of search case sensitivity,
+                    auto-indent, tab size and write-tabs. Enter ‘y’ or ‘n’ or a
+                    number in up to three, comma separated fields (e.g.
+                    n,y,4,n). An empty field leaves the respective value
+                    unchanged. The default values are case sensitive: n,
+                    auto-indent: y, tab-size: 4, Write Tabs: n
+                    In the minimal (WiPy) version, Ctrl-A just toggles the
+                    auto-indent flag.
+Ctrl-L              Mark/Unmark the current line. The mark affects Delete,
+                    Backspace, Cut lines, Copy lines, Insert lines, Tab,
+                    Backtab, Save and Replace.
+Ctrl-X  Ctrl-Del    Delete the area between the mark and the current line and
+                    keep it in the paste buffer. Together with the Ctrl-V this
+                    implements the Cut & Paste feature. The mark is cleared.
+Ctrl-D              Copy the area between the mark and the current line to the
+                    paste buffer. Together with the Ctrl-V this implements the
+                    Copy & Paste feature. The mark is cleared on copy.
+Ctrl-V              Insert the content of the paste buffer before the actual
+                    line. If the mark is set, delete the marked area first. In
+                    line edit mode, Ctrl-V inserts the stripped first line of
+                    the paste buffer.
+Ctrl-W              Switch to the next file buffer.
+Ctrl-O              Open a new file buffer. The file name will be prompted for.
+                    If the name is left empty, an empty buffer will be opened.
+                    If the file cannot be loaded (e.g. because it does not
+                    exist), a buffer with that name will still be opened, but
+                    will be empty. If the name entered belongs to a directory,
+                    the sorted list of file names in that directory will be
+                    returned.
+Ctrl-Z              Undo the last change(s). Every char add sequence/deleted
+                    char sequence/replaced item/deleted line/inserted
+                    line(s)/indent sequence/Un-indent sequence counts as a
+                    single change. The default for the undo stack size per
+                    buffer is 50 with PyBoard/WiPy and 500 with Linux/Darwin
+                    systems. It can be changed in the call to pye().
+---------------------------------------------------------------------------------
+Functions denoted with (*) are not supported in the minimal version (WiPy, see
+below). The editor is contained in the file pye.py. Start pye from the REPL
+prompt e.g. with
+
+        from pye import pye
+        res = pye(object_1, object_2, ..[, tabsize][, undo][, device][, baud])
+
+If object_n is a string, it's considered as the name of a file to be edited,
+and the name of the file will be returned. If object_n is a list of strings,
+these will be edited, and the edited list will be returned. If no object is
+named, pye() will give you an empty screen, creating a list of strings, unless
+you save to a file. In that case, the file name will be returned. If object_n
+is neither a string nor a list of strings, an empty buffer is opened. It is
+always the last buffer closed, which will be returned. Optional named parameters:
+
+tabsize=n   Tab step (integer). The default is 4
+undo=n      Size of the undo stack (integer). A value of 0 or False disables
+            undo.
+device=n    Device to be used for screen/keyboard on PyBoard (integer). On
+            PyBoard, 0 is USB_VCP. 1 is UART 1, and so on. The default is 0
+            (USB_VCP). This Option is not available on WiPy. You'll get the
+            output on UART by redirecting the REPL prompt.
+baud=n      UART baud rate (integer). The default is 115200.
+
+The Linux/Darwin version can be called from the command line with:
+
+        python3 pye.py [filename(s)]
+
+Obviously, you may use micropython too. Using python3 (not micropython),
+content can also be redirected or pipe'd into the editor.
+
+When reading files, tab characters (\x09) in the text are replaced by spaces,
+tab size 8, and white space at the end of a line is discarded. When you save
+the file, you have the option to replace sequences of spaces by tabs, tab size
+8. However, the original state will NOT be restored. So be careful when editing
+files with tab characters.
+
+The size of a file that can be edited on PyBoard/WiPy is limited by its memory.
+You may use REDRAW to determine how much space is left. Besides the file
+itself, both buffer operations and especially undo consume memory. The undo
+stack can be limited in the call to pye, the buffer size can be reduced again
+by copying a single line into it. Up to about 300 lines on WiPy and 600 lines
+on PyBoard should be safe to edit. The largest suitable file size is in the
+same order of what WiPy/PyBoard can handle as source file.
+
+When you save a file on PyBoard/WiPy, these changes may not be visible in the
+file system of a connected PC until you disconnect and reconnect the
+Pyboard/WiPy drive. See also the related discussion in the MicroPython Forum.

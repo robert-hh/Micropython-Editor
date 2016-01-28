@@ -166,11 +166,11 @@ class Editor:
 ## symbols that are shared between instances of Editor
     yank_buffer = []
     find_pattern = ""
+    case = "n"
 #ifdef REPLACE
     replc_pattern = ""
 #endif
 #ifndef BASIC
-    case = "n"
     write_tabs = "n"
 #endif
 
@@ -460,32 +460,26 @@ class Editor:
                     res += chr(key)
                     self.wr(chr(key))
 
-    def find_in_file(self, pattern, pos, end_line):
+    def find_in_file(self, pattern, pos, end):
         Editor.find_pattern = pattern # remember it
-        if True:
-#ifndef BASIC
-            pass
         if Editor.case != "y":
-#endif
             pattern = pattern.lower()
         spos = pos
-        for line in range(self.cur_line, end_line):
-            if True:
-#ifndef BASIC
-                if Editor.case == "y":
-                    match = self.content[line][spos:].find(pattern)
-                else:
+        for line in range(self.cur_line, end):
+            if Editor.case != "y":
+                match = self.content[line][spos:].lower().find(pattern)
+#ifndef BASIC                
+            else:
+                match = self.content[line][spos:].find(pattern)
 #endif
-                    match = self.content[line][spos:].lower().find(pattern)
-            if match >= 0:
-                break
+            if match >= 0: ## Bingo!
+                self.col = match + spos
+                self.cur_line = line
+                return len(pattern)
             spos = 0
         else:
             self.message = "No match: " + pattern
-            return 0
-        self.col = match + spos
-        self.cur_line = line
-        return len(pattern)
+            return -1
 
     def undo_add(self, lnum, text, key, span = 1):
         self.changed = '*'
@@ -760,7 +754,7 @@ class Editor:
                     self.message = "Replace (yes/No/all/quit) ? "
                     while True: ## and go
                         ni = self.find_in_file(pat, self.col, end_line)
-                        if ni: ## Pattern found
+                        if ni >= 0: ## Pattern found
                             if q != 'a':
                                 self.display_window()
                                 key = self.get_input()  ## Get Char of Fct.
@@ -773,7 +767,12 @@ class Editor:
                                 self.col += len(rpat)
                                 count += 1
                             else: ## everything else is no
-                                self.col += 1
+                                 self.col += 1
+#ifdef REGEXP
+                            if self.col >= len(self.content[self.cur_line]): ## catch the case of replacing line ends
+                                self.cur_line += 1
+                                self.col = 0
+#endif
                         else: ## not found, quit
                             break
                     self.cur_line = cur_line ## restore cur_line
@@ -863,7 +862,7 @@ class Editor:
 #endif
 ## Read file into content
     def get_file(self, fname):
-        from os import listdir, getcwd
+        from os import listdir
         try:    from uos import stat
         except: from os import stat
 
@@ -871,8 +870,7 @@ class Editor:
             fname = self.line_edit("Open file: ", "")
         if fname:
             self.fname = fname
-            if fname == '.': fname = getcwd()
-            if (stat(fname)[0] & 0x4000): ## Dir
+            if fname in ('.', '..') or (stat(fname)[0] & 0x4000): ## Dir
                 self.content = ["Directory '{}'".format(fname), ""] + sorted(listdir(fname))
             else:
                 if True:

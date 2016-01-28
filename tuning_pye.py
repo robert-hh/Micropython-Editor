@@ -1,7 +1,8 @@
 ##
 ## This is the regex version of find.
-    def find_in_file(self, pattern, pos, end):
+    def find_in_file(self, pattern, col, end):
         import re
+#define REGEXP 1
         Editor.find_pattern = pattern ## remember it
         if Editor.case != "y":
             pattern = pattern.lower()
@@ -9,27 +10,24 @@
             rex = re.compile(pattern)
         except:
             self.message = "Invalid pattern: " + pattern
-            return False
-        spos = pos
+            return -1
+        scol = col
         for line in range(self.cur_line, end):
+            l = self.content[line]
             if Editor.case != "y":
-                match = rex.search(self.content[line][spos:].lower())
-            else:
-                match = rex.search(self.content[line][spos:])
-            if match:
-                break
-            spos = 0
+                l = l.lower()
+## since micropython does not support span, a step-by_step match has to be performed
+            ecol = 1 if pattern[0] == '^' else len(l) + 1 
+            for i in range(scol, ecol):
+                match = rex.match(l[i:])
+                if match: ## bingo!
+                    self.col = i
+                    self.cur_line = line
+                    return len(match.group(0))
+            scol = 0
         else:
             self.message = pattern + " not found"
-            return 0
-## micropython does not support span(), therefore a second simple find on the target line
-        if Editor.case != "y":
-            self.col = max(self.content[line][spos:].lower().find(match.group(0)), 0) + spos
-        else:
-            self.col = max(self.content[line][spos:].find(match.group(0)), 0) + spos
-        self.cur_line = line
-        self.message = ' ' ## force status once
-        return len(match.group(0))
+            return -1
 
     def line_edit(self, prompt, default):  ## better one: added cursor keys and backsp, delete
         push_msg = lambda msg: self.wr(msg + "\b" * len(msg)) ## Write a message and move cursor back
