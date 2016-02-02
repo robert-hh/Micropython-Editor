@@ -114,13 +114,15 @@ prompt e.g. with
         from pye import pye
         res = pye(object_1, object_2, ..[, tabsize][, undo][, device][, baud])
 
-If object_n is a string, it's considered as the name of a file to be edited,
-and the name of the file will be returned. If object_n is a list of strings,
-these will be edited, and the edited list will be returned. If no object is
-named, pye() will give you an empty screen, creating a list of strings, unless
-you save to a file. In that case, the file name will be returned. If object_n
-is neither a string nor a list of strings, an empty buffer is opened. It is
-always the last buffer closed, which will be returned. Optional named parameters:
+If object_n is a string, it's considered as the name of a file to be edited, 
+and the name of the file will be returned. If object_n is a list of strings, 
+these will be edited, and the edited list will be returned. If no object is 
+named, pye() will give you an empty screen, creating a list of strings, 
+unless you save to a file. In that case, the file name will be returned. If 
+object_n is neither a string nor a list of strings, an empty buffer is 
+opened. It is always the last buffer closed, which will be returned. 
+
+Optional named parameters:
 
 tabsize=n   Tab step (integer). The default is 4
 undo=n      Size of the undo stack (integer). A value of 0 or False disables
