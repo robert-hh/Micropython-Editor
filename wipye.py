@@ -155,11 +155,6 @@ class Editor:
             elif key == 0x7f: 
                 self.wr('\b \b' * len(res))
                 res = ''
-            elif key == 0x16: 
-                if Editor.yank_buffer:
-                    self.wr('\b \b' * len(res))
-                    res = Editor.yank_buffer[0].strip()[:len(prompt) + Editor.width - 2]
-                    self.wr(res)
             elif 0x20 <= key < 0xfff0: 
                 if len(prompt) + len(res) < Editor.width - 2:
                     res += chr(key)
@@ -341,7 +336,8 @@ class Editor:
                 return key
             elif key in (0x17, 0x0f):
                 return key
-            else: self.handle_edit_keys(key)
+            else:
+                self.handle_edit_keys(key)
     def get_file(self, fname):
         from os import listdir
         try: from uos import stat
@@ -384,8 +380,8 @@ def expandtabs(s):
 def pye(*content, tab_size = 4, undo = 50, device = 0, baud = 115200):
     gc.collect() 
     slot = [Editor(tab_size, undo)]
+    index = 0
     if content:
-        index = 0
         for f in content:
             if index: slot.append(Editor(tab_size, undo))
             if type(f) == str and f: 
@@ -394,7 +390,6 @@ def pye(*content, tab_size = 4, undo = 50, device = 0, baud = 115200):
             elif type(f) == list and len(f) > 0 and type(f[0]) == str:
                 slot[index].content = f 
             index += 1
-    index = 0
     while True:
         try:
             index %= len(slot)

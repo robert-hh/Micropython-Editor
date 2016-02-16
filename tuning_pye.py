@@ -74,7 +74,7 @@
             elif key == KEY_ZAP: ## Get from content
                 if Editor.yank_buffer:
                     self.wr('\b' * pos + ' ' * len(res) + '\b' * len(res))
-                    res = Editor.yank_buffer[0].strip()
+                    res = Editor.yank_buffer[0].strip()[:Editor.width - len(prompt) - 2]
                     self.wr(res)
                     pos = len(res)
             elif 0x20 <= key < 0xfff0: ## char to be inserted

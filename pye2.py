@@ -452,11 +452,13 @@ class Editor:
             elif key == KEY_DELETE: ## Delete prev. Entry
                 self.wr('\b \b' * len(res))
                 res = ''
+#ifndef BASIC
             elif key == KEY_ZAP: ## Get from paste buffer
                 if Editor.yank_buffer:
                     self.wr('\b \b' * len(res))
-                    res = Editor.yank_buffer[0].strip()[:len(prompt) + Editor.width - 2]
+                    res = Editor.yank_buffer[0].strip()[:Editor.width - len(prompt) - 2]
                     self.wr(res)
+#endif
             elif 0x20 <= key < 0xfff0: ## character to be added
                 if len(prompt) + len(res) < Editor.width - 2:
                     res += chr(key)
@@ -470,7 +472,7 @@ class Editor:
         for line in range(self.cur_line, end):
             if Editor.case != "y":
                 match = self.content[line][spos:].lower().find(pattern)
-#ifndef BASIC                
+#ifndef BASIC
             else:
                 match = self.content[line][spos:].find(pattern)
 #endif
@@ -724,9 +726,7 @@ class Editor:
 #ifdef INDENT
             else:
                 lrange = self.line_range()
-#ifndef BASIC
                 self.undo_add(lrange[0], self.content[lrange[0]:lrange[1]], KEY_INDENT, lrange[1] - lrange[0]) ## undo replaces
-#endif
                 for i in range(lrange[0],lrange[1]):
                     if len(self.content[i]) > 0:
                         self.content[i] = ' ' * (self.tab_size - self.spaces(self.content[i]) % self.tab_size) + self.content[i]
@@ -747,9 +747,7 @@ class Editor:
 #ifdef INDENT
             else:
                 lrange = self.line_range()
-#ifndef BASIC
                 self.undo_add(lrange[0], self.content[lrange[0]:lrange[1]], KEY_UNDENT, lrange[1] - lrange[0]) ## undo replaces
-#endif
                 for i in range(lrange[0],lrange[1]):
                     ns = self.spaces(self.content[i])
                     if ns > 0:
@@ -865,7 +863,8 @@ class Editor:
                 return key
             elif key in (KEY_NEXT, KEY_GET):
                 return key
-            else: self.handle_edit_keys(key)
+            else:
+                self.handle_edit_keys(key)
 
 ## packtabs: replace sequence of space by tab
 #ifndef BASIC
@@ -941,8 +940,8 @@ def pye(*content, tab_size = 4, undo = 50, device = 0, baud = 115200):
 ## prepare content
     gc.collect() ## all (memory) is mine
     slot = [Editor(tab_size, undo)]
+    index = 0
     if content:
-        index = 0
         for f in content:
             if index: slot.append(Editor(tab_size, undo))
             if type(f) == str and f: ## String = non-empty Filename
@@ -955,7 +954,6 @@ def pye(*content, tab_size = 4, undo = 50, device = 0, baud = 115200):
 #if defined(PYBOARD) || defined(LINUX)
     Editor.init_tty(device, baud)
 #endif
-    index = 0
     while True:
         try:
             index %= len(slot)
