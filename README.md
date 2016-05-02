@@ -11,9 +11,46 @@ A small text editor written in Python running on PYBoard and WiPy, allowing to e
 - Added a status line, and single line prompts for Quit, Save, Find, Replace, Goto, Get file and Flag settings.
 - Support of the basic mouse functions scrolling up/down and setting the cursor (not WiPy).
 
-The editor assumes a VT100 terminal. It works in Insert mode. Cursor Keys, Home, End, PgUp, PgDn, Del and Backspace work as you would expect. The additional functions like FIND etc. are available with Ctrl-Keys. On reading files, tab characters are expanded to spaces with a tab size of 8, and trailing white space on a line will be discarded. The orginal state of tabs will not be restored when the file is written. Optionally, tabs can be written when saving the file, replacing spaces with tabs when possible. The screen size is determined, when the editor is started or when the Redraw-key (Ctrl-E) is hit.
+The editor assumes a VT100 terminal. It works in Insert mode. The following list
+shows most of the commands:
 
-The editor works also well in a Linux or MAC terminal environment (and also in some terminal apps of Android - tested with Termux), with both python3 and micropython. For that purpose, a small main() section is embedded, which when called with CPython also accepts data from a pipe or redirection.
+|Key(s)|Function|
+|:---|:---|
+|Up Down Left Right| Cursor movement by one line or char|
+|PgUp & PgDd|Page up/down|
+|Home End|Goto the start or end of a line|
+|Enter|Enter a line break at the cursor position. Autoindent is supported|
+|Backspace|Delete char left to the  cursor|
+|Del|Delete the char under the cursor. If lines are marked, delete the marked area|
+|Tab & Backtab|Insert or remove spaces up to the next tab position. If lines are marked, indent or unindent|
+|Ctrl-O|Open a new file. If the file name is left empty, an empty buffer is opened|
+|Ctrl-Q|Close a file buffer or end line-edit|
+|Ctrl-S|Save to file|
+|Ctrl-W|Switch to the next file buffer|
+|Ctrl-F|Find|
+|Ctrl-N|Repeat last find|
+|Ctrl-R|Find and Replace|
+|Ctrl-G|Goto a line|
+|Ctrl-K|Goto the bracket matching the one under the cursor|
+|Ctrl-L|Mark/Unmark the current line. The mark can then be extended by moving the cursor|
+|Ctrl-X|Cut the marked lines|
+|Ctrl-D|Copy the marked lines|
+|Ctrl-V|Insert the copied/cut lines|
+|Ctrl-Z|Undo the last change|
+|Ctrl-A|Change settings for tab size, search case sensitivity, auto-indent and writing tabs|
+|Ctrl-E|Redraw the screen. On WiPy and PyBord it shows the amoount of free memory|  
+
+More details can be found in the doc file. On reading files, tab characters
+are expanded to spaces with a tab size of 8, and trailing white space on a
+line will be discarded. The orginal state of tabs will not be restored when
+the file is written. Optionally, tabs can be written when saving the file, replacing
+spaces with tabs when possible. The screen size is determined, when the editor is
+started or when the Redraw-key (Ctrl-E) is hit.
+
+The editor works also well in a Linux or MAC terminal environment (and also in some
+terminal apps of Android - tested with Termux), with both python3 and micropython.
+For that purpose, a small main() section is embedded, which when called with
+CPython also accepts data from a pipe or redirection.
 
 **Files:**
 
@@ -147,10 +184,10 @@ anyhow called one after the other, resulting in a enormous long function handlin
 **2.0** Edit muliple files
 - Support for editing mutiple files at once and copy/paste between them
 - Ctrl-W steps through the list of files/buffers
-- Ctrl-O opens a new file/buffer. 
+- Ctrl-O opens a new file/buffer.
 
 **2.1** Some shrinking for WiPy
-- Make Indent/Un-Indent optional in the WiPy version, to allow all variants to get compiled w/o running out of memory. 
+- Make Indent/Un-Indent optional in the WiPy version, to allow all variants to get compiled w/o running out of memory.
 The final code saving is just a few hundred bytes, so it's still not clear to me why these few extra lines dont't fit.
 - Fixing a glitch which added an extra line when un-doing the delete of all lines
 - Some shifting around of code lines
@@ -174,3 +211,6 @@ The final code saving is just a few hundred bytes, so it's still not clear to me
 **2.4** Fix for the regular expression search variant
 - Fix a glitch, that the regular expression variant of search and replace did not find patterns anchored at the end, single line starts or single line endings. That fix required changes not only to the find function, such that all variants of pye are affected.
 - Consider '.' **and** '..' in file open as directory names, avoiding stat() on these.
+
+**2.5** Fix a small bug of edit_line()'s paste command
+- Fixed a glitch, that allowed to paste text longer then the available space on the status line. No harm was done, just the screen content scrolled up. After leaving the line edit mode, a redraw fixed that.
