@@ -61,7 +61,7 @@ CPython also accepts data from a pipe or redirection.
 - pe.py: Condensed source file for PyBoard with all functions
 - pemin.py: Condensed source file with a reduced function set for PyBoard
 - wipye.py: Condensed source file with a reduced function set for WiPy
-- wipye.mpy: Precomiled verion of pye.py for WiPy with all fucntions enabled. To be able to run it, you have to add:  
+- wipye.mpy: Precompiled version of pye.py for WiPy with all functions enabled. To be able to run it, you have to add:  
     `#define MICROPY_PERSISTENT_CODE_LOAD (1)`  
     to the file mpconfigport.h of the cc3200 branch, make it, and load it to WIPy.
 - tuning_pye.py: A file with some improved replacements for functions of pye:
