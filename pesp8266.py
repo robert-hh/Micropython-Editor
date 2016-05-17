@@ -13,11 +13,12 @@ class Editor:
     b"\x1b[4~": 0x03, 
     b"\x1b[5~": 0xfff1,
     b"\x1b[6~": 0xfff2,
-    b"\x03" : 0x04, 
+    b"\x03" : 0x11, 
     b"\r" : 0x0a,
     b"\x7f" : 0x08, 
     b"\x1b[3~": 0x7f,
     b"\x1b[Z" : 0x15, 
+    b"\x0b" : 0xfffd,
     }
     yank_buffer = []
     find_pattern = ""
@@ -34,16 +35,15 @@ class Editor:
         self.undo_zero = 0
         self.autoindent = "y"
         self.mark = None
-    def wr(self, s):
-        sys.stdout.write(s)
-    def rd_any(self):
-        return False
-    def rd(self):
-        while True:
-            try:
-                return sys.stdin.read(1).encode()
-            except:
-                return b'\x03'
+    if sys.platform in ("WiPy", "esp8266"):
+        def wr(self, s):
+            sys.stdout.write(s)
+        def rd_any(self):
+            return False
+        def rd(self):
+            while True:
+                try: return sys.stdin.read(1).encode()
+                except: return b'\x03'
     def goto(self, row, col):
         self.wr("\x1b[{};{}H".format(row + 1, col + 1))
     def clear_to_eol(self):
@@ -57,6 +57,18 @@ class Editor:
             self.wr(b"\x1b[43m")
         else: 
             self.wr(b"\x1b[0m")
+    def scroll_region(self, stop):
+        self.wr('\x1b[1;{}r'.format(stop) if stop else '\x1b[r') 
+    def scroll_up(self, scrolling):
+        Editor.scrbuf[scrolling:] = Editor.scrbuf[:-scrolling]
+        Editor.scrbuf[:scrolling] = [''] * scrolling
+        self.goto(0, 0)
+        self.wr("\x1bM" * scrolling)
+    def scroll_down(self, scrolling):
+        Editor.scrbuf[:-scrolling] = Editor.scrbuf[scrolling:]
+        Editor.scrbuf[-scrolling:] = [''] * scrolling
+        self.goto(Editor.height - 1, 0)
+        self.wr("\x1bD " * scrolling)
     def get_screen_size(self):
         self.wr('\x1b[999;999H\x1b[6n')
         pos = b''
@@ -71,6 +83,7 @@ class Editor:
         Editor.height -= 1
         Editor.scrbuf = [(False,"\x00")] * Editor.height 
         self.row = min(Editor.height - 1, self.row)
+        self.scroll_region(Editor.height)
         if sys.implementation.name == "micropython":
             gc.collect()
             if flag: self.message = "{} Bytes Memory available".format(gc.mem_free())
@@ -200,9 +213,15 @@ class Editor:
     def handle_edit_keys(self, key): 
         l = self.content[self.cur_line]
         if key == 0x0d:
+            if self.cur_line < self.total_lines - 1:
                 self.cur_line += 1
+                if self.cur_line == self.top_line + Editor.height:
+                    self.scroll_down(1)
         elif key == 0x0b:
+            if self.cur_line > 0:
                 self.cur_line -= 1
+                if self.cur_line < self.top_line:
+                    self.scroll_up(1)
         elif key == 0x1f:
                 self.col -= 1
         elif key == 0x1e:
@@ -255,6 +274,45 @@ class Editor:
         elif key == 0x01: 
             if True:
                 self.autoindent = 'y' if self.autoindent != 'y' else 'n' 
+        elif key == 0xfffd:
+            if self.col < len(l): 
+                opening = "([{<"
+                closing = ")]}>"
+                level = 0
+                pos = self.col
+                srch = l[pos]
+                i = opening.find(srch)
+                if i >= 0: 
+                    pos += 1
+                    match = closing[i]
+                    for i in range(self.cur_line, self.total_lines):
+                        for c in range(pos, len(self.content[i])):
+                            if self.content[i][c] == match:
+                                if level == 0: 
+                                    self.cur_line, self.col = i, c
+                                    return True 
+                                else:
+                                    level -= 1
+                            elif self.content[i][c] == srch:
+                                level += 1
+                        pos = 0 
+                else:
+                    i = closing.find(srch)
+                    if i >= 0: 
+                        pos -= 1
+                        match = opening[i]
+                        for i in range(self.cur_line, -1, -1):
+                            for c in range(pos, -1, -1):
+                                if self.content[i][c] == match:
+                                    if level == 0: 
+                                        self.cur_line, self.col = i, c
+                                        return True 
+                                    else:
+                                        level -= 1
+                                elif self.content[i][c] == srch:
+                                    level += 1
+                            if i > 0: 
+                                pos = len(self.content[i - 1]) - 1
         elif key == 0x0c:
             self.mark = self.cur_line if self.mark == None else None
         elif key == 0x0a:
@@ -382,6 +440,7 @@ class Editor:
                     res = self.line_edit("Content changed! Quit without saving (y/N)? ", "N")
                     if not res or res[0].upper() != 'Y':
                         continue
+                self.scroll_region(0)
                 self.goto(Editor.height, 0)
                 self.clear_to_eol()
                 self.undo = []
@@ -391,39 +450,30 @@ class Editor:
             else:
                 self.handle_edit_keys(key)
     def get_file(self, fname):
-        from os import listdir
-#        try: from uos import stat
-#        except: from os import stat
         if not fname:
             fname = self.line_edit("Open file: ", "")
         if fname:
             self.fname = fname
-#            if fname in ('.', '..') or (stat(fname)[0] & 0x4000): 
-            if fname in ('.', '..'): 
-                self.content = ["Directory '{}'".format(fname), ""] + sorted(listdir(fname))
-            else:
-                with open(fname) as f:
-                    self.content = f.readlines()
-                for i in range(len(self.content)): 
-                    self.content[i] = expandtabs(self.content[i].rstrip('\r\n\t '))
+            if True:
+                    with open(fname) as f:
+                        self.content = f.readlines()
+            for i in range(len(self.content)): 
+                self.content[i] = expandtabs(self.content[i].rstrip('\r\n\t '))
     def put_file(self, fname):
-        import os
-        with open(fname, "w") as f:
+        if sys.platform == "esp8266":
+            from os import remove, rename
+        else:
+            from os import unlink, rename
+            remove = unlink
+        with open("tmpfile.pye", "w") as f:
             for l in self.content:
-               f.write(l + '\n')
-#        try: os.rename(fname)
-#        except: pass
-#        os.rename("tmpfile.pye", fname)
+                    f.write(l + '\n')
+        try: remove(fname)
+        except: pass
+        rename("tmpfile.pye", fname)
 def expandtabs(s):
-    if '\t' in s:
-        r = ''
-        for c in s:
-            if c == '\t': r += ' ' * ( 8 - len(r) % 8)
-            else: r += c
-        return r
-    else:
         return s
-def pye(*content, tab_size = 4, undo = 10):
+def pye(*content, tab_size = 4, undo = 50, device = 0, baud = 115200):
     gc.collect() 
     slot = [Editor(tab_size, undo)]
     index = 0
