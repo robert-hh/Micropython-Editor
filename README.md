@@ -64,6 +64,9 @@ CPython also accepts data from a pipe or redirection.
 - wipye.mpy: Precompiled version of pye.py for WiPy with all functions enabled. To be able to run it, you have to add:  
     `#define MICROPY_PERSISTENT_CODE_LOAD (1)`  
     to the file mpconfigport.h of the cc3200 branch, make it, and load it to WIPy.
+- pesp8266.py: A version of for the esp8266 port. It requires frozen byte code
+to be enabled, which is in a very early test phase. A cros-compiled version may
+executed from the file system.
 - tuning_pye.py: A file with some improved replacements for functions of pye:
 a) find_in_file() supporting regular expressions,
 b) line_edit() supporting the cursor left/right/home/end keys, and
@@ -138,7 +141,7 @@ c) expandtabs() and packtabs() with a second argument for tabsize (not for pye, 
 - Changed string formatting to Python3 style
 
 **1.8** Clean Copy & Paste, Indent, Un-Indent
-- Added a Mark Line key for Line Delete, Line Copy, Indent and Un-Indent
+- Added a Mark Line key forFixed a glitch, that allowed to paste text longer then the available space on the status line. No harm was done, just the screen content scrolled up. After leaving the line edit mode, a redraw fixed that. Line Delete, Line Copy, Indent and Un-Indent
 - Changed Line Delete, Line Copy and Buffer Insert into a cleaner Copy & Paste mode
 - Added a cleaner Indent and Un-Indent method; for WiPy too
 - Removed the attempt to recover from out-of-memory situations: did not work.
@@ -217,3 +220,7 @@ The final code saving is just a few hundred bytes, so it's still not clear to me
 
 **2.5** Fix a small bug of edit_line()'s paste command
 - Fixed a glitch, that allowed to paste text longer then the available space on the status line. No harm was done, just the screen content scrolled up. After leaving the line edit mode, a redraw fixed that.
+
+**2.6** Adapted to change lib names in micropython
+- For micropython replaced \_io with uio
+- Preliminary esp8266 version.
