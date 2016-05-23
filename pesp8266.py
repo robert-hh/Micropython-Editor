@@ -450,21 +450,25 @@ class Editor:
             else:
                 self.handle_edit_keys(key)
     def get_file(self, fname):
+        from os import listdir
         if not fname:
             fname = self.line_edit("Open file: ", "")
         if fname:
             self.fname = fname
             if True:
+                pass
+            if (fname in ('.', '..')
+                ): 
+                self.content = ["Directory '{}'".format(fname), ""] + sorted(listdir(fname))
+            else:
+                if True:
                     with open(fname) as f:
                         self.content = f.readlines()
             for i in range(len(self.content)): 
                 self.content[i] = expandtabs(self.content[i].rstrip('\r\n\t '))
     def put_file(self, fname):
-        if sys.platform == "esp8266":
-            from os import remove, rename
-        else:
-            from os import unlink, rename
-            remove = unlink
+        if True:
+            from uos import remove, rename
         with open("tmpfile.pye", "w") as f:
             for l in self.content:
                     f.write(l + '\n')
@@ -472,6 +476,20 @@ class Editor:
         except: pass
         rename("tmpfile.pye", fname)
 def expandtabs(s):
+    if True:
+        from uio import StringIO
+    if '\t' in s:
+        sb = StringIO()
+        pos = 0
+        for c in s:
+            if c == '\t': 
+                sb.write(" " * (8 - pos % 8)) 
+                pos += 8 - pos % 8
+            else:
+                sb.write(c)
+                pos += 1
+        return sb.getvalue()
+    else:
         return s
 def pye(*content, tab_size = 4, undo = 50, device = 0, baud = 115200):
     gc.collect() 

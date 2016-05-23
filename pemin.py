@@ -414,24 +414,30 @@ class Editor:
             fname = self.line_edit("Open file: ", "")
         if fname:
             self.fname = fname
-            if fname in ('.', '..') or (stat(fname)[0] & 0x4000): 
+            if True:
+                pass
+            if (fname in ('.', '..')
+                 or (stat(fname)[0] & 0x4000)
+                ): 
                 self.content = ["Directory '{}'".format(fname), ""] + sorted(listdir(fname))
             else:
                 if True:
                     with open(fname) as f:
                         self.content = f.readlines()
-                for i in range(len(self.content)): 
-                    self.content[i] = expandtabs(self.content[i].rstrip('\r\n\t '))
+            for i in range(len(self.content)): 
+                self.content[i] = expandtabs(self.content[i].rstrip('\r\n\t '))
     def put_file(self, fname):
-        from os import unlink, rename
+        if True:
+            from uos import remove, rename
         with open("tmpfile.pye", "w") as f:
             for l in self.content:
                     f.write(l + '\n')
-        try: unlink(fname)
+        try: remove(fname)
         except: pass
         rename("tmpfile.pye", fname)
 def expandtabs(s):
-    from _io import StringIO
+    if True:
+        from uio import StringIO
     if '\t' in s:
         sb = StringIO()
         pos = 0

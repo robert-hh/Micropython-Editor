@@ -869,7 +869,14 @@ class Editor:
 ## packtabs: replace sequence of space by tab
 #ifndef BASIC
     def packtabs(self, s):
-        from _io import StringIO
+        if True:
+#ifdef LINUX
+            pass
+        if sys.implementation.name == "cpython":
+            from _io import StringIO
+        else:
+#endif
+            from uio import StringIO
         sb = StringIO()
         for i in range(0, len(s), 8):
             c = s[i:i + 8]
@@ -921,7 +928,14 @@ class Editor:
 
 ## expandtabs: hopefully sometimes replaced by the built-in function
 def expandtabs(s):
-    from _io import StringIO
+    if True:
+#ifdef LINUX
+        pass
+    if sys.implementation.name == "cpython":
+        from _io import StringIO
+    else:
+#endif
+        from uio import StringIO
     if '\t' in s:
         sb = StringIO()
         pos = 0

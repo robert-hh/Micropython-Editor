@@ -557,7 +557,8 @@ class Editor:
             else:
                 self.handle_edit_keys(key)
     def packtabs(self, s):
-        from _io import StringIO
+        if True:
+            from uio import StringIO
         sb = StringIO()
         for i in range(0, len(s), 8):
             c = s[i:i + 8]
@@ -593,7 +594,8 @@ class Editor:
         except: pass
         rename("tmpfile.pye", fname)
 def expandtabs(s):
-    from _io import StringIO
+    if True:
+        from uio import StringIO
     if '\t' in s:
         sb = StringIO()
         pos = 0

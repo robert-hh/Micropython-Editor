@@ -258,8 +258,8 @@ class Editor:
             if not Editor.sdev:
                 Editor.serialcomm.setinterrupt(3)
 #endif
-#ifdef WIPY
-    if sys.platform == "WiPy":
+#if defined(WIPY) || defined(ESP8266)
+    if sys.platform in ("WiPy", "esp8266"):
         def wr(self, s):
             sys.stdout.write(s)
 
@@ -269,7 +269,7 @@ class Editor:
         def rd(self):
             while True:
                 try: return sys.stdin.read(1).encode()
-                except: pass
+                except: return b'\x03'
 
 ##        @staticmethod
 ##        def init_tty(device, baud):
@@ -850,7 +850,14 @@ class Editor:
 ## packtabs: replace sequence of space by tab
 #ifndef BASIC
     def packtabs(self, s):
-        from _io import StringIO
+        if True:
+#ifdef LINUX
+            pass
+        if sys.implementation.name == "cpython":
+            from _io import StringIO
+        else:
+#endif
+            from uio import StringIO
         sb = StringIO()
         for i in range(0, len(s), 8):
             c = s[i:i + 8]
@@ -862,14 +869,21 @@ class Editor:
 ## Read file into content
     def get_file(self, fname):
         from os import listdir
+#ifndef ESP8266
         try:    from uos import stat
         except: from os import stat
-
+#endif
         if not fname:
             fname = self.line_edit("Open file: ", "")
         if fname:
             self.fname = fname
-            if fname in ('.', '..') or (stat(fname)[0] & 0x4000): ## Dir
+            if True:
+                pass
+            if (fname in ('.', '..')
+#ifndef ESP8266
+                 or (stat(fname)[0] & 0x4000)
+#endif
+                ): ## Dir
                 self.content = ["Directory '{}'".format(fname), ""] + sorted(listdir(fname))
             else:
                 if True:
@@ -882,12 +896,21 @@ class Editor:
 #endif
                     with open(fname) as f:
                         self.content = f.readlines()
-                for i in range(len(self.content)):  ## strip and convert
-                    self.content[i] = expandtabs(self.content[i].rstrip('\r\n\t '))
+            for i in range(len(self.content)):  ## strip and convert
+                self.content[i] = expandtabs(self.content[i].rstrip('\r\n\t '))
 
 ## write file
     def put_file(self, fname):
-        from os import unlink, rename
+        if True:
+#ifdef LINUX
+            pass
+        if sys.platform in ("linux", "darwin"):
+            from os import unlink, rename
+            remove = unlink
+        else:
+#endif
+            from uos import remove, rename
+
         with open("tmpfile.pye", "w") as f:
             for l in self.content:
 #ifndef BASIC
@@ -896,13 +919,20 @@ class Editor:
                 else:
 #endif
                     f.write(l + '\n')
-        try:    unlink(fname)
+        try:    remove(fname)
         except: pass
         rename("tmpfile.pye", fname)
 
 ## expandtabs: hopefully sometimes replaced by the built-in function
 def expandtabs(s):
-    from _io import StringIO
+    if True:
+#ifdef LINUX
+        pass
+    if sys.implementation.name == "cpython":
+        from _io import StringIO
+    else:
+#endif
+        from uio import StringIO
     if '\t' in s:
         sb = StringIO()
         pos = 0
