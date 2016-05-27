@@ -13,12 +13,13 @@ class Editor:
     b"\x1b[4~": 0x03, 
     b"\x1b[5~": 0xfff1,
     b"\x1b[6~": 0xfff2,
-    b"\x03" : 0x11, 
+    b"\x03" : 0x04, 
     b"\r" : 0x0a,
     b"\x7f" : 0x08, 
     b"\x1b[3~": 0x7f,
     b"\x1b[Z" : 0x15, 
-    b"\x0b" : 0xfffd,
+    b"\x19" : 0x18, 
+    b"\x08" : 0x12, 
     }
     yank_buffer = []
     find_pattern = ""
@@ -274,45 +275,6 @@ class Editor:
         elif key == 0x01: 
             if True:
                 self.autoindent = 'y' if self.autoindent != 'y' else 'n' 
-        elif key == 0xfffd:
-            if self.col < len(l): 
-                opening = "([{<"
-                closing = ")]}>"
-                level = 0
-                pos = self.col
-                srch = l[pos]
-                i = opening.find(srch)
-                if i >= 0: 
-                    pos += 1
-                    match = closing[i]
-                    for i in range(self.cur_line, self.total_lines):
-                        for c in range(pos, len(self.content[i])):
-                            if self.content[i][c] == match:
-                                if level == 0: 
-                                    self.cur_line, self.col = i, c
-                                    return True 
-                                else:
-                                    level -= 1
-                            elif self.content[i][c] == srch:
-                                level += 1
-                        pos = 0 
-                else:
-                    i = closing.find(srch)
-                    if i >= 0: 
-                        pos -= 1
-                        match = opening[i]
-                        for i in range(self.cur_line, -1, -1):
-                            for c in range(pos, -1, -1):
-                                if self.content[i][c] == match:
-                                    if level == 0: 
-                                        self.cur_line, self.col = i, c
-                                        return True 
-                                    else:
-                                        level -= 1
-                                elif self.content[i][c] == srch:
-                                    level += 1
-                            if i > 0: 
-                                pos = len(self.content[i - 1]) - 1
         elif key == 0x0c:
             self.mark = self.cur_line if self.mark == None else None
         elif key == 0x0a:
@@ -476,8 +438,8 @@ class Editor:
         except: pass
         rename("tmpfile.pye", fname)
 def expandtabs(s):
-    if True:
-        from uio import StringIO
+    try: from uio import StringIO
+    except: from _io import StringIO
     if '\t' in s:
         sb = StringIO()
         pos = 0

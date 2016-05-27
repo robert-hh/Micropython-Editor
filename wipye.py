@@ -13,11 +13,13 @@ class Editor:
     b"\x1b[4~": 0x03, 
     b"\x1b[5~": 0xfff1,
     b"\x1b[6~": 0xfff2,
-    b"\x03" : 0x11, 
+    b"\x03" : 0x04, 
     b"\r" : 0x0a,
     b"\x7f" : 0x08, 
     b"\x1b[3~": 0x7f,
     b"\x1b[Z" : 0x15, 
+    b"\x19" : 0x18, 
+    b"\x08" : 0x12, 
     }
     yank_buffer = []
     find_pattern = ""
@@ -368,8 +370,8 @@ class Editor:
         except: pass
         rename("tmpfile.pye", fname)
 def expandtabs(s):
-    if True:
-        from uio import StringIO
+    try: from uio import StringIO
+    except: from _io import StringIO
     if '\t' in s:
         sb = StringIO()
         pos = 0

@@ -122,17 +122,18 @@ class Editor:
     b"\x1b[4~": KEY_END,  ## Putty
     b"\x1b[5~": KEY_PGUP,
     b"\x1b[6~": KEY_PGDN,
-    b"\x03"   : KEY_QUIT, ## Ctrl-C
+    b"\x03"   : KEY_DUP, ## Ctrl-C
     b"\r"     : KEY_ENTER,
     b"\x7f"   : KEY_BACKSPACE, ## Ctrl-? (127)
     b"\x1b[3~": KEY_DELETE,
     b"\x1b[Z" : KEY_BACKTAB, ## Shift Tab
+    b"\x19"   : KEY_YANK, ## Ctrl-Y alias to Ctrl-X
+    b"\x08"   : KEY_REPLC, ## Ctrl-H
 #ifndef BASIC
 ## keys of BASIC functions mapped onto themselves
 ## may be imitted from KEYMAP
     b"\x11"   : KEY_QUIT, ## Ctrl-Q
     b"\n"     : KEY_ENTER,
-    b"\x08"   : KEY_BACKSPACE,
     b"\x13"   : KEY_WRITE,  ## Ctrl-S
     b"\x06"   : KEY_FIND, ## Ctrl-F
     b"\x0e"   : KEY_FIND_AGAIN, ## Ctrl-N
@@ -141,7 +142,6 @@ class Editor:
     b"\x1a"   : KEY_UNDO, ## Ctrl-Z
     b"\x09"   : KEY_TAB,
     b"\x15"   : KEY_BACKTAB, ## Ctrl-U
-    b"\x12"   : KEY_REPLC, ## Ctrl-R
     b"\x18"   : KEY_YANK, ## Ctrl-X
     b"\x16"   : KEY_ZAP, ## Ctrl-V
     b"\x04"   : KEY_DUP, ## Ctrl-D
@@ -170,9 +170,6 @@ class Editor:
 #ifdef REPLACE
     replc_pattern = ""
 #endif
-#ifndef BASIC
-    write_tabs = "n"
-#endif
 
     def __init__(self, tab_size, undo_limit):
         self.top_line = self.cur_line = self.row = self.col = self.margin = 0
@@ -185,6 +182,9 @@ class Editor:
         self.undo_zero = 0
         self.autoindent = "y"
         self.mark = None
+#ifndef BASIC
+        self.write_tabs = "n"
+#endif
 
 #ifdef LINUX
     if sys.platform in ("linux", "darwin"):
@@ -612,13 +612,13 @@ class Editor:
         elif key == KEY_TOGGLE: ## Toggle Autoindent/Statusline/Search case
             if True:
 #ifndef BASIC
-                pat = self.line_edit("Case Sensitive Search {}, Autoindent {}, Tab Size {}, Write Tabs {}: ".format(Editor.case, self.autoindent, self.tab_size, Editor.write_tabs), "")
+                pat = self.line_edit("Case Sensitive Search {}, Autoindent {}, Tab Size {}, Write Tabs {}: ".format(Editor.case, self.autoindent, self.tab_size, self.write_tabs), "")
                 try:
                     res =  [i.strip().lower() for i in pat.split(",")]
                     if res[0]: Editor.case       = 'y' if res[0][0] == 'y' else 'n'
                     if res[1]: self.autoindent = 'y' if res[1][0] == 'y' else 'n'
                     if res[2]: self.tab_size = int(res[2])
-                    if res[3]: Editor.write_tabs = 'y' if res[3][0] == 'y' else 'n'
+                    if res[3]: self.write_tabs = 'y' if res[3][0] == 'y' else 'n'
                 except:
                     pass
             else:
@@ -850,14 +850,10 @@ class Editor:
 ## packtabs: replace sequence of space by tab
 #ifndef BASIC
     def packtabs(self, s):
-        if True:
-#ifdef LINUX
-            pass
-        if sys.implementation.name == "cpython":
-            from _io import StringIO
-        else:
-#endif
-            from uio import StringIO
+    
+        try: from uio import StringIO
+        except: from _io import StringIO
+    
         sb = StringIO()
         for i in range(0, len(s), 8):
             c = s[i:i + 8]
@@ -914,7 +910,7 @@ class Editor:
         with open("tmpfile.pye", "w") as f:
             for l in self.content:
 #ifndef BASIC
-                if Editor.write_tabs == 'y':
+                if self.write_tabs == 'y':
                     f.write(self.packtabs(l) + '\n')
                 else:
 #endif
@@ -925,15 +921,14 @@ class Editor:
 
 ## expandtabs: hopefully sometimes replaced by the built-in function
 def expandtabs(s):
-    if True:
-#ifdef LINUX
-        pass
-    if sys.implementation.name == "cpython":
-        from _io import StringIO
-    else:
-#endif
-        from uio import StringIO
+    
+    try: from uio import StringIO
+    except: from _io import StringIO
+    
     if '\t' in s:
+#ifndef BASIC
+        self.write_tabs = 'y' ## rewrite tabs
+#endif
         sb = StringIO()
         pos = 0
         for c in s:

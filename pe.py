@@ -13,14 +13,15 @@ class Editor:
     b"\x1b[4~": 0x03, 
     b"\x1b[5~": 0xfff1,
     b"\x1b[6~": 0xfff2,
-    b"\x03" : 0x11, 
+    b"\x03" : 0x04, 
     b"\r" : 0x0a,
     b"\x7f" : 0x08, 
     b"\x1b[3~": 0x7f,
     b"\x1b[Z" : 0x15, 
+    b"\x19" : 0x18, 
+    b"\x08" : 0x12, 
     b"\x11" : 0x11, 
     b"\n" : 0x0a,
-    b"\x08" : 0x08,
     b"\x13" : 0x13, 
     b"\x06" : 0x06, 
     b"\x0e" : 0x0e, 
@@ -29,7 +30,6 @@ class Editor:
     b"\x1a" : 0x1a, 
     b"\x09" : 0x09,
     b"\x15" : 0x15, 
-    b"\x12" : 0x12, 
     b"\x18" : 0x18, 
     b"\x16" : 0x16, 
     b"\x04" : 0x04, 
@@ -49,7 +49,6 @@ class Editor:
     find_pattern = ""
     case = "n"
     replc_pattern = ""
-    write_tabs = "n"
     def __init__(self, tab_size, undo_limit):
         self.top_line = self.cur_line = self.row = self.col = self.margin = 0
         self.tab_size = tab_size
@@ -61,6 +60,7 @@ class Editor:
         self.undo_zero = 0
         self.autoindent = "y"
         self.mark = None
+        self.write_tabs = "n"
     if sys.platform == "pyboard":
         def wr(self,s):
             ns = 0
@@ -336,13 +336,13 @@ class Editor:
             self.row = Editor.height - 1 
         elif key == 0x01: 
             if True:
-                pat = self.line_edit("Case Sensitive Search {}, Autoindent {}, Tab Size {}, Write Tabs {}: ".format(Editor.case, self.autoindent, self.tab_size, Editor.write_tabs), "")
+                pat = self.line_edit("Case Sensitive Search {}, Autoindent {}, Tab Size {}, Write Tabs {}: ".format(Editor.case, self.autoindent, self.tab_size, self.write_tabs), "")
                 try:
                     res = [i.strip().lower() for i in pat.split(",")]
                     if res[0]: Editor.case = 'y' if res[0][0] == 'y' else 'n'
                     if res[1]: self.autoindent = 'y' if res[1][0] == 'y' else 'n'
                     if res[2]: self.tab_size = int(res[2])
-                    if res[3]: Editor.write_tabs = 'y' if res[3][0] == 'y' else 'n'
+                    if res[3]: self.write_tabs = 'y' if res[3][0] == 'y' else 'n'
                 except:
                     pass
             else:
@@ -537,8 +537,8 @@ class Editor:
             else:
                 self.handle_edit_keys(key)
     def packtabs(self, s):
-        if True:
-            from uio import StringIO
+        try: from uio import StringIO
+        except: from _io import StringIO
         sb = StringIO()
         for i in range(0, len(s), 8):
             c = s[i:i + 8]
@@ -571,7 +571,7 @@ class Editor:
             from uos import remove, rename
         with open("tmpfile.pye", "w") as f:
             for l in self.content:
-                if Editor.write_tabs == 'y':
+                if self.write_tabs == 'y':
                     f.write(self.packtabs(l) + '\n')
                 else:
                     f.write(l + '\n')
@@ -579,9 +579,10 @@ class Editor:
         except: pass
         rename("tmpfile.pye", fname)
 def expandtabs(s):
-    if True:
-        from uio import StringIO
+    try: from uio import StringIO
+    except: from _io import StringIO
     if '\t' in s:
+        self.write_tabs = 'y' 
         sb = StringIO()
         pos = 0
         for c in s:
