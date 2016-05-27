@@ -938,9 +938,6 @@ def expandtabs(s):
     except: from _io import StringIO
     
     if '\t' in s:
-#ifndef BASIC
-        self.write_tabs = 'y' ## rewrite tabs
-#endif
         sb = StringIO()
         pos = 0
         for c in s:

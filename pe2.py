@@ -600,7 +600,6 @@ def expandtabs(s):
     try: from uio import StringIO
     except: from _io import StringIO
     if '\t' in s:
-        self.write_tabs = 'y' 
         sb = StringIO()
         pos = 0
         for c in s:

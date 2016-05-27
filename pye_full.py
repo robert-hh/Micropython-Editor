@@ -182,10 +182,10 @@ class Editor:
         self.undo_zero = 0
         self.autoindent = "y"
         self.mark = None
+        self.straight = "y"
 #ifndef BASIC
         self.write_tabs = "n"
 #endif
-
 #ifdef LINUX
     if sys.platform in ("linux", "darwin"):
 
@@ -258,8 +258,8 @@ class Editor:
             if not Editor.sdev:
                 Editor.serialcomm.setinterrupt(3)
 #endif
-#if defined(WIPY) || defined(ESP8266)
-    if sys.platform in ("WiPy", "esp8266"):
+#ifdef WIPY
+    if sys.platform == "WiPy":
         def wr(self, s):
             sys.stdout.write(s)
 
@@ -269,14 +269,14 @@ class Editor:
         def rd(self):
             while True:
                 try: return sys.stdin.read(1).encode()
-                except: return b'\x03'
+                except: pass
 
 ##        @staticmethod
-##        def init_tty(device, baud):
+##        def init_tty(self, device, baud):
 ##            pass
 
 ##        @staticmethod
-##        def deinit_tty():
+##        def deinit_tty(self):
 ##            pass
 #endif
     def goto(self, row, col):
@@ -376,8 +376,10 @@ class Editor:
     def display_window(self): ## Update window and status line
 ## Force cur_line and col to be in the reasonable bounds
         self.cur_line = min(self.total_lines - 1, max(self.cur_line, 0))
-        self.col = max(0, min(self.col, len(self.content[self.cur_line])))
 ## Check if Column is out of view, and align margin if needed
+        if self.straight != "y":
+            self.col = min(self.col, len(self.content[self.cur_line]))
+        if self.col <  0: self.col = 0
         if self.col >= Editor.width + self.margin:
             self.margin = self.col - Editor.width + (Editor.width >> 2)
         elif self.col < self.margin:
@@ -428,59 +430,89 @@ class Editor:
         return ((self.mark, self.cur_line + 1) if self.mark < self.cur_line else
                 (self.cur_line, self.mark + 1))
 
-    def line_edit(self, prompt, default):  ## simple one: only 4 fcts
+    def line_edit(self, prompt, default):  ## better one: added cursor keys and backsp, delete
+        push_msg = lambda msg: self.wr(msg + "\b" * len(msg)) ## Write a message and move cursor back
         self.goto(Editor.height, 0)
-        self.hilite(1)
+        self.hilite(True)
         self.wr(prompt)
         self.wr(default)
         self.clear_to_eol()
         res = default
+        self.message = ' ' # Shows status after lineedit
+        pos = len(res)
         while True:
             key = self.get_input()  ## Get Char of Fct.
             if key in (KEY_ENTER, KEY_TAB): ## Finis
-                self.hilite(0)
+                self.hilite(False)
                 return res
             elif key == KEY_QUIT: ## Abort
-                self.hilite(0)
+                self.hilite(False)
                 return None
+            elif key == KEY_LEFT:
+                if pos > 0:
+                    self.wr("\b")
+                    pos -= 1
+            elif key == KEY_RIGHT:
+                if pos < len(res):
+                    self.wr(res[pos])
+                    pos += 1
+            elif key == KEY_HOME:
+                self.wr("\b" * pos)
+                pos = 0
+            elif key == KEY_END:
+                self.wr(res[pos:])
+                pos = len(res)
+            elif key == KEY_DELETE: ## Delete
+                if pos < len(res):
+                    res = res[:pos] + res[pos+1:]
+                    push_msg(res[pos:] + ' ') ## update tail
             elif key == KEY_BACKSPACE: ## Backspace
-                if (len(res) > 0):
-                    res = res[:len(res)-1]
-                    self.wr('\b \b')
-            elif key == KEY_DELETE: ## Delete prev. Entry
-                self.wr('\b \b' * len(res))
-                res = ''
-#ifndef BASIC
-            elif key == KEY_ZAP: ## Get from paste buffer
+                if pos > 0:
+                    res = res[:pos-1] + res[pos:]
+                    self.wr("\b")
+                    pos -= 1
+                    push_msg(res[pos:] + ' ') ## update tail
+            elif key == KEY_ZAP: ## Get from content
                 if Editor.yank_buffer:
-                    self.wr('\b \b' * len(res))
+                    self.wr('\b' * pos + ' ' * len(res) + '\b' * len(res))
                     res = Editor.yank_buffer[0].strip()[:Editor.width - len(prompt) - 2]
                     self.wr(res)
-#endif
-            elif 0x20 <= key < 0xfff0: ## character to be added
-                if len(prompt) + len(res) < Editor.width - 2:
-                    res += chr(key)
-                    self.wr(chr(key))
+                    pos = len(res)
+            elif 0x20 <= key < 0xfff0: ## char to be inserted
+                if len(prompt) + len(res) < self.width - 2:
+                    res = res[:pos] + chr(key) + res[pos:]
+                    self.wr(res[pos])
+                    pos += 1
+                    push_msg(res[pos:]) ## update tail
 
-    def find_in_file(self, pattern, pos, end):
-        Editor.find_pattern = pattern # remember it
+## This is the regex version of find.
+    def find_in_file(self, pattern, col, end):
+        import re
+#define REGEXP 1
+        Editor.find_pattern = pattern ## remember it
         if Editor.case != "y":
             pattern = pattern.lower()
-        spos = pos
+        try:
+            rex = re.compile(pattern)
+        except:
+            self.message = "Invalid pattern: " + pattern
+            return -1
+        scol = col
         for line in range(self.cur_line, end):
+            l = self.content[line]
             if Editor.case != "y":
-                match = self.content[line][spos:].lower().find(pattern)
-#ifndef BASIC
-            else:
-                match = self.content[line][spos:].find(pattern)
-#endif
-            if match >= 0: ## Bingo!
-                self.col = match + spos
-                self.cur_line = line
-                return len(pattern)
-            spos = 0
+                l = l.lower()
+## since micropython does not support span, a step-by_step match has to be performed
+            ecol = 1 if pattern[0] == '^' else len(l) + 1
+            for i in range(scol, ecol):
+                match = rex.match(l[i:])
+                if match: ## bingo!
+                    self.col = i
+                    self.cur_line = line
+                    return len(match.group(0))
+            scol = 0
         else:
-            self.message = "No match: " + pattern
+            self.message = pattern + " not found"
             return -1
 
     def undo_add(self, lnum, text, key, span = 1):
@@ -507,6 +539,7 @@ class Editor:
 
     def handle_edit_keys(self, key): ## keys which change content
         l = self.content[self.cur_line]
+        jut = self.col - len(l) ## <0: before text end, = 0 at text end, >0 beyond text end
         if key == KEY_DOWN:
 #ifdef SCROLL
             if self.cur_line < self.total_lines - 1:
@@ -539,7 +572,7 @@ class Editor:
                 self.col -= 1
         elif key == KEY_RIGHT:
 #ifndef BASIC
-            if self.col >= len(l) and self.cur_line < self.total_lines - 1:
+            if self.straight != "y" and self.col >= len(l) and self.cur_line < self.total_lines - 1:
                 self.col = 0
                 self.cur_line += 1
 #ifdef SCROLL
@@ -557,14 +590,17 @@ class Editor:
                 self.content[self.cur_line] = l[:self.col] + l[self.col + 1:]
             elif (self.cur_line + 1) < self.total_lines: ## test for last line
                 self.undo_add(self.cur_line, [l, self.content[self.cur_line + 1]], KEY_NONE)
+                if jut > 0: ## Landfill needed
+                    l += ' ' * jut
                 self.content[self.cur_line] = l + self.content.pop(self.cur_line + 1)
                 self.total_lines -= 1
         elif key == KEY_BACKSPACE:
             if self.mark != None:
                 self.delete_lines(False)
             elif self.col > 0:
-                self.undo_add(self.cur_line, [l], KEY_BACKSPACE)
-                self.content[self.cur_line] = l[:self.col - 1] + l[self.col:]
+                if jut <= 0: ## if on solid ground
+                    self.undo_add(self.cur_line, [l], KEY_BACKSPACE)
+                    self.content[self.cur_line] = l[:self.col - 1] + l[self.col:]
                 self.col -= 1
 #ifndef BASIC
             elif self.cur_line > 0: # at the start of a line, but not the first
@@ -577,7 +613,10 @@ class Editor:
         elif 0x20 <= key < 0xfff0: ## character to be added
             self.mark = None
             self.undo_add(self.cur_line, [l], 0x20 if key == 0x20 else 0x41)
-            self.content[self.cur_line] = l[:self.col] + chr(key) + l[self.col:]
+            if jut < 0:
+                self.content[self.cur_line] = l[:self.col] + chr(key) + l[self.col:]
+            else:
+                self.content[self.cur_line] = l + ' ' * jut + chr(key)
             self.col += 1
         elif key == KEY_HOME:
             ni = self.spaces(l)
@@ -612,13 +651,16 @@ class Editor:
         elif key == KEY_TOGGLE: ## Toggle Autoindent/Statusline/Search case
             if True:
 #ifndef BASIC
-                pat = self.line_edit("Case Sensitive Search {}, Autoindent {}, Tab Size {}, Write Tabs {}: ".format(Editor.case, self.autoindent, self.tab_size, self.write_tabs), "")
+                pat = self.line_edit(
+                "Case Sensitive Search {}, Autoindent {}, Tab Size {}, Write Tabs {}, Straight Cursor {}: ".format(
+                Editor.case, self.autoindent, self.tab_size, self.write_tabs, self.straight), "")
                 try:
                     res =  [i.strip().lower() for i in pat.split(",")]
                     if res[0]: Editor.case       = 'y' if res[0][0] == 'y' else 'n'
                     if res[1]: self.autoindent = 'y' if res[1][0] == 'y' else 'n'
                     if res[2]: self.tab_size = int(res[2])
                     if res[3]: self.write_tabs = 'y' if res[3][0] == 'y' else 'n'
+                    if res[4]: self.straight = 'y' if res[4][0] == 'y' else 'n'
                 except:
                     pass
             else:
@@ -706,7 +748,10 @@ class Editor:
 #endif
                 ni = self.tab_size - self.col % self.tab_size ## determine spaces to add
                 self.undo_add(self.cur_line, [l], KEY_TAB)
-                self.content[self.cur_line] = l[:self.col] + ' ' * ni + l[self.col:]
+                if jut < 0:
+                    self.content[self.cur_line] = l[:self.col] + ' ' * ni + l[self.col:]
+                else:
+                    self.content[self.cur_line] = l + ' ' * (jut + ni)
                 self.col += ni
 #ifdef INDENT
             else:
@@ -720,11 +765,15 @@ class Editor:
 #ifdef INDENT
             if self.mark == None:
 #endif
-                ni = min((self.col - 1) % self.tab_size + 1, self.spaces(l, self.col)) ## determine spaces to drop
-                if ni > 0:
-                    self.undo_add(self.cur_line, [l], KEY_BACKTAB)
-                    self.content[self.cur_line] = l[:self.col - ni] + l[self.col:]
-                    self.col -= ni
+                ni = (self.col - 1) % self.tab_size + 1
+                if jut <= 0:
+                    ni = min(ni, self.spaces(l, self.col)) ## determine spaces to drop
+                    if ni > 0:
+                        self.undo_add(self.cur_line, [l], KEY_BACKTAB)
+                        self.content[self.cur_line] = l[:self.col - ni] + l[self.col:]
+                        self.col -= ni
+                else:
+                    self.col -= min(ni, jut)
 #ifdef INDENT
             else:
                 lrange = self.line_range()
@@ -800,7 +849,7 @@ class Editor:
             if len(self.undo) > 0:
                 action = self.undo.pop(-1) ## get action from stack
                 if not action[3] in (KEY_INDENT, KEY_UNDENT):
-                    self.cur_line = action[0] ## wrong for Bkspc of BOL
+                    self.cur_line = action[0] ## wrong Bkspc of BOL
                 self.col = action[4]
                 if action[1] >= 0: ## insert or replace line
                     if action[0] < self.total_lines:
@@ -844,16 +893,14 @@ class Editor:
                 return key
             elif key in (KEY_NEXT, KEY_GET):
                 return key
-            else:
-                self.handle_edit_keys(key)
+            else: self.handle_edit_keys(key)
 
 ## packtabs: replace sequence of space by tab
 #ifndef BASIC
     def packtabs(self, s):
-    
         try: from uio import StringIO
         except: from _io import StringIO
-    
+
         sb = StringIO()
         for i in range(0, len(s), 8):
             c = s[i:i + 8]
@@ -869,12 +916,11 @@ class Editor:
         try:    from uos import stat
         except: from os import stat
 #endif
+
         if not fname:
             fname = self.line_edit("Open file: ", "")
         if fname:
             self.fname = fname
-            if True:
-                pass
             if (fname in ('.', '..')
 #ifndef ESP8266
                  or (stat(fname)[0] & 0x4000)
@@ -892,8 +938,8 @@ class Editor:
 #endif
                     with open(fname) as f:
                         self.content = f.readlines()
-            for i in range(len(self.content)):  ## strip and convert
-                self.content[i] = expandtabs(self.content[i].rstrip('\r\n\t '))
+                for i in range(len(self.content)):  ## strip and convert
+                    self.content[i] = expandtabs(self.content[i].rstrip('\r\n\t '))
 
 ## write file
     def put_file(self, fname):
@@ -906,7 +952,6 @@ class Editor:
         else:
 #endif
             from uos import remove, rename
-
         with open("tmpfile.pye", "w") as f:
             for l in self.content:
 #ifndef BASIC
@@ -921,10 +966,9 @@ class Editor:
 
 ## expandtabs: hopefully sometimes replaced by the built-in function
 def expandtabs(s):
-    
     try: from uio import StringIO
     except: from _io import StringIO
-    
+
     if '\t' in s:
         sb = StringIO()
         pos = 0
