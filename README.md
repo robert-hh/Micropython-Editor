@@ -12,7 +12,7 @@ A small text editor written in Python running on PYBoard and WiPy, allowing to e
 - Support of the basic mouse functions scrolling up/down and setting the cursor (not WiPy).
 
 The editor assumes a VT100 terminal. It works in Insert mode. The following list
-shows most of the commands:
+shows most of the commands. Commands marked with (opt) may not be supported in minimal versions:
 
 |Key(s)|Function|
 |:---|:---|
@@ -20,23 +20,26 @@ shows most of the commands:
 |PgUp & PgDd|Page up/down|
 |Home End|Goto the start or end of a line|
 |Enter|Enter a line break at the cursor position. Autoindent is supported|
-|Backspace|Delete char left to the  cursor|
+|Backspace|Delete char left to the  cursor (The key must be set to ASCII-Del)|
 |Del|Delete the char under the cursor. If lines are marked, delete the marked area|
-|Tab & Backtab|Insert or remove spaces up to the next tab position. If lines are marked, indent or unindent|
+|Tab & Backtab|Insert or remove spaces up to the next tab position. If lines are marked, indent or unindent (opt)|
 |Ctrl-O|Open a new file. If the file name is left empty, an empty buffer is opened|
+|Ctrl-W|Toggle to the next file buffer|
 |Ctrl-Q|Close a file buffer or end line-edit|
 |Ctrl-S|Save to file|
 |Ctrl-W|Switch to the next file buffer|
 |Ctrl-F|Find|
 |Ctrl-N|Repeat last find|
-|Ctrl-R|Find and Replace|
-|Ctrl-G|Goto a line|
-|Ctrl-K|Goto the bracket matching the one under the cursor|
+|Ctrl-H|Find and Replace (opt)|
+|Ctrl-G|Go to a line|
+|Ctrl-T|Go to the first line (opt)|
+|Ctrl-B|Go to the last line (opt)|
+|Ctrl-K|Goto the bracket matching the one under the cursor (opt)|
 |Ctrl-L|Mark/Unmark the current line. The mark can then be extended by moving the cursor|
-|Ctrl-X|Cut the marked lines|
-|Ctrl-D|Copy the marked lines|
+|Ctrl-X|Cut the marked lines (Alternative: Ctrl-Y)|
+|Ctrl-C|Copy the marked lines (Alternative: Ctrl-D)|
 |Ctrl-V|Insert the copied/cut lines|
-|Ctrl-Z|Undo the last change|
+|Ctrl-Z|Undo the last change(s)|
 |Ctrl-A|Change settings for tab size, search case sensitivity, auto-indent and writing tabs|
 |Ctrl-E|Redraw the screen. On WiPy and PyBord it shows the amoount of free memory|  
 
@@ -45,7 +48,7 @@ are expanded to spaces with a tab size of 8, and trailing white space on a
 line will be discarded. The orginal state of tabs will not be restored when
 the file is written. Optionally, tabs can be written when saving the file, replacing
 spaces with tabs when possible. The screen size is determined, when the editor is
-started or when the Redraw-key (Ctrl-E) is hit.
+started, when the Redraw-key (Ctrl-E) is hit or on any file window change (Ctrl-W).
 
 The editor works also well in a Linux or MAC terminal environment (and also in some
 terminal apps of Android - tested with Termux), with both python3 and micropython.
