@@ -564,7 +564,8 @@ class Editor:
         for i in range(0, len(s), 8):
             c = s[i:i + 8]
             cr = c.rstrip(" ")
-            if c != cr: sb.write(cr + "\t") 
+            if (len(c) - len(cr)) > 1:
+                sb.write(cr + "\t") 
             else: sb.write(c)
         return sb.getvalue()
     def get_file(self, fname):
@@ -583,8 +584,10 @@ class Editor:
                 if True:
                     with open(fname) as f:
                         self.content = f.readlines()
+                Editor.tab_seen = 'n'
                 for i in range(len(self.content)): 
                     self.content[i] = expandtabs(self.content[i].rstrip('\r\n\t '))
+                self.write_tabs = Editor.tab_seen
     def put_file(self, fname):
         from os import unlink, rename
         with open("tmpfile.pye", "w") as f:
@@ -600,6 +603,7 @@ def expandtabs(s):
     try: from uio import StringIO
     except: from _io import StringIO
     if '\t' in s:
+        Editor.tab_seen = 'y'
         sb = StringIO()
         pos = 0
         for c in s:

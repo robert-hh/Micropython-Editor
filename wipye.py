@@ -358,8 +358,8 @@ class Editor:
                 if True:
                     with open(fname) as f:
                         self.content = f.readlines()
-            for i in range(len(self.content)): 
-                self.content[i] = expandtabs(self.content[i].rstrip('\r\n\t '))
+                for i in range(len(self.content)): 
+                    self.content[i] = expandtabs(self.content[i].rstrip('\r\n\t '))
     def put_file(self, fname):
         if True:
             from uos import remove, rename

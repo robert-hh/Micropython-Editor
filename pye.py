@@ -858,7 +858,8 @@ class Editor:
         for i in range(0, len(s), 8):
             c = s[i:i + 8]
             cr = c.rstrip(" ")
-            if c != cr: sb.write(cr + "\t") ## Spaces at the end of a section
+            if (len(c) - len(cr)) > 1: 
+                sb.write(cr + "\t") ## Spaces at the end of a section
             else: sb.write(c)
         return sb.getvalue()
 #endif
@@ -892,8 +893,14 @@ class Editor:
 #endif
                     with open(fname) as f:
                         self.content = f.readlines()
-            for i in range(len(self.content)):  ## strip and convert
-                self.content[i] = expandtabs(self.content[i].rstrip('\r\n\t '))
+#ifndef BASIC
+                Editor.tab_seen = 'n'
+#endif
+                for i in range(len(self.content)):  ## strip and convert
+                    self.content[i] = expandtabs(self.content[i].rstrip('\r\n\t '))
+#ifndef BASIC
+                self.write_tabs = Editor.tab_seen
+#endif
 
 ## write file
     def put_file(self, fname):
@@ -926,6 +933,9 @@ def expandtabs(s):
     except: from _io import StringIO
     
     if '\t' in s:
+#ifndef BASIC
+        Editor.tab_seen = 'y'
+#endif
         sb = StringIO()
         pos = 0
         for c in s:
