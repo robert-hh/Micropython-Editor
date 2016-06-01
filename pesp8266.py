@@ -413,14 +413,15 @@ class Editor:
                 self.handle_edit_keys(key)
     def get_file(self, fname):
         from os import listdir
+        try: from uos import stat
+        except: from os import stat
         if not fname:
             fname = self.line_edit("Open file: ", "")
         if fname:
             self.fname = fname
             if True:
                 pass
-            if (fname in ('.', '..')
-                ): 
+            if fname in ('.', '..') or (stat(fname)[0] & 0x4000): 
                 self.content = ["Directory '{}'".format(fname), ""] + sorted(listdir(fname))
             else:
                 if True:

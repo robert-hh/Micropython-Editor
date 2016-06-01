@@ -866,21 +866,16 @@ class Editor:
 ## Read file into content
     def get_file(self, fname):
         from os import listdir
-#ifndef ESP8266
         try:    from uos import stat
         except: from os import stat
-#endif
+
         if not fname:
             fname = self.line_edit("Open file: ", "")
         if fname:
             self.fname = fname
             if True:
                 pass
-            if (fname in ('.', '..')
-#ifndef ESP8266
-                 or (stat(fname)[0] & 0x4000)
-#endif
-                ): ## Dir
+            if fname in ('.', '..') or (stat(fname)[0] & 0x4000): ## Dir
                 self.content = ["Directory '{}'".format(fname), ""] + sorted(listdir(fname))
             else:
                 if True:

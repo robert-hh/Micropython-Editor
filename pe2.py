@@ -576,9 +576,7 @@ class Editor:
             fname = self.line_edit("Open file: ", "")
         if fname:
             self.fname = fname
-            if (fname in ('.', '..')
-                 or (stat(fname)[0] & 0x4000)
-                ): 
+            if fname in ('.', '..') or (stat(fname)[0] & 0x4000): 
                 self.content = ["Directory '{}'".format(fname), ""] + sorted(listdir(fname))
             else:
                 if True:

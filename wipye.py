@@ -350,9 +350,7 @@ class Editor:
             self.fname = fname
             if True:
                 pass
-            if (fname in ('.', '..')
-                 or (stat(fname)[0] & 0x4000)
-                ): 
+            if fname in ('.', '..') or (stat(fname)[0] & 0x4000): 
                 self.content = ["Directory '{}'".format(fname), ""] + sorted(listdir(fname))
             else:
                 if True:
