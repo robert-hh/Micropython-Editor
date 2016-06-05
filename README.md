@@ -40,7 +40,7 @@ shows most of the commands. Commands marked with (opt) may not be supported in m
 |Ctrl-C|Copy the marked lines (Alternative: Ctrl-D)|
 |Ctrl-V|Insert the copied/cut lines|
 |Ctrl-Z|Undo the last change(s)|
-|Ctrl-A|Change settings for tab size, search case sensitivity, auto-indent and writing tabs|
+|Ctrl-A|Change settings for tab size, search case sensitivity, auto-indent and writing tabs (opt)|
 |Ctrl-E|Redraw the screen. On WiPy and PyBord it shows the amoount of free memory|  
 
 More details can be found in the doc file. On reading files, tab characters
@@ -227,3 +227,10 @@ The final code saving is just a few hundred bytes, so it's still not clear to me
 **2.6** Adapted to change lib names in micropython
 - For micropython replaced \_io with uio
 - Preliminary esp8266 version.
+
+
+**2.7** Adapted to change lib names in micropython
+- Further adaption to esp8266, which s now identical to the WiPy version
+- Changed file save method, such that it works now across devices
+- Made settings dialogue visible in basic mode, allowing to change both the
+autoindent flag and the search case flag
