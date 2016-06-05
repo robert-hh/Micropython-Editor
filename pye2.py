@@ -170,9 +170,7 @@ class Editor:
 #ifdef REPLACE
     replc_pattern = ""
 #endif
-#ifndef BASIC
-    write_tabs = "n"
-#endif
+
 
     def __init__(self, tab_size, undo_limit):
         self.top_line = self.cur_line = self.row = self.col = self.margin = 0
@@ -247,7 +245,7 @@ class Editor:
             return self.serialcomm.read(1)
 
         @staticmethod
-        def init_tty(self, device, baud):
+        def init_tty(device, baud):
             import pyb
             Editor.sdev = device
             if Editor.sdev:
@@ -257,12 +255,12 @@ class Editor:
                 Editor.serialcomm.setinterrupt(-1)
 
         @staticmethod
-        def deinit_tty(self):
+        def deinit_tty():
             if not Editor.sdev:
                 Editor.serialcomm.setinterrupt(3)
 #endif
-#ifdef WIPY
-    if sys.platform == "WiPy":
+#if defined(WIPY) || defined(ESP8266)
+    if sys.platform in ("WiPy", "esp8266"):
         def wr(self, s):
             sys.stdout.write(s)
 
@@ -272,7 +270,8 @@ class Editor:
         def rd(self):
             while True:
                 try: return sys.stdin.read(1).encode()
-                except: pass
+                except: return b'\x03'
+
 
 ##        @staticmethod
 ##        def init_tty(self, device, baud):
@@ -872,15 +871,15 @@ class Editor:
 ## packtabs: replace sequence of space by tab
 #ifndef BASIC
     def packtabs(self, s):
-    
+
         try: from uio import StringIO
         except: from _io import StringIO
-    
+
         sb = StringIO()
         for i in range(0, len(s), 8):
             c = s[i:i + 8]
             cr = c.rstrip(" ")
-            if (len(c) - len(cr)) > 1: 
+            if (len(c) - len(cr)) > 1:
                 sb.write(cr + "\t") ## Spaces at the end of a section
             else: sb.write(c)
         return sb.getvalue()
@@ -890,7 +889,6 @@ class Editor:
         from os import listdir
         try:    from uos import stat
         except: from os import stat
-
         if not fname:
             fname = self.line_edit("Open file: ", "")
         if fname:
@@ -919,8 +917,17 @@ class Editor:
 
 ## write file
     def put_file(self, fname):
-        from os import unlink, rename
-        with open("tmpfile.pye", "w") as f:
+        if True:
+#ifdef LINUX
+            pass
+        if sys.platform in ("linux", "darwin"):
+            from os import unlink, rename
+            remove = unlink
+        else:
+#endif
+            from uos import remove, rename
+        tmpfile = fname + ".pyetmp"
+        with open(tmpfile, "w") as f:
             for l in self.content:
 #ifndef BASIC
                 if self.write_tabs == 'y':
@@ -928,16 +935,16 @@ class Editor:
                 else:
 #endif
                     f.write(l + '\n')
-        try:    unlink(fname)
+        try:    remove(fname)
         except: pass
-        rename("tmpfile.pye", fname)
+        rename(tmpfile, fname)
 
 ## expandtabs: hopefully sometimes replaced by the built-in function
 def expandtabs(s):
-    
+
     try: from uio import StringIO
     except: from _io import StringIO
-    
+
     if '\t' in s:
 #ifndef BASIC
         Editor.tab_seen = 'y'

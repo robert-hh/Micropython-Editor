@@ -430,7 +430,7 @@ class Editor:
 
     def line_edit(self, prompt, default):  ## simple one: only 4 fcts
         self.goto(Editor.height, 0)
-        self.hilite(1)
+        self.hilite(True)
         self.wr(prompt)
         self.wr(default)
         self.clear_to_eol()
@@ -438,10 +438,10 @@ class Editor:
         while True:
             key = self.get_input()  ## Get Char of Fct.
             if key in (KEY_ENTER, KEY_TAB): ## Finis
-                self.hilite(0)
+                self.hilite(False)
                 return res
             elif key == KEY_QUIT: ## Abort
-                self.hilite(0)
+                self.hilite(False)
                 return None
             elif key == KEY_BACKSPACE: ## Backspace
                 if (len(res) > 0):
@@ -610,20 +610,25 @@ class Editor:
             self.row = Editor.height - 1 ## will be fixed if required
 #endif
         elif key == KEY_TOGGLE: ## Toggle Autoindent/Statusline/Search case
-            if True:
+            pat = self.line_edit("Case Sensitive Search {}, Autoindent {}"
 #ifndef BASIC
-                pat = self.line_edit("Case Sensitive Search {}, Autoindent {}, Tab Size {}, Write Tabs {}: ".format(Editor.case, self.autoindent, self.tab_size, self.write_tabs), "")
-                try:
-                    res =  [i.strip().lower() for i in pat.split(",")]
-                    if res[0]: Editor.case       = 'y' if res[0][0] == 'y' else 'n'
-                    if res[1]: self.autoindent = 'y' if res[1][0] == 'y' else 'n'
-                    if res[2]: self.tab_size = int(res[2])
-                    if res[3]: self.write_tabs = 'y' if res[3][0] == 'y' else 'n'
-                except:
-                    pass
-            else:
+            ", Tab Size {}, Write Tabs {}"
 #endif
-                self.autoindent = 'y' if self.autoindent != 'y' else 'n' ## toggle
+            ": ".format(Editor.case, self.autoindent
+#ifndef BASIC
+            , self.tab_size, self.write_tabs
+#endif
+            ), "")
+            try:
+                res =  [i.strip().lower() for i in pat.split(",")]
+                if res[0]: Editor.case       = 'y' if res[0][0] == 'y' else 'n'
+                if res[1]: self.autoindent = 'y' if res[1][0] == 'y' else 'n'
+#ifndef BASIC
+                if res[2]: self.tab_size = int(res[2])
+                if res[3]: self.write_tabs = 'y' if res[3][0] == 'y' else 'n'
+#endif
+            except:
+                pass
 #ifdef MOUSE
         elif key == KEY_MOUSE: ## Set Cursor
             if self.mouse_y < Editor.height:
@@ -850,15 +855,15 @@ class Editor:
 ## packtabs: replace sequence of space by tab
 #ifndef BASIC
     def packtabs(self, s):
-    
+
         try: from uio import StringIO
         except: from _io import StringIO
-    
+
         sb = StringIO()
         for i in range(0, len(s), 8):
             c = s[i:i + 8]
             cr = c.rstrip(" ")
-            if (len(c) - len(cr)) > 1: 
+            if (len(c) - len(cr)) > 1:
                 sb.write(cr + "\t") ## Spaces at the end of a section
             else: sb.write(c)
         return sb.getvalue()
@@ -868,13 +873,10 @@ class Editor:
         from os import listdir
         try:    from uos import stat
         except: from os import stat
-
         if not fname:
             fname = self.line_edit("Open file: ", "")
         if fname:
             self.fname = fname
-            if True:
-                pass
             if fname in ('.', '..') or (stat(fname)[0] & 0x4000): ## Dir
                 self.content = ["Directory '{}'".format(fname), ""] + sorted(listdir(fname))
             else:
@@ -908,8 +910,8 @@ class Editor:
         else:
 #endif
             from uos import remove, rename
-
-        with open("tmpfile.pye", "w") as f:
+        tmpfile = fname + ".pyetmp"
+        with open(tmpfile, "w") as f:
             for l in self.content:
 #ifndef BASIC
                 if self.write_tabs == 'y':
@@ -919,14 +921,13 @@ class Editor:
                     f.write(l + '\n')
         try:    remove(fname)
         except: pass
-        rename("tmpfile.pye", fname)
+        rename(tmpfile, fname)
 
 ## expandtabs: hopefully sometimes replaced by the built-in function
 def expandtabs(s):
-    
     try: from uio import StringIO
     except: from _io import StringIO
-    
+
     if '\t' in s:
 #ifndef BASIC
         Editor.tab_seen = 'y'

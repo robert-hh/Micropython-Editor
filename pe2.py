@@ -49,7 +49,6 @@ class Editor:
     find_pattern = ""
     case = "n"
     replc_pattern = ""
-    write_tabs = "n"
     def __init__(self, tab_size, undo_limit):
         self.top_line = self.cur_line = self.row = self.col = self.margin = 0
         self.tab_size = tab_size
@@ -77,7 +76,7 @@ class Editor:
                 pass
             return self.serialcomm.read(1)
         @staticmethod
-        def init_tty(self, device, baud):
+        def init_tty(device, baud):
             import pyb
             Editor.sdev = device
             if Editor.sdev:
@@ -86,7 +85,7 @@ class Editor:
                 Editor.serialcomm = pyb.USB_VCP()
                 Editor.serialcomm.setinterrupt(-1)
         @staticmethod
-        def deinit_tty(self):
+        def deinit_tty():
             if not Editor.sdev:
                 Editor.serialcomm.setinterrupt(3)
     def goto(self, row, col):
@@ -587,16 +586,18 @@ class Editor:
                     self.content[i] = expandtabs(self.content[i].rstrip('\r\n\t '))
                 self.write_tabs = Editor.tab_seen
     def put_file(self, fname):
-        from os import unlink, rename
-        with open("tmpfile.pye", "w") as f:
+        if True:
+            from uos import remove, rename
+        tmpfile = fname + ".pyetmp"
+        with open(tmpfile, "w") as f:
             for l in self.content:
                 if self.write_tabs == 'y':
                     f.write(self.packtabs(l) + '\n')
                 else:
                     f.write(l + '\n')
-        try: unlink(fname)
+        try: remove(fname)
         except: pass
-        rename("tmpfile.pye", fname)
+        rename(tmpfile, fname)
 def expandtabs(s):
     try: from uio import StringIO
     except: from _io import StringIO

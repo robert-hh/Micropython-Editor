@@ -20,6 +20,7 @@ class Editor:
     b"\x1b[Z" : 0x15, 
     b"\x19" : 0x18, 
     b"\x08" : 0x12, 
+    b"\x0b" : 0xfffd,
     }
     yank_buffer = []
     find_pattern = ""
@@ -151,7 +152,7 @@ class Editor:
                 (self.cur_line, self.mark + 1))
     def line_edit(self, prompt, default): 
         self.goto(Editor.height, 0)
-        self.hilite(1)
+        self.hilite(True)
         self.wr(prompt)
         self.wr(default)
         self.clear_to_eol()
@@ -159,10 +160,10 @@ class Editor:
         while True:
             key = self.get_input() 
             if key in (0x0a, 0x09): 
-                self.hilite(0)
+                self.hilite(False)
                 return res
             elif key == 0x11: 
-                self.hilite(0)
+                self.hilite(False)
                 return None
             elif key == 0x08: 
                 if (len(res) > 0):
@@ -273,8 +274,54 @@ class Editor:
                 self.cur_line = int(line) - 1
                 self.row = Editor.height >> 1
         elif key == 0x01: 
-            if True:
-                self.autoindent = 'y' if self.autoindent != 'y' else 'n' 
+            pat = self.line_edit("Case Sensitive Search {}, Autoindent {}"
+            ": ".format(Editor.case, self.autoindent
+            ), "")
+            try:
+                res = [i.strip().lower() for i in pat.split(",")]
+                if res[0]: Editor.case = 'y' if res[0][0] == 'y' else 'n'
+                if res[1]: self.autoindent = 'y' if res[1][0] == 'y' else 'n'
+            except:
+                pass
+        elif key == 0xfffd:
+            if self.col < len(l): 
+                opening = "([{<"
+                closing = ")]}>"
+                level = 0
+                pos = self.col
+                srch = l[pos]
+                i = opening.find(srch)
+                if i >= 0: 
+                    pos += 1
+                    match = closing[i]
+                    for i in range(self.cur_line, self.total_lines):
+                        for c in range(pos, len(self.content[i])):
+                            if self.content[i][c] == match:
+                                if level == 0: 
+                                    self.cur_line, self.col = i, c
+                                    return True 
+                                else:
+                                    level -= 1
+                            elif self.content[i][c] == srch:
+                                level += 1
+                        pos = 0 
+                else:
+                    i = closing.find(srch)
+                    if i >= 0: 
+                        pos -= 1
+                        match = opening[i]
+                        for i in range(self.cur_line, -1, -1):
+                            for c in range(pos, -1, -1):
+                                if self.content[i][c] == match:
+                                    if level == 0: 
+                                        self.cur_line, self.col = i, c
+                                        return True 
+                                    else:
+                                        level -= 1
+                                elif self.content[i][c] == srch:
+                                    level += 1
+                            if i > 0: 
+                                pos = len(self.content[i - 1]) - 1
         elif key == 0x0c:
             self.mark = self.cur_line if self.mark == None else None
         elif key == 0x0a:
@@ -419,8 +466,6 @@ class Editor:
             fname = self.line_edit("Open file: ", "")
         if fname:
             self.fname = fname
-            if True:
-                pass
             if fname in ('.', '..') or (stat(fname)[0] & 0x4000): 
                 self.content = ["Directory '{}'".format(fname), ""] + sorted(listdir(fname))
             else:
@@ -432,12 +477,13 @@ class Editor:
     def put_file(self, fname):
         if True:
             from uos import remove, rename
-        with open("tmpfile.pye", "w") as f:
+        tmpfile = fname + ".pyetmp"
+        with open(tmpfile, "w") as f:
             for l in self.content:
                     f.write(l + '\n')
         try: remove(fname)
         except: pass
-        rename("tmpfile.pye", fname)
+        rename(tmpfile, fname)
 def expandtabs(s):
     try: from uio import StringIO
     except: from _io import StringIO

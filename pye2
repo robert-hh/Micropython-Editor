@@ -133,8 +133,6 @@ class Editor:
     replc_pattern = ""
 
 
-    write_tabs = "n"
-
 
     def __init__(self, tab_size, undo_limit):
         self.top_line = self.cur_line = self.row = self.col = self.margin = 0
@@ -798,7 +796,6 @@ class Editor:
         from os import listdir
         try: from uos import stat
         except: from os import stat
-
         if not fname:
             fname = self.line_edit("Open file: ", "")
         if fname:
@@ -827,8 +824,17 @@ class Editor:
 
 ## write file
     def put_file(self, fname):
-        from os import unlink, rename
-        with open("tmpfile.pye", "w") as f:
+        if True:
+
+            pass
+        if sys.platform in ("linux", "darwin"):
+            from os import unlink, rename
+            remove = unlink
+        else:
+
+            from uos import remove, rename
+        tmpfile = fname + ".pyetmp"
+        with open(tmpfile, "w") as f:
             for l in self.content:
 
                 if self.write_tabs == 'y':
@@ -836,9 +842,9 @@ class Editor:
                 else:
 
                     f.write(l + '\n')
-        try: unlink(fname)
+        try: remove(fname)
         except: pass
-        rename("tmpfile.pye", fname)
+        rename(tmpfile, fname)
 
 ## expandtabs: hopefully sometimes replaced by the built-in function
 def expandtabs(s):

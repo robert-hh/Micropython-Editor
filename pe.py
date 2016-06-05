@@ -193,7 +193,7 @@ class Editor:
                 (self.cur_line, self.mark + 1))
     def line_edit(self, prompt, default): 
         self.goto(Editor.height, 0)
-        self.hilite(1)
+        self.hilite(True)
         self.wr(prompt)
         self.wr(default)
         self.clear_to_eol()
@@ -201,10 +201,10 @@ class Editor:
         while True:
             key = self.get_input() 
             if key in (0x0a, 0x09): 
-                self.hilite(0)
+                self.hilite(False)
                 return res
             elif key == 0x11: 
-                self.hilite(0)
+                self.hilite(False)
                 return None
             elif key == 0x08: 
                 if (len(res) > 0):
@@ -335,18 +335,19 @@ class Editor:
             self.cur_line = self.total_lines - 1
             self.row = Editor.height - 1 
         elif key == 0x01: 
-            if True:
-                pat = self.line_edit("Case Sensitive Search {}, Autoindent {}, Tab Size {}, Write Tabs {}: ".format(Editor.case, self.autoindent, self.tab_size, self.write_tabs), "")
-                try:
-                    res = [i.strip().lower() for i in pat.split(",")]
-                    if res[0]: Editor.case = 'y' if res[0][0] == 'y' else 'n'
-                    if res[1]: self.autoindent = 'y' if res[1][0] == 'y' else 'n'
-                    if res[2]: self.tab_size = int(res[2])
-                    if res[3]: self.write_tabs = 'y' if res[3][0] == 'y' else 'n'
-                except:
-                    pass
-            else:
-                self.autoindent = 'y' if self.autoindent != 'y' else 'n' 
+            pat = self.line_edit("Case Sensitive Search {}, Autoindent {}"
+            ", Tab Size {}, Write Tabs {}"
+            ": ".format(Editor.case, self.autoindent
+            , self.tab_size, self.write_tabs
+            ), "")
+            try:
+                res = [i.strip().lower() for i in pat.split(",")]
+                if res[0]: Editor.case = 'y' if res[0][0] == 'y' else 'n'
+                if res[1]: self.autoindent = 'y' if res[1][0] == 'y' else 'n'
+                if res[2]: self.tab_size = int(res[2])
+                if res[3]: self.write_tabs = 'y' if res[3][0] == 'y' else 'n'
+            except:
+                pass
         elif key == 0x1b: 
             if self.mouse_y < Editor.height:
                 self.col = self.mouse_x + self.margin
@@ -555,8 +556,6 @@ class Editor:
             fname = self.line_edit("Open file: ", "")
         if fname:
             self.fname = fname
-            if True:
-                pass
             if fname in ('.', '..') or (stat(fname)[0] & 0x4000): 
                 self.content = ["Directory '{}'".format(fname), ""] + sorted(listdir(fname))
             else:
@@ -570,7 +569,8 @@ class Editor:
     def put_file(self, fname):
         if True:
             from uos import remove, rename
-        with open("tmpfile.pye", "w") as f:
+        tmpfile = fname + ".pyetmp"
+        with open(tmpfile, "w") as f:
             for l in self.content:
                 if self.write_tabs == 'y':
                     f.write(self.packtabs(l) + '\n')
@@ -578,7 +578,7 @@ class Editor:
                     f.write(l + '\n')
         try: remove(fname)
         except: pass
-        rename("tmpfile.pye", fname)
+        rename(tmpfile, fname)
 def expandtabs(s):
     try: from uio import StringIO
     except: from _io import StringIO
