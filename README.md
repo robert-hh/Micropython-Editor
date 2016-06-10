@@ -2,14 +2,14 @@
 
 **Description**
 
-A small text editor written in Python running on PYBoard and WiPy, allowing to edit files locally. It is based on the editor widget of pfalcon at https://github.com/pfalcon/pyedit. I ported it to PyBoard and WiPy and added a few functions:
+A small text editor written in Python running on PYBoard, WiPy and ESP8266 modules, allowing to edit files locally. It is based on the editor widget of pfalcon at https://github.com/pfalcon/pyedit. I ported it to PyBoard, WiPy and ESP8266 and added a few functions:
 
-- Use USB_VCP/Telnet or UART for input and output.
+- Use USB_VCP/Telnet or UART (PybOard only) for input and output.
 - Changed the read keyboard function to comply with slow byte-by-byte input on serial lines.
 - Added support for Tab, BackTab, Save, Del and Backspace joining lines, Find, Replace, Goto Line, Undo, Get file, Auto-Indent, Set Flags, Copy/Delete & Paste, Indent, Un-Indent
 - Handling tab (0x09) on reading & writing files,
 - Added a status line, and single line prompts for Quit, Save, Find, Replace, Goto, Get file and Flag settings.
-- Support of the basic mouse functions scrolling up/down and setting the cursor (not WiPy).
+- Optional support of the basic mouse functions scrolling up/down and setting the cursor.
 
 The editor assumes a VT100 terminal. It works in Insert mode. The following list
 shows most of the commands. Commands marked with (opt) may not be supported in minimal versions:
@@ -68,14 +68,13 @@ CPython also accepts data from a pipe or redirection.
     `#define MICROPY_PERSISTENT_CODE_LOAD (1)`  
     to the file mpconfigport.h of the cc3200 branch, make it, and load it to WIPy.
 - pesp8266.py: A version of for the esp8266 port. It requires frozen byte code
-to be enabled, which is in a very early test phase. A cros-compiled version may
+to be enabled, which is in a very early test phase. A cross-compiled version may
 executed from the file system.
 - tuning_pye.py: A file with some improved replacements for functions of pye:
 a) find_in_file() supporting regular expressions,
 b) line_edit() supporting the cursor left/right/home/end keys, and
 c) expandtabs() and packtabs() with a second argument for tabsize (not for pye, but maybe useful)
 - strip.sh: sample Shell script which creates the different variants out of pye.py using cpp, including all variants of wipye.py with either speed up scrolling or support replace or support goto bracket or support indent/un-indent or support mouse.
-- pye_vt.py: a variant of pye.py, where all directly screen related functions are placed into a separate class. That's a better style, however it uses more memory. This file is just given as example and not maintained.
 
 **Short Version History**
 
