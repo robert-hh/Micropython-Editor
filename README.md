@@ -2,7 +2,7 @@
 
 **Description**
 
-A small text editor written in Python running on PYBoard and WiPy, allowing to edit files locally. It is based on the editor widget of pfalcon at https://github.com/pfalcon/pyedit. I ported it to PyBoard and WiPy and added a few functions:
+A small text editor written in Python running on PYBoard, WiPy and ESP8266 boards, allowing to edit files locally. It is based on the editor widget of pfalcon at https://github.com/pfalcon/pyedit. I ported it to PyBoard and WiPy and added a few functions:
 
 - Use USB_VCP/Telnet or UART for input and output.
 - Changed the read keyboard function to comply with slow byte-by-byte input on serial lines.
