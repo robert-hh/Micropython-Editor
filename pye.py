@@ -22,7 +22,7 @@
 #define REPLACE 1
 #define BRACKET 1
 #define INDENT 1
-#define MOUSE 1
+##define MOUSE 1
 #endif
 import sys, gc
 #ifdef LINUX
@@ -430,7 +430,7 @@ class Editor:
 
     def line_edit(self, prompt, default):  ## simple one: only 4 fcts
         self.goto(Editor.height, 0)
-        self.hilite(True)
+        self.hilite(1)
         self.wr(prompt)
         self.wr(default)
         self.clear_to_eol()
@@ -438,10 +438,10 @@ class Editor:
         while True:
             key = self.get_input()  ## Get Char of Fct.
             if key in (KEY_ENTER, KEY_TAB): ## Finis
-                self.hilite(False)
+                self.hilite(0)
                 return res
             elif key == KEY_QUIT: ## Abort
-                self.hilite(False)
+                self.hilite(0)
                 return None
             elif key == KEY_BACKSPACE: ## Backspace
                 if (len(res) > 0):

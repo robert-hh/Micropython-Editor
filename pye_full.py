@@ -22,7 +22,7 @@
 #define REPLACE 1
 #define BRACKET 1
 #define INDENT 1
-#define MOUSE 1
+    ##define MOUSE 1
 #endif
 import sys, gc
 #ifdef LINUX
@@ -271,13 +271,13 @@ class Editor:
                 try: return sys.stdin.read(1).encode()
                 except: return b'\x03'
 
-##        @staticmethod
-##        def init_tty(device, baud):
-##            pass
+        @staticmethod
+        def init_tty(device, baud):
+            pass
 
-##        @staticmethod
-##        def deinit_tty():
-##            pass
+        @staticmethod
+        def deinit_tty():
+            pass
 #endif
     def goto(self, row, col):
         self.wr("\x1b[{};{}H".format(row + 1, col + 1))
@@ -433,7 +433,7 @@ class Editor:
     def line_edit(self, prompt, default):  ## better one: added cursor keys and backsp, delete
         push_msg = lambda msg: self.wr(msg + "\b" * len(msg)) ## Write a message and move cursor back
         self.goto(Editor.height, 0)
-        self.hilite(True)
+        self.hilite(1)
         self.wr(prompt)
         self.wr(default)
         self.clear_to_eol()
@@ -442,10 +442,10 @@ class Editor:
         while True:
             key = self.get_input()  ## Get Char of Fct.
             if key in (KEY_ENTER, KEY_TAB): ## Finis
-                self.hilite(False)
+                self.hilite(0)
                 return res
             elif key == KEY_QUIT: ## Abort
-                self.hilite(False)
+                self.hilite(0)
                 return None
             elif key == KEY_LEFT:
                 if pos > 0:
@@ -486,13 +486,14 @@ class Editor:
 
 ## This is the regex version of find.
     def find_in_file(self, pattern, col, end):
-        import re
+        try: from ure import compile
+        except: from re import compile
 #define REGEXP 1
         Editor.find_pattern = pattern ## remember it
         if Editor.case != "y":
             pattern = pattern.lower()
         try:
-            rex = re.compile(pattern)
+            rex = compile(pattern)
         except:
             self.message = "Invalid pattern: " + pattern
             return -1
@@ -851,7 +852,7 @@ class Editor:
             if len(self.undo) > 0:
                 action = self.undo.pop(-1) ## get action from stack
                 if not action[3] in (KEY_INDENT, KEY_UNDENT):
-                    self.cur_line = action[0] ## wrong Bkspc of BOL
+                    self.cur_line = action[0] ## wrong for Bkspc of BOL
                 self.col = action[4]
                 if action[1] >= 0: ## insert or replace line
                     if action[0] < self.total_lines:
@@ -901,6 +902,7 @@ class Editor:
 ## packtabs: replace sequence of space by tab
 #ifndef BASIC
     def packtabs(self, s):
+
         try: from uio import StringIO
         except: from _io import StringIO
 

@@ -345,21 +345,20 @@ class Editor:
             self.cur_line = self.total_lines - 1
             self.row = Editor.height - 1 
         elif key == 0x01: 
-            if True:
-                pat = self.line_edit(
-                "Case Sensitive Search {}, Autoindent {}, Tab Size {}, Write Tabs {}, Straight Cursor {}: ".format(
-                Editor.case, self.autoindent, self.tab_size, self.write_tabs, self.straight), "")
-                try:
-                    res = [i.strip().lower() for i in pat.split(",")]
-                    if res[0]: Editor.case = 'y' if res[0][0] == 'y' else 'n'
-                    if res[1]: self.autoindent = 'y' if res[1][0] == 'y' else 'n'
-                    if res[2]: self.tab_size = int(res[2])
-                    if res[3]: self.write_tabs = 'y' if res[3][0] == 'y' else 'n'
-                    if res[4]: self.straight = 'y' if res[4][0] == 'y' else 'n'
-                except:
-                    pass
-            else:
-                self.autoindent = 'y' if self.autoindent != 'y' else 'n' 
+            pat = self.line_edit("Case Sensitive Search {}, Autoindent {}"
+            ", Tab Size {}, Write Tabs {}, Straight Cursor {}"
+            ": ".format(Editor.case, self.autoindent, self.straight
+            , self.tab_size, self.write_tabs
+            ), "")
+            try:
+                res = [i.strip().lower() for i in pat.split(",")]
+                if res[0]: Editor.case = 'y' if res[0][0] == 'y' else 'n'
+                if res[1]: self.autoindent = 'y' if res[1][0] == 'y' else 'n'
+                if res[2]: self.tab_size = int(res[2])
+                if res[3]: self.write_tabs = 'y' if res[3][0] == 'y' else 'n'
+                if res[4]: self.straight = 'y' if res[4][0] == 'y' else 'n'
+            except:
+                pass
         elif key == 0x1b: 
             if self.mouse_y < Editor.height:
                 self.col = self.mouse_x + self.margin

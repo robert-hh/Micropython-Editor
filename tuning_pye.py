@@ -1,13 +1,14 @@
 ##
 ## This is the regex version of find.
     def find_in_file(self, pattern, col, end):
-        import re
+        try: from ure import compile
+        except: from re import compile
 #define REGEXP 1
         Editor.find_pattern = pattern ## remember it
         if Editor.case != "y":
             pattern = pattern.lower()
         try:
-            rex = re.compile(pattern)
+            rex = compile(pattern)
         except:
             self.message = "Invalid pattern: " + pattern
             return -1

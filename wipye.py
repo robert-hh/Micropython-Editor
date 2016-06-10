@@ -137,7 +137,7 @@ class Editor:
                 (self.cur_line, self.mark + 1))
     def line_edit(self, prompt, default): 
         self.goto(Editor.height, 0)
-        self.hilite(True)
+        self.hilite(1)
         self.wr(prompt)
         self.wr(default)
         self.clear_to_eol()
@@ -145,10 +145,10 @@ class Editor:
         while True:
             key = self.get_input() 
             if key in (0x0a, 0x09): 
-                self.hilite(False)
+                self.hilite(0)
                 return res
             elif key == 0x11: 
-                self.hilite(False)
+                self.hilite(0)
                 return None
             elif key == 0x08: 
                 if (len(res) > 0):
