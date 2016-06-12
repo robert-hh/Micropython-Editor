@@ -1,4 +1,4 @@
-#Pyboard-Editor
+# Micropython-Editor
 
 **Description**
 
@@ -65,11 +65,19 @@ CPython also accepts data from a pipe or redirection.
 - pemin.py: Condensed source file with a reduced function set for PyBoard
 - wipye.py: Condensed source file with a reduced function set for WiPy
 - wipye.mpy: Precompiled version of pye.py for WiPy with all functions enabled. To be able to run it, you have to add:  
+
     `#define MICROPY_PERSISTENT_CODE_LOAD (1)`  
-    to the file mpconfigport.h of the cc3200 branch, make it, and load it to WIPy.
+
+    to the file mpconfigport.h of the cc3200 branch, rebuild the binary it, and load it to WiPy.
 - pesp8266.py: A version of for the esp8266 port. It requires frozen byte code
-to be enabled, which is in a very early test phase. A cross-compiled version may
-executed from the file system.
+to be enabled, which available as PR2067. A cross-compiled version may
+executed from the file system. You have to create a new build, adding:
+
+     `#define MICROPY_PERSISTENT_CODE_LOAD (1)`  
+
+     to mpconfigport.h and changing line 430 of py/emitglue.c into:  
+
+    `#elif defined(__thumb2__) || defined(__xtensa__)`
 - tuning_pye.py: A file with some improved replacements for functions of pye:
 a) find_in_file() supporting regular expressions,
 b) line_edit() supporting the cursor left/right/home/end keys, and
@@ -227,7 +235,7 @@ The final code saving is just a few hundred bytes, so it's still not clear to me
 - For micropython replaced \_io with uio
 - Preliminary esp8266 version.
 
-**2.7** Adapted to change lib names in micropython
+**2.7** Change file save method and settings dialogue
 - Further adaption to esp8266, which is now identical to the WiPy version
 - Changed file save method, such that it works now across devices
 - Made settings dialogue visible in basic mode, allowing to change both the
