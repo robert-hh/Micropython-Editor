@@ -70,8 +70,9 @@ CPython also accepts data from a pipe or redirection.
 
     to the file mpconfigport.h of the cc3200 branch, rebuild the binary it, and load it to WiPy.
 - pesp8266.py: A version of for the esp8266 port. It requires frozen byte code
-to be enabled, which available as PR2067. A cross-compiled version may
-executed from the file system. You have to create a new build, adding:
+to be enabled, which available from version 1.8.1 on. In order to use it, you have to
+put pesp8266 into the directory esp8266/modules and rebuild micropython.
+A cross-compiled version may executed from the file system. You have to create a new build, adding:
 
      `#define MICROPY_PERSISTENT_CODE_LOAD (1)`  
 
