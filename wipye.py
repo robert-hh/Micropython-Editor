@@ -44,6 +44,12 @@ class Editor:
             while True:
                 try: return sys.stdin.read(1).encode()
                 except: return b'\x03'
+        @staticmethod
+        def init_tty(device, baud):
+            pass
+        @staticmethod
+        def deinit_tty():
+            pass
     def goto(self, row, col):
         self.wr("\x1b[{};{}H".format(row + 1, col + 1))
     def clear_to_eol(self):
@@ -402,6 +408,7 @@ def pye(*content, tab_size = 4, undo = 50, device = 0, baud = 115200):
             elif type(f) == list and len(f) > 0 and type(f[0]) == str:
                 slot[index].content = f 
             index += 1
+    Editor.init_tty(device, baud)
     while True:
         try:
             index %= len(slot)
@@ -418,5 +425,6 @@ def pye(*content, tab_size = 4, undo = 50, device = 0, baud = 115200):
                 index += 1
         except Exception as err:
             slot[index].message = "{!r}".format(err)
+    Editor.deinit_tty()
     Editor.yank_buffer = []
     return slot[0].content if (slot[0].fname == "") else slot[0].fname

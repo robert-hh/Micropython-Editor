@@ -649,9 +649,9 @@ class Editor:
             self.row = Editor.height - 1 ## will be fixed if required
 #endif
         elif key == KEY_TOGGLE: ## Toggle Autoindent/Statusline/Search case
-            pat = self.line_edit("Case Sensitive Search {}, Autoindent {}"
+            pat = self.line_edit("Case Sensitive Search {}, Autoindent {}, Straight Cursor {}"
 #ifndef BASIC
-            ", Tab Size {}, Write Tabs {}, Straight Cursor {}"
+            ", Tab Size {}, Write Tabs {}"
 #endif
             ": ".format(Editor.case, self.autoindent, self.straight
 #ifndef BASIC
@@ -1007,9 +1007,7 @@ def pye(*content, tab_size = 4, undo = 50, device = 0, baud = 115200):
                 slot[index].content = f ## non-empty list of strings -> edit
             index += 1
 ## edit
-#if defined(PYBOARD) || defined(LINUX)
     Editor.init_tty(device, baud)
-#endif
     while True:
         try:
             index %= len(slot)
@@ -1027,9 +1025,7 @@ def pye(*content, tab_size = 4, undo = 50, device = 0, baud = 115200):
         except Exception as err:
             slot[index].message = "{!r}".format(err)
 ## All windows closed, clean up
-#if defined(PYBOARD) || defined(LINUX)
     Editor.deinit_tty()
-#endif
     Editor.yank_buffer = []
 ## close
     return slot[0].content if (slot[0].fname == "") else slot[0].fname

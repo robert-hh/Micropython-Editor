@@ -345,8 +345,8 @@ class Editor:
             self.cur_line = self.total_lines - 1
             self.row = Editor.height - 1 
         elif key == 0x01: 
-            pat = self.line_edit("Case Sensitive Search {}, Autoindent {}"
-            ", Tab Size {}, Write Tabs {}, Straight Cursor {}"
+            pat = self.line_edit("Case Sensitive Search {}, Autoindent {}, Straight Cursor {}"
+            ", Tab Size {}, Write Tabs {}"
             ": ".format(Editor.case, self.autoindent, self.straight
             , self.tab_size, self.write_tabs
             ), "")
