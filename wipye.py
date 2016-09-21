@@ -1,25 +1,25 @@
 import sys, gc
 class Editor:
     KEYMAP = { 
-    b"\x1b[A" : 0x0b,
-    b"\x1b[B" : 0x0d,
-    b"\x1b[D" : 0x1f,
-    b"\x1b[C" : 0x1e,
-    b"\x1b[H" : 0x10, 
-    b"\x1bOH" : 0x10, 
-    b"\x1b[1~": 0x10, 
-    b"\x1b[F" : 0x03, 
-    b"\x1bOF" : 0x03, 
-    b"\x1b[4~": 0x03, 
-    b"\x1b[5~": 0xfff1,
-    b"\x1b[6~": 0xfff2,
-    b"\x03" : 0x04, 
-    b"\r" : 0x0a,
-    b"\x7f" : 0x08, 
-    b"\x1b[3~": 0x7f,
-    b"\x1b[Z" : 0x15, 
-    b"\x19" : 0x18, 
-    b"\x08" : 0x12, 
+    "\x1b[A" : 0x0b,
+    "\x1b[B" : 0x0d,
+    "\x1b[D" : 0x1f,
+    "\x1b[C" : 0x1e,
+    "\x1b[H" : 0x10, 
+    "\x1bOH" : 0x10, 
+    "\x1b[1~": 0x10, 
+    "\x1b[F" : 0x03, 
+    "\x1bOF" : 0x03, 
+    "\x1b[4~": 0x03, 
+    "\x1b[5~": 0xfff1,
+    "\x1b[6~": 0xfff2,
+    "\x03" : 0x04, 
+    "\r" : 0x0a,
+    "\x7f" : 0x08, 
+    "\x1b[3~": 0x7f,
+    "\x1b[Z" : 0x15, 
+    "\x19" : 0x18, 
+    "\x08" : 0x12, 
     }
     yank_buffer = []
     find_pattern = ""
@@ -42,8 +42,8 @@ class Editor:
             return False
         def rd(self):
             while True:
-                try: return sys.stdin.read(1).encode()
-                except: return b'\x03'
+                try: return sys.stdin.read(1)
+                except: return '\x03'
         @staticmethod
         def init_tty(device, baud):
             pass
@@ -53,24 +53,24 @@ class Editor:
     def goto(self, row, col):
         self.wr("\x1b[{};{}H".format(row + 1, col + 1))
     def clear_to_eol(self):
-        self.wr(b"\x1b[0K")
+        self.wr("\x1b[0K")
     def cursor(self, onoff):
-        self.wr(b"\x1b[?25h" if onoff else b"\x1b[?25l")
+        self.wr("\x1b[?25h" if onoff else "\x1b[?25l")
     def hilite(self, mode):
         if mode == 1: 
-            self.wr(b"\x1b[1;47m")
+            self.wr("\x1b[1;47m")
         elif mode == 2: 
-            self.wr(b"\x1b[43m")
+            self.wr("\x1b[43m")
         else: 
-            self.wr(b"\x1b[0m")
+            self.wr("\x1b[0m")
     def get_screen_size(self):
         self.wr('\x1b[999;999H\x1b[6n')
-        pos = b''
+        pos = ''
         char = self.rd() 
-        while char != b'R':
+        while char != 'R':
             pos += char
             char = self.rd()
-        return [int(i, 10) for i in pos[2:].split(b';')]
+        return [int(i, 10) for i in pos[2:].split(';')]
     def redraw(self, flag):
         self.cursor(False)
         Editor.height, Editor.width = self.get_screen_size()
@@ -83,18 +83,18 @@ class Editor:
     def get_input(self): 
         while True:
             in_buffer = self.rd()
-            if in_buffer == b'\x1b': 
+            if in_buffer == '\x1b': 
                 while True:
                     in_buffer += self.rd()
-                    c = chr(in_buffer[-1])
+                    c = in_buffer[-1]
                     if c == '~' or (c.isalpha() and c != 'O'):
                         break
             if in_buffer in self.KEYMAP:
                 c = self.KEYMAP[in_buffer]
                 if c != 0x1b:
-                    return c
-            elif len(in_buffer) == 1: 
-                return in_buffer[0]
+                    return c, ""
+            else:
+                return 0, in_buffer
     def display_window(self): 
         self.cur_line = min(self.total_lines - 1, max(self.cur_line, 0))
         self.col = max(0, min(self.col, len(self.content[self.cur_line])))
@@ -149,7 +149,7 @@ class Editor:
         self.clear_to_eol()
         res = default
         while True:
-            key = self.get_input() 
+            key, char = self.get_input() 
             if key in (0x0a, 0x09): 
                 self.hilite(0)
                 return res
@@ -163,10 +163,10 @@ class Editor:
             elif key == 0x7f: 
                 self.wr('\b \b' * len(res))
                 res = ''
-            elif 0x20 <= key < 0xfff0: 
+            elif key == 0: 
                 if len(prompt) + len(res) < Editor.width - 2:
-                    res += chr(key)
-                    self.wr(chr(key))
+                    res += char
+                    self.wr(char)
     def find_in_file(self, pattern, pos, end):
         Editor.find_pattern = pattern 
         if Editor.case != "y":
@@ -203,7 +203,7 @@ class Editor:
         self.total_lines = len(self.content)
         self.cur_line = lrange[0]
         self.mark = None 
-    def handle_edit_keys(self, key): 
+    def handle_edit_keys(self, key, char): 
         l = self.content[self.cur_line]
         if key == 0x0d:
                 self.cur_line += 1
@@ -230,11 +230,11 @@ class Editor:
                 self.undo_add(self.cur_line, [l], 0x08)
                 self.content[self.cur_line] = l[:self.col - 1] + l[self.col:]
                 self.col -= 1
-        elif 0x20 <= key < 0xfff0: 
+        elif key == 0: 
             self.mark = None
-            self.undo_add(self.cur_line, [l], 0x20 if key == 0x20 else 0x41)
-            self.content[self.cur_line] = l[:self.col] + chr(key) + l[self.col:]
-            self.col += 1
+            self.undo_add(self.cur_line, [l], 0x20 if char == " " else 0x41)
+            self.content[self.cur_line] = l[:self.col] + char + l[self.col:]
+            self.col += len(char)
         elif key == 0x10:
             ni = self.spaces(l)
             self.col = ni if self.col != ni else 0
@@ -338,7 +338,7 @@ class Editor:
         while True:
             if not self.rd_any(): 
                 self.display_window() 
-            key = self.get_input() 
+            key, char = self.get_input() 
             self.message = '' 
             if key == 0x11:
                 if self.changed:
@@ -352,7 +352,7 @@ class Editor:
             elif key in (0x17, 0x0f):
                 return key
             else:
-                self.handle_edit_keys(key)
+                self.handle_edit_keys(key, char)
     def get_file(self, fname):
         from os import listdir
         try: from uos import stat

@@ -70,7 +70,7 @@ CPython also accepts data from a pipe or redirection.
 
     to the file mpconfigport.h of the cc3200 branch, rebuild the binary it, and load it to WiPy.
 - pesp8266.py: A version of for the esp8266 port. It requires frozen byte code
-to be enabled, which available from version 1.8.1 on. In order to use it, you have to
+to be enabled, which is available from version 1.8.2 on. In order to use it, you have to
 put pesp8266 into the directory esp8266/modules and rebuild micropython.
 A cross-compiled version may executed from the file system. You have to create a new build, adding:
 
@@ -242,3 +242,7 @@ The final code saving is just a few hundred bytes, so it's still not clear to me
 - Made settings dialogue visible in basic mode, allowing to change both the
 autoindent flag and the search case flag
 - Create the ESP8266 version with all features but mouse support.
+
+**2.8** Support of two byte UTF-8 characters on keyboard input
+- This in implemented for all versions. However WiPy does not support it in the lower
+  levels of sys.stdin.

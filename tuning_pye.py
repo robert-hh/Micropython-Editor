@@ -33,20 +33,19 @@
     def line_edit(self, prompt, default):  ## better one: added cursor keys and backsp, delete
         push_msg = lambda msg: self.wr(msg + "\b" * len(msg)) ## Write a message and move cursor back
         self.goto(Editor.height, 0)
-        self.hilite(True)
+        self.hilite(1)
         self.wr(prompt)
         self.wr(default)
         self.clear_to_eol()
         res = default
-        self.message = ' ' # Shows status after lineedit
         pos = len(res)
         while True:
-            key = self.get_input()  ## Get Char of Fct.
+            key, char = self.get_input()  ## Get Char of Fct.
             if key in (KEY_ENTER, KEY_TAB): ## Finis
-                self.hilite(False)
+                self.hilite(0)
                 return res
             elif key == KEY_QUIT: ## Abort
-                self.hilite(False)
+                self.hilite(0)
                 return None
             elif key == KEY_LEFT:
                 if pos > 0:
@@ -78,14 +77,14 @@
                     res = Editor.yank_buffer[0].strip()[:Editor.width - len(prompt) - 2]
                     self.wr(res)
                     pos = len(res)
-            elif 0x20 <= key < 0xfff0: ## char to be inserted
+            elif key == KEY_NONE: ## char to be inserted
                 if len(prompt) + len(res) < self.width - 2:
-                    res = res[:pos] + chr(key) + res[pos:]
+                    res = res[:pos] + char + res[pos:]
                     self.wr(res[pos])
-                    pos += 1
+                    pos += len(char)
                     push_msg(res[pos:]) ## update tail
 
-    def line_edit(self, prompt, default):  ## simple one: only 4 fcts
+    def line_edit(self, prompt, default):  ## simple one: only 4+1 fcts
         self.goto(Editor.height, 0)
         self.hilite(1)
         self.wr(prompt)
@@ -93,7 +92,7 @@
         self.clear_to_eol()
         res = default
         while True:
-            key = self.get_input()  ## Get Char of Fct.
+            key, char = self.get_input()  ## Get Char of Fct.
             if key in (KEY_ENTER, KEY_TAB): ## Finis
                 self.hilite(0)
                 return res
@@ -107,10 +106,17 @@
             elif key == KEY_DELETE: ## Delete prev. Entry
                 self.wr('\b \b' * len(res))
                 res = ''
-            elif key >= 0x20: ## char to be added at the end
-                if len(prompt) + len(res) < self.width - 2:
-                    res += chr(key)
-                    self.wr(chr(key))
+#ifndef BASIC
+            elif key == KEY_ZAP: ## Get from paste buffer
+                if Editor.yank_buffer:
+                    self.wr('\b \b' * len(res))
+                    res = Editor.yank_buffer[0].strip()[:Editor.width - len(prompt) - 2]
+                    self.wr(res)
+#endif
+            elif key == KEY_NONE: ## character to be added
+                if len(prompt) + len(res) < Editor.width - 2:
+                    res += char
+                    self.wr(char)
 
     def expandtabs(self, s, tabsize = 8):
         import _io

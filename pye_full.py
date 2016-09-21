@@ -22,7 +22,7 @@
 #define REPLACE 1
 #define BRACKET 1
 #define INDENT 1
-    ##define MOUSE 1
+##define MOUSE 1
 #endif
 import sys, gc
 #ifdef LINUX
@@ -110,57 +110,57 @@ KEY_UNDENT    = 0xffff
 class Editor:
 
     KEYMAP = { ## Gets lengthy
-    b"\x1b[A" : KEY_UP,
-    b"\x1b[B" : KEY_DOWN,
-    b"\x1b[D" : KEY_LEFT,
-    b"\x1b[C" : KEY_RIGHT,
-    b"\x1b[H" : KEY_HOME, ## in Linux Terminal
-    b"\x1bOH" : KEY_HOME, ## Picocom, Minicom
-    b"\x1b[1~": KEY_HOME, ## Putty
-    b"\x1b[F" : KEY_END,  ## Linux Terminal
-    b"\x1bOF" : KEY_END,  ## Picocom, Minicom
-    b"\x1b[4~": KEY_END,  ## Putty
-    b"\x1b[5~": KEY_PGUP,
-    b"\x1b[6~": KEY_PGDN,
-    b"\x03"   : KEY_DUP, ## Ctrl-C
-    b"\r"     : KEY_ENTER,
-    b"\x7f"   : KEY_BACKSPACE, ## Ctrl-? (127)
-    b"\x1b[3~": KEY_DELETE,
-    b"\x1b[Z" : KEY_BACKTAB, ## Shift Tab
-    b"\x19"   : KEY_YANK, ## Ctrl-Y alias to Ctrl-X
-    b"\x08"   : KEY_REPLC, ## Ctrl-H
+    "\x1b[A" : KEY_UP,
+    "\x1b[B" : KEY_DOWN,
+    "\x1b[D" : KEY_LEFT,
+    "\x1b[C" : KEY_RIGHT,
+    "\x1b[H" : KEY_HOME, ## in Linux Terminal
+    "\x1bOH" : KEY_HOME, ## Picocom, Minicom
+    "\x1b[1~": KEY_HOME, ## Putty
+    "\x1b[F" : KEY_END,  ## Linux Terminal
+    "\x1bOF" : KEY_END,  ## Picocom, Minicom
+    "\x1b[4~": KEY_END,  ## Putty
+    "\x1b[5~": KEY_PGUP,
+    "\x1b[6~": KEY_PGDN,
+    "\x03"   : KEY_DUP, ## Ctrl-C
+    "\r"     : KEY_ENTER,
+    "\x7f"   : KEY_BACKSPACE, ## Ctrl-? (127)
+    "\x1b[3~": KEY_DELETE,
+    "\x1b[Z" : KEY_BACKTAB, ## Shift Tab
+    "\x19"   : KEY_YANK, ## Ctrl-Y alias to Ctrl-X
+    "\x08"   : KEY_REPLC, ## Ctrl-H
 #ifndef BASIC
 ## keys of BASIC functions mapped onto themselves
 ## may be imitted from KEYMAP
-    b"\x11"   : KEY_QUIT, ## Ctrl-Q
-    b"\n"     : KEY_ENTER,
-    b"\x13"   : KEY_WRITE,  ## Ctrl-S
-    b"\x06"   : KEY_FIND, ## Ctrl-F
-    b"\x0e"   : KEY_FIND_AGAIN, ## Ctrl-N
-    b"\x07"   : KEY_GOTO, ##  Ctrl-G
-    b"\x05"   : KEY_REDRAW, ## Ctrl-E
-    b"\x1a"   : KEY_UNDO, ## Ctrl-Z
-    b"\x09"   : KEY_TAB,
-    b"\x15"   : KEY_BACKTAB, ## Ctrl-U
-    b"\x18"   : KEY_YANK, ## Ctrl-X
-    b"\x16"   : KEY_ZAP, ## Ctrl-V
-    b"\x04"   : KEY_DUP, ## Ctrl-D
-    b"\x0c"   : KEY_MARK, ## Ctrl-L
-    b"\x14"   : KEY_FIRST, ## Ctrl-T
-    b"\x02"   : KEY_LAST,  ## Ctrl-B
-    b"\x01"   : KEY_TOGGLE, ## Ctrl-A
-    b"\x17"   : KEY_NEXT, ## Ctrl-W
-    b"\x0f"   : KEY_GET, ## Ctrl-O
+    "\x11"   : KEY_QUIT, ## Ctrl-Q
+    "\n"     : KEY_ENTER,
+    "\x13"   : KEY_WRITE,  ## Ctrl-S
+    "\x06"   : KEY_FIND, ## Ctrl-F
+    "\x0e"   : KEY_FIND_AGAIN, ## Ctrl-N
+    "\x07"   : KEY_GOTO, ##  Ctrl-G
+    "\x05"   : KEY_REDRAW, ## Ctrl-E
+    "\x1a"   : KEY_UNDO, ## Ctrl-Z
+    "\x09"   : KEY_TAB,
+    "\x15"   : KEY_BACKTAB, ## Ctrl-U
+    "\x18"   : KEY_YANK, ## Ctrl-X
+    "\x16"   : KEY_ZAP, ## Ctrl-V
+    "\x04"   : KEY_DUP, ## Ctrl-D
+    "\x0c"   : KEY_MARK, ## Ctrl-L
+    "\x14"   : KEY_FIRST, ## Ctrl-T
+    "\x02"   : KEY_LAST,  ## Ctrl-B
+    "\x01"   : KEY_TOGGLE, ## Ctrl-A
+    "\x17"   : KEY_NEXT, ## Ctrl-W
+    "\x0f"   : KEY_GET, ## Ctrl-O
 ## other keys
-    b"\x1b[1;5H": KEY_FIRST, ## Ctrl-Home
-    b"\x1b[1;5F": KEY_LAST, ## Ctrl-End
-    b"\x1b[3;5~": KEY_YANK, ## Ctrl-Del
+    "\x1b[1;5H": KEY_FIRST, ## Ctrl-Home
+    "\x1b[1;5F": KEY_LAST, ## Ctrl-End
+    "\x1b[3;5~": KEY_YANK, ## Ctrl-Del
 #endif
 #ifdef BRACKET
-    b"\x0b"   : KEY_MATCH,## Ctrl-K
+    "\x0b"   : KEY_MATCH,## Ctrl-K
 #endif
 #ifdef MOUSE
-    b"\x1b[M" : KEY_MOUSE,
+    "\x1b[M" : KEY_MOUSE,
 #endif
     }
 ## symbols that are shared between instances of Editor
@@ -182,10 +182,10 @@ class Editor:
         self.undo_zero = 0
         self.autoindent = "y"
         self.mark = None
-        self.straight = "y"
 #ifndef BASIC
         self.write_tabs = "n"
 #endif
+
 #ifdef LINUX
     if sys.platform in ("linux", "darwin"):
 
@@ -203,11 +203,14 @@ class Editor:
         def rd(self):
             while True:
                 try: ## WINCH causes interrupt
-                    return os.read(self.sdev,1)
+                    c = os.read(self.sdev,1)
+                    if (c[0] & 0xe0) == 0xc0:  ## utf-8, 2 bytes
+                        c += os.read(self.sdev,1)
+                    return c.decode("UTF-8")[0]
                 except:
                     if Editor.winch: ## simulate REDRAW key
                         Editor.winch = False
-                        return b'\x05'
+                        return '\x05'
 
         @staticmethod
         def init_tty(device, baud):
@@ -241,7 +244,10 @@ class Editor:
         def rd(self):
             while not self.serialcomm.any():
                 pass
-            return self.serialcomm.read(1)
+            c = self.serialcomm.read(1)
+            if (c[0] & 0xe0) == 0xc0:  ## utf-8, 2 bytes
+                c += self.serialcomm.read(1)
+            return c.decode()[0]
 
         @staticmethod
         def init_tty(device, baud):
@@ -268,8 +274,8 @@ class Editor:
 
         def rd(self):
             while True:
-                try: return sys.stdin.read(1).encode()
-                except: return b'\x03'
+                try: return sys.stdin.read(1)
+                except: return '\x03'
 
         @staticmethod
         def init_tty(device, baud):
@@ -283,18 +289,18 @@ class Editor:
         self.wr("\x1b[{};{}H".format(row + 1, col + 1))
 
     def clear_to_eol(self):
-        self.wr(b"\x1b[0K")
+        self.wr("\x1b[0K")
 
     def cursor(self, onoff):
-        self.wr(b"\x1b[?25h" if onoff else b"\x1b[?25l")
+        self.wr("\x1b[?25h" if onoff else "\x1b[?25l")
 
     def hilite(self, mode):
         if mode == 1: ## used for the status line
-            self.wr(b"\x1b[1;47m")
+            self.wr("\x1b[1;47m")
         elif mode == 2: ## used for the marked area
-            self.wr(b"\x1b[43m")
+            self.wr("\x1b[43m")
         else:         ## plain text
-            self.wr(b"\x1b[0m")
+            self.wr("\x1b[0m")
 
 #ifdef MOUSE
     def mouse_reporting(self, onoff):
@@ -318,12 +324,12 @@ class Editor:
 #endif
     def get_screen_size(self):
         self.wr('\x1b[999;999H\x1b[6n')
-        pos = b''
+        pos = ''
         char = self.rd() ## expect ESC[yyy;xxxR
-        while char != b'R':
+        while char != 'R':
             pos += char
             char = self.rd()
-        return [int(i, 10) for i in pos[2:].split(b';')]
+        return [int(i, 10) for i in pos[2:].split(';')]
 
     def redraw(self, flag):
         self.cursor(False)
@@ -348,38 +354,36 @@ class Editor:
     def get_input(self):  ## read from interface/keyboard one byte each and match against function keys
         while True:
             in_buffer = self.rd()
-            if in_buffer == b'\x1b': ## starting with ESC, must be fct
+            if in_buffer == '\x1b': ## starting with ESC, must be fct
                 while True:
                     in_buffer += self.rd()
-                    c = chr(in_buffer[-1])
+                    c = in_buffer[-1]
                     if c == '~' or (c.isalpha() and c != 'O'):
                         break
             if in_buffer in self.KEYMAP:
                 c = self.KEYMAP[in_buffer]
                 if c != KEY_MOUSE:
-                    return c
+                    return c, ""
 #ifdef MOUSE
                 else: ## special for mice
                     self.mouse_fct = ord((self.rd())) ## read 3 more chars
                     self.mouse_x = ord(self.rd()) - 33
                     self.mouse_y = ord(self.rd()) - 33
                     if self.mouse_fct == 0x61:
-                        return KEY_SCRLDN
+                        return KEY_SCRLDN, ""
                     elif self.mouse_fct == 0x60:
-                        return KEY_SCRLUP
+                        return KEY_SCRLUP, ""
                     else:
-                        return KEY_MOUSE ## do nothing but set the cursor
+                        return KEY_MOUSE, "" ## do nothing but set the cursor
 #endif
-            elif len(in_buffer) == 1: ## but only if a single char
-                return in_buffer[0]
+            else:
+                return KEY_NONE, in_buffer
 
     def display_window(self): ## Update window and status line
 ## Force cur_line and col to be in the reasonable bounds
         self.cur_line = min(self.total_lines - 1, max(self.cur_line, 0))
+        self.col = max(0, min(self.col, len(self.content[self.cur_line])))
 ## Check if Column is out of view, and align margin if needed
-        if self.straight != "y":
-            self.col = min(self.col, len(self.content[self.cur_line]))
-        if self.col <  0: self.col = 0
         if self.col >= Editor.width + self.margin:
             self.margin = self.col - Editor.width + (Editor.width >> 2)
         elif self.col < self.margin:
@@ -440,7 +444,7 @@ class Editor:
         res = default
         pos = len(res)
         while True:
-            key = self.get_input()  ## Get Char of Fct.
+            key, char = self.get_input()  ## Get Char of Fct.
             if key in (KEY_ENTER, KEY_TAB): ## Finis
                 self.hilite(0)
                 return res
@@ -477,11 +481,11 @@ class Editor:
                     res = Editor.yank_buffer[0].strip()[:Editor.width - len(prompt) - 2]
                     self.wr(res)
                     pos = len(res)
-            elif 0x20 <= key < 0xfff0: ## char to be inserted
+            elif key == KEY_NONE: ## char to be inserted
                 if len(prompt) + len(res) < self.width - 2:
-                    res = res[:pos] + chr(key) + res[pos:]
+                    res = res[:pos] + char + res[pos:]
                     self.wr(res[pos])
-                    pos += 1
+                    pos += len(char)
                     push_msg(res[pos:]) ## update tail
 
 ## This is the regex version of find.
@@ -537,9 +541,8 @@ class Editor:
         self.cur_line = lrange[0]
         self.mark = None ## unset line mark
 
-    def handle_edit_keys(self, key): ## keys which change content
+    def handle_edit_keys(self, key, char): ## keys which change content
         l = self.content[self.cur_line]
-        jut = self.col - len(l) ## <0: before text end, = 0 at text end, >0 beyond text end
         if key == KEY_DOWN:
 #ifdef SCROLL
             if self.cur_line < self.total_lines - 1:
@@ -572,7 +575,7 @@ class Editor:
                 self.col -= 1
         elif key == KEY_RIGHT:
 #ifndef BASIC
-            if self.straight != "y" and self.col >= len(l) and self.cur_line < self.total_lines - 1:
+            if self.col >= len(l) and self.cur_line < self.total_lines - 1:
                 self.col = 0
                 self.cur_line += 1
 #ifdef SCROLL
@@ -590,17 +593,14 @@ class Editor:
                 self.content[self.cur_line] = l[:self.col] + l[self.col + 1:]
             elif (self.cur_line + 1) < self.total_lines: ## test for last line
                 self.undo_add(self.cur_line, [l, self.content[self.cur_line + 1]], KEY_NONE)
-                if jut > 0: ## Landfill needed
-                    l += ' ' * jut
                 self.content[self.cur_line] = l + self.content.pop(self.cur_line + 1)
                 self.total_lines -= 1
         elif key == KEY_BACKSPACE:
             if self.mark != None:
                 self.delete_lines(False)
             elif self.col > 0:
-                if jut <= 0: ## if on solid ground
-                    self.undo_add(self.cur_line, [l], KEY_BACKSPACE)
-                    self.content[self.cur_line] = l[:self.col - 1] + l[self.col:]
+                self.undo_add(self.cur_line, [l], KEY_BACKSPACE)
+                self.content[self.cur_line] = l[:self.col - 1] + l[self.col:]
                 self.col -= 1
 #ifndef BASIC
             elif self.cur_line > 0: # at the start of a line, but not the first
@@ -610,14 +610,11 @@ class Editor:
                 self.cur_line -= 1
                 self.total_lines -= 1
 #endif
-        elif 0x20 <= key < 0xfff0: ## character to be added
+        elif key == KEY_NONE: ## character to be added
             self.mark = None
-            self.undo_add(self.cur_line, [l], 0x20 if key == 0x20 else 0x41)
-            if jut < 0:
-                self.content[self.cur_line] = l[:self.col] + chr(key) + l[self.col:]
-            else:
-                self.content[self.cur_line] = l + ' ' * jut + chr(key)
-            self.col += 1
+            self.undo_add(self.cur_line, [l], 0x20 if char == " " else 0x41)
+            self.content[self.cur_line] = l[:self.col] + char + l[self.col:]
+            self.col += len(char)
         elif key == KEY_HOME:
             ni = self.spaces(l)
             self.col = ni if self.col != ni else 0
@@ -649,11 +646,11 @@ class Editor:
             self.row = Editor.height - 1 ## will be fixed if required
 #endif
         elif key == KEY_TOGGLE: ## Toggle Autoindent/Statusline/Search case
-            pat = self.line_edit("Case Sensitive Search {}, Autoindent {}, Straight Cursor {}"
+            pat = self.line_edit("Case Sensitive Search {}, Autoindent {}"
 #ifndef BASIC
             ", Tab Size {}, Write Tabs {}"
 #endif
-            ": ".format(Editor.case, self.autoindent, self.straight
+            ": ".format(Editor.case, self.autoindent
 #ifndef BASIC
             , self.tab_size, self.write_tabs
 #endif
@@ -665,7 +662,6 @@ class Editor:
 #ifndef BASIC
                 if res[2]: self.tab_size = int(res[2])
                 if res[3]: self.write_tabs = 'y' if res[3][0] == 'y' else 'n'
-                if res[4]: self.straight = 'y' if res[4][0] == 'y' else 'n'
 #endif
             except:
                 pass
@@ -751,10 +747,7 @@ class Editor:
 #endif
                 ni = self.tab_size - self.col % self.tab_size ## determine spaces to add
                 self.undo_add(self.cur_line, [l], KEY_TAB)
-                if jut < 0:
-                    self.content[self.cur_line] = l[:self.col] + ' ' * ni + l[self.col:]
-                else:
-                    self.content[self.cur_line] = l + ' ' * (jut + ni)
+                self.content[self.cur_line] = l[:self.col] + ' ' * ni + l[self.col:]
                 self.col += ni
 #ifdef INDENT
             else:
@@ -768,15 +761,11 @@ class Editor:
 #ifdef INDENT
             if self.mark == None:
 #endif
-                ni = (self.col - 1) % self.tab_size + 1
-                if jut <= 0:
-                    ni = min(ni, self.spaces(l, self.col)) ## determine spaces to drop
-                    if ni > 0:
-                        self.undo_add(self.cur_line, [l], KEY_BACKTAB)
-                        self.content[self.cur_line] = l[:self.col - ni] + l[self.col:]
-                        self.col -= ni
-                else:
-                    self.col -= min(ni, jut)
+                ni = min((self.col - 1) % self.tab_size + 1, self.spaces(l, self.col)) ## determine spaces to drop
+                if ni > 0:
+                    self.undo_add(self.cur_line, [l], KEY_BACKTAB)
+                    self.content[self.cur_line] = l[:self.col - ni] + l[self.col:]
+                    self.col -= ni
 #ifdef INDENT
             else:
                 lrange = self.line_range()
@@ -807,8 +796,8 @@ class Editor:
                         if ni >= 0: ## Pattern found
                             if q != 'a':
                                 self.display_window()
-                                key = self.get_input()  ## Get Char of Fct.
-                                q = chr(key).lower()
+                                key, char = self.get_input()  ## Get Char of Fct.
+                                q = char.lower()
                             if q == 'q' or key == KEY_QUIT:
                                 break
                             elif q in ('a','y'):
@@ -876,7 +865,7 @@ class Editor:
         while True:
             if not self.rd_any(): ## skip update if a char is waiting
                 self.display_window()  ## Update & display window
-            key = self.get_input()  ## Get Char of Fct-key code
+            key, char = self.get_input()  ## Get Char of Fct-key code
             self.message = '' ## clear message
 
             if key == KEY_QUIT:
@@ -897,7 +886,7 @@ class Editor:
             elif key in (KEY_NEXT, KEY_GET):
                 return key
             else:
-                self.handle_edit_keys(key)
+                self.handle_edit_keys(key, char)
 
 ## packtabs: replace sequence of space by tab
 #ifndef BASIC
