@@ -129,9 +129,6 @@ class Editor:
     "\x1b[Z" : KEY_BACKTAB, ## Shift Tab
     "\x19"   : KEY_YANK, ## Ctrl-Y alias to Ctrl-X
     "\x08"   : KEY_REPLC, ## Ctrl-H
-#ifndef BASIC
-## keys of BASIC functions mapped onto themselves
-## may be imitted from KEYMAP
     "\x11"   : KEY_QUIT, ## Ctrl-Q
     "\n"     : KEY_ENTER,
     "\x13"   : KEY_WRITE,  ## Ctrl-S
@@ -155,7 +152,6 @@ class Editor:
     "\x1b[1;5H": KEY_FIRST, ## Ctrl-Home
     "\x1b[1;5F": KEY_LAST, ## Ctrl-End
     "\x1b[3;5~": KEY_YANK, ## Ctrl-Del
-#endif
 #ifdef BRACKET
     "\x0b"   : KEY_MATCH,## Ctrl-K
 #endif

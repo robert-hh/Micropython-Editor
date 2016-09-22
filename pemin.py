@@ -20,6 +20,28 @@ class Editor:
     "\x1b[Z" : 0x15, 
     "\x19" : 0x18, 
     "\x08" : 0x12, 
+    "\x11" : 0x11, 
+    "\n" : 0x0a,
+    "\x13" : 0x13, 
+    "\x06" : 0x06, 
+    "\x0e" : 0x0e, 
+    "\x07" : 0x07, 
+    "\x05" : 0x05, 
+    "\x1a" : 0x1a, 
+    "\x09" : 0x09,
+    "\x15" : 0x15, 
+    "\x18" : 0x18, 
+    "\x16" : 0x16, 
+    "\x04" : 0x04, 
+    "\x0c" : 0x0c, 
+    "\x14" : 0x14, 
+    "\x02" : 0x02, 
+    "\x01" : 0x01, 
+    "\x17" : 0x17, 
+    "\x0f" : 0x0f, 
+    "\x1b[1;5H": 0x14, 
+    "\x1b[1;5F": 0x02, 
+    "\x1b[3;5~": 0x18, 
     }
     yank_buffer = []
     find_pattern = ""
@@ -87,6 +109,7 @@ class Editor:
         while char != 'R':
             pos += char
             char = self.rd()
+        print(pos)
         return [int(i, 10) for i in pos[2:].split(';')]
     def redraw(self, flag):
         self.cursor(False)
@@ -490,7 +513,7 @@ def pye(*content, tab_size = 4, undo = 50, device = 0, baud = 115200):
                 slot[index].get_file(None)
             elif key == 0x17:
                 index += 1
-        except Exception as err:
+        except (MemoryError, RuntimeError) as err:
             slot[index].message = "{!r}".format(err)
     Editor.deinit_tty()
     Editor.yank_buffer = []
