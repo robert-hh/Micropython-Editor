@@ -75,9 +75,11 @@ class Editor:
             while not self.serialcomm.any():
                 pass
             c = self.serialcomm.read(1)
-            if (c[0] & 0xe0) == 0xc0: 
+            flag = c[0]
+            while (flag & 0xc0) == 0xc0: 
                 c += self.serialcomm.read(1)
-            return c.decode()[0]
+                flag <<= 1
+            return c.decode("UTF-8")
         @staticmethod
         def init_tty(device, baud):
             import pyb

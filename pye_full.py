@@ -204,9 +204,11 @@ class Editor:
             while True:
                 try: ## WINCH causes interrupt
                     c = os.read(self.sdev,1)
-                    if (c[0] & 0xe0) == 0xc0:  ## utf-8, 2 bytes
+                    flag = c[0]
+                    while (flag & 0xc0) == 0xc0:  ## utf-8 char collection
                         c += os.read(self.sdev,1)
-                    return c.decode("UTF-8")[0]
+                        flag <<= 1
+                    return c.decode("UTF-8")
                 except:
                     if Editor.winch: ## simulate REDRAW key
                         Editor.winch = False
@@ -245,9 +247,11 @@ class Editor:
             while not self.serialcomm.any():
                 pass
             c = self.serialcomm.read(1)
-            if (c[0] & 0xe0) == 0xc0:  ## utf-8, 2 bytes
+            flag = c[0]
+            while (flag & 0xc0) == 0xc0:   ## utf-8 char collection
                 c += self.serialcomm.read(1)
-            return c.decode()[0]
+                flag <<= 1
+            return c.decode("UTF-8")
 
         @staticmethod
         def init_tty(device, baud):

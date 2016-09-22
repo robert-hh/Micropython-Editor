@@ -79,9 +79,11 @@ class Editor:
             while True:
                 try: 
                     c = os.read(self.sdev,1)
-                    if (c[0] & 0xe0) == 0xc0: 
+                    flag = c[0]
+                    while (flag & 0xc0) == 0xc0: 
                         c += os.read(self.sdev,1)
-                    return c.decode("UTF-8")[0]
+                        flag <<= 1
+                    return c.decode("UTF-8")
                 except:
                     if Editor.winch: 
                         Editor.winch = False
