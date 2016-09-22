@@ -92,8 +92,7 @@ class Editor:
         while char != 'R':
             pos += char
             char = self.rd()
-        print(pos)
-        return [int(i, 10) for i in pos[2:].split(';')]
+        return [int(i, 10) for i in pos.lstrip("\n\x1b[").split(';')]
     def redraw(self, flag):
         self.cursor(False)
         Editor.height, Editor.width = self.get_screen_size()
@@ -446,7 +445,7 @@ def pye(*content, tab_size = 4, undo = 50, device = 0, baud = 115200):
                 slot[index].get_file(None)
             elif key == 0x17:
                 index += 1
-        except (MemoryError, RuntimeError) as err:
+        except Exception as err:
             slot[index].message = "{!r}".format(err)
     Editor.deinit_tty()
     Editor.yank_buffer = []

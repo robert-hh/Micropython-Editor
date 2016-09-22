@@ -193,7 +193,7 @@ class Editor:
         while char != 'R':
             pos += char
             char = self.rd()
-        return [int(i, 10) for i in pos[2:].split(';')]
+        return [int(i, 10) for i in pos.lstrip("\n\x1b[").split(';')]
 
     def redraw(self, flag):
         self.cursor(False)
