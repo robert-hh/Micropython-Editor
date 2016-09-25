@@ -115,7 +115,7 @@ class Editor:
                 c = self.KEYMAP[in_buffer]
                 if c != 0x1b:
                     return c, ""
-            else:
+            elif ord(in_buffer[0]) >= 32:
                 return 0, in_buffer
     def display_window(self): 
         self.cur_line = min(self.total_lines - 1, max(self.cur_line, 0))

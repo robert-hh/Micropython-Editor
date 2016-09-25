@@ -376,7 +376,7 @@ class Editor:
                     else:
                         return KEY_MOUSE, "" ## do nothing but set the cursor
 #endif
-            else:
+            elif ord(in_buffer[0]) >= 32:
                 return KEY_NONE, in_buffer
 
     def display_window(self): ## Update window and status line
