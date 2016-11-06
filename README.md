@@ -36,8 +36,8 @@ shows most of the commands. Commands marked with (opt) may not be supported in m
 |Ctrl-B|Go to the last line (opt)|
 |Ctrl-K|Goto the bracket matching the one under the cursor (opt)|
 |Ctrl-L|Mark/Unmark the current line. The mark can then be extended by moving the cursor|
-|Ctrl-X|Cut the marked lines (Alternative: Ctrl-Y)|
-|Ctrl-C|Copy the marked lines (Alternative: Ctrl-D)|
+|Ctrl-X or Ctrl-Y|Cut the marked lines
+|Ctrl-C or Ctrl-D|Copy the marked lines
 |Ctrl-V|Insert the copied/cut lines|
 |Ctrl-Z|Undo the last change(s)|
 |Ctrl-A|Change settings for tab size, search case sensitivity, auto-indent and writing tabs (opt)|
@@ -63,6 +63,8 @@ CPython also accepts data from a pipe or redirection.
 - README.md: This one
 - pe.py: Condensed source file for PyBoard with all functions
 - pemin.py: Condensed source file with a reduced function set for PyBoard
+- peteensy.py: Condensed source file for teensy 3.6 and 3.5 with all functions,
+but w/o regular expression search (no re in teensy yet).
 - wipye.py: Condensed source file with a reduced function set for WiPy
 - wipye.mpy: Precompiled version of pye.py for WiPy with all functions enabled. To be able to run it, you have to add:  
 
@@ -243,6 +245,6 @@ The final code saving is just a few hundred bytes, so it's still not clear to me
 autoindent flag and the search case flag
 - Create the ESP8266 version with all features but mouse support.
 
-**2.8** Support of two byte UTF-8 characters on keyboard input
+**2.8** Support of UTF-8 characters on keyboard input
 - This in implemented for all versions. However WiPy does not support it in the lower
   levels of sys.stdin.
