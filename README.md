@@ -2,7 +2,7 @@
 
 **Description**
 
-A small text editor written in Python running on PYBoard, WiPy and ESP8266 modules, allowing to edit files locally. It is based on the editor widget of pfalcon at https://github.com/pfalcon/pyedit. I ported it to PyBoard, WiPy and ESP8266 and added a few functions:
+A small text editor written in Python running on PYBoard, WiPy, LoPy, ESP8266 modules and teensy 3.5/3.6, allowing to edit files locally. It is based on the editor widget of pfalcon at https://github.com/pfalcon/pyedit. I ported it to PyBoard, WiPy and ESP8266 and added a few functions:
 
 - Use USB_VCP/Telnet or UART (PybOard only) for input and output.
 - Changed the read keyboard function to comply with slow byte-by-byte input on serial lines.
@@ -70,20 +70,14 @@ but w/o regular expression search (no re in teensy yet).
 
     `#define MICROPY_PERSISTENT_CODE_LOAD (1)`  
 
-    to the file mpconfigport.h of the cc3200 branch, rebuild the binary it, and load it to WiPy.
+    to the file mpconfigport.h of the cc3200 branch, rebuild the binary, and load it to WiPy.
 - pesp8266.py: A version of for the esp8266 port. It requires frozen byte code
 to be enabled, which is available from version 1.8.2 on. In order to use it, you have to
 put pesp8266 into the directory esp8266/modules and rebuild micropython.
-A cross-compiled version may executed from the file system. You have to create a new build, adding:
-
-     `#define MICROPY_PERSISTENT_CODE_LOAD (1)`  
-
-     to mpconfigport.h and changing line 430 of py/emitglue.c into:  
-
-    `#elif defined(__thumb2__) || defined(__xtensa__)`
+A cross-compiled version may executed from the file system.
 - tuning_pye.py: A file with some improved replacements for functions of pye:
 a) find_in_file() supporting regular expressions,
-b) line_edit() supporting the cursor left/right/home/end keys, and
+b) line_edit() frewer function keys for minimal code size, and
 c) expandtabs() and packtabs() with a second argument for tabsize (not for pye, but maybe useful)
 - strip.sh: sample Shell script which creates the different variants out of pye.py using cpp, including all variants of wipye.py with either speed up scrolling or support replace or support goto bracket or support indent/un-indent or support mouse.
 
@@ -248,3 +242,7 @@ autoindent flag and the search case flag
 **2.8** Support of UTF-8 characters on keyboard input
 - This in implemented for all versions. However WiPy does not support it in the lower
   levels of sys.stdin.
+
+**2.9** Support for teensy 3.5 and 3.6
+- The only change was to add the teensy names to the platform detection
+- Implement full function set for line-edit by default
