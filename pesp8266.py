@@ -20,6 +20,7 @@ class Editor:
     "\x1b[Z" : 0x15, 
     "\x19" : 0x18, 
     "\x08" : 0x12, 
+    "\x12" : 0x12, 
     "\x11" : 0x11, 
     "\n" : 0x0a,
     "\x13" : 0x13, 
@@ -60,7 +61,7 @@ class Editor:
         self.autoindent = "y"
         self.mark = None
         self.write_tabs = "n"
-    if sys.platform in ("WiPy", "esp8266"):
+    if sys.platform in ("WiPy", "LoPy", "esp8266") or sys.platform.startswith("teensy"):
         def wr(self, s):
             sys.stdout.write(s)
         def rd_any(self):
@@ -180,12 +181,14 @@ class Editor:
         return ((self.mark, self.cur_line + 1) if self.mark < self.cur_line else
                 (self.cur_line, self.mark + 1))
     def line_edit(self, prompt, default): 
+        push_msg = lambda msg: self.wr(msg + "\b" * len(msg)) 
         self.goto(Editor.height, 0)
         self.hilite(1)
         self.wr(prompt)
         self.wr(default)
         self.clear_to_eol()
         res = default
+        pos = len(res)
         while True:
             key, char = self.get_input() 
             if key in (0x0a, 0x09): 
@@ -194,22 +197,42 @@ class Editor:
             elif key == 0x11: 
                 self.hilite(0)
                 return None
-            elif key == 0x08: 
-                if (len(res) > 0):
-                    res = res[:len(res)-1]
-                    self.wr('\b \b')
+            elif key == 0x1f:
+                if pos > 0:
+                    self.wr("\b")
+                    pos -= 1
+            elif key == 0x1e:
+                if pos < len(res):
+                    self.wr(res[pos])
+                    pos += 1
             elif key == 0x7f: 
-                self.wr('\b \b' * len(res))
-                res = ''
+                if pos < len(res):
+                    res = res[:pos] + res[pos+1:]
+                    push_msg(res[pos:] + ' ') 
+            elif key == 0x08: 
+                if pos > 0:
+                    res = res[:pos-1] + res[pos:]
+                    self.wr("\b")
+                    pos -= 1
+                    push_msg(res[pos:] + ' ') 
+            elif key == 0x10:
+                self.wr("\b" * pos)
+                pos = 0
+            elif key == 0x03:
+                self.wr(res[pos:])
+                pos = len(res)
             elif key == 0x16: 
                 if Editor.yank_buffer:
-                    self.wr('\b \b' * len(res))
+                    self.wr('\b' * pos + ' ' * len(res) + '\b' * len(res))
                     res = Editor.yank_buffer[0].strip()[:Editor.width - len(prompt) - 2]
                     self.wr(res)
+                    pos = len(res)
             elif key == 0: 
-                if len(prompt) + len(res) < Editor.width - 2:
-                    res += char
-                    self.wr(char)
+                if len(prompt) + len(res) < self.width - 2:
+                    res = res[:pos] + char + res[pos:]
+                    self.wr(res[pos])
+                    pos += len(char)
+                    push_msg(res[pos:]) 
     def find_in_file(self, pattern, pos, end):
         Editor.find_pattern = pattern 
         if Editor.case != "y":
@@ -547,8 +570,8 @@ class Editor:
                     with open(fname) as f:
                         self.content = f.readlines()
                 Editor.tab_seen = 'n'
-                for i in range(len(self.content)): 
-                    self.content[i] = expandtabs(self.content[i].rstrip('\r\n\t '))
+                for i, l in enumerate(self.content):
+                    self.content[i] = expandtabs(l.rstrip('\r\n\t '))
                 self.write_tabs = Editor.tab_seen
     def put_file(self, fname):
         if True:
@@ -588,8 +611,10 @@ def pye(*content, tab_size = 4, undo = 50, device = 0, baud = 115200):
         for f in content:
             if index: slot.append(Editor(tab_size, undo))
             if type(f) == str and f: 
-                try: slot[index].get_file(f)
-                except: slot[index].message = "File not found"
+                try:
+                    slot[index].get_file(f)
+                except Exception as err:
+                    slot[index].message = "{!r}".format(err)
             elif type(f) == list and len(f) > 0 and type(f[0]) == str:
                 slot[index].content = f 
             index += 1

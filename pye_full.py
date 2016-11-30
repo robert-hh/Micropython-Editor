@@ -129,6 +129,7 @@ class Editor:
     "\x1b[Z" : KEY_BACKTAB, ## Shift Tab
     "\x19"   : KEY_YANK, ## Ctrl-Y alias to Ctrl-X
     "\x08"   : KEY_REPLC, ## Ctrl-H
+    "\x12"   : KEY_REPLC, ## Ctrl-R
     "\x11"   : KEY_QUIT, ## Ctrl-Q
     "\n"     : KEY_ENTER,
     "\x13"   : KEY_WRITE,  ## Ctrl-S
@@ -264,8 +265,8 @@ class Editor:
             if not Editor.sdev:
                 Editor.serialcomm.setinterrupt(3)
 #endif
-#if defined(WIPY) || defined(ESP8266)
-    if sys.platform in ("WiPy", "esp8266"):
+#if defined(WIPY) || defined(ESP8266) || defined(TEENSY)
+    if sys.platform in ("WiPy", "LoPy", "esp8266") or sys.platform.startswith("teensy"):
         def wr(self, s):
             sys.stdout.write(s)
 
@@ -929,8 +930,8 @@ class Editor:
 #ifndef BASIC
                 Editor.tab_seen = 'n'
 #endif
-                for i in range(len(self.content)):  ## strip and convert
-                    self.content[i] = expandtabs(self.content[i].rstrip('\r\n\t '))
+                for i, l in enumerate(self.content): 
+                    self.content[i] = expandtabs(l.rstrip('\r\n\t '))
 #ifndef BASIC
                 self.write_tabs = Editor.tab_seen
 #endif
@@ -990,8 +991,10 @@ def pye(*content, tab_size = 4, undo = 50, device = 0, baud = 115200):
         for f in content:
             if index: slot.append(Editor(tab_size, undo))
             if type(f) == str and f: ## String = non-empty Filename
-                try: slot[index].get_file(f)
-                except: slot[index].message = "File not found"
+                try: 
+                    slot[index].get_file(f)
+                except Exception as err:
+                    slot[index].message = "{!r}".format(err)
             elif type(f) == list and len(f) > 0 and type(f[0]) == str:
                 slot[index].content = f ## non-empty list of strings -> edit
             index += 1
@@ -1035,8 +1038,8 @@ if __name__ == "__main__":
                     name = sys.stdin.readlines()
                     os.close(0) ## close and repopen /dev/tty
                     fd_tty = os.open("/dev/tty", os.O_RDONLY) ## memorized, if new fd
-                    for i in range(len(name)):  ## strip and convert
-                        name[i] = expandtabs(name[i].rstrip('\r\n\t '))
+                    for i, l in enumerate(name):  ## strip and convert
+                        name[i] = expandtabs(l.rstrip('\r\n\t '))
             pye(name, undo = 500, device=fd_tty)
     else:
         print ("\nSorry, this OS is not supported (yet)")

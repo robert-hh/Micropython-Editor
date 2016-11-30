@@ -129,6 +129,7 @@ class Editor:
     "\x1b[Z" : KEY_BACKTAB, ## Shift Tab
     "\x19"   : KEY_YANK, ## Ctrl-Y alias to Ctrl-X
     "\x08"   : KEY_REPLC, ## Ctrl-H
+    "\x12"   : KEY_REPLC, ## Ctrl-R
     "\x11"   : KEY_QUIT, ## Ctrl-Q
     "\n"     : KEY_ENTER,
     "\x13"   : KEY_WRITE,  ## Ctrl-S
@@ -264,8 +265,8 @@ class Editor:
             if not Editor.sdev:
                 Editor.serialcomm.setinterrupt(3)
 #endif
-#if defined(WIPY) || defined(ESP8266)
-    if sys.platform in ("WiPy", "esp8266"):
+#if defined(WIPY) || defined(ESP8266) || defined(TEENSY)
+    if sys.platform in ("WiPy", "LoPy", "esp8266") or sys.platform.startswith("teensy"):
         def wr(self, s):
             sys.stdout.write(s)
 
@@ -436,13 +437,15 @@ class Editor:
         return ((self.mark, self.cur_line + 1) if self.mark < self.cur_line else
                 (self.cur_line, self.mark + 1))
 
-    def line_edit(self, prompt, default):  ## simple one: only 4 fcts
+    def line_edit(self, prompt, default):  ## better one: added cursor keys and backsp, delete
+        push_msg = lambda msg: self.wr(msg + "\b" * len(msg)) ## Write a message and move cursor back
         self.goto(Editor.height, 0)
         self.hilite(1)
         self.wr(prompt)
         self.wr(default)
         self.clear_to_eol()
         res = default
+        pos = len(res)
         while True:
             key, char = self.get_input()  ## Get Char of Fct.
             if key in (KEY_ENTER, KEY_TAB): ## Finis
@@ -451,24 +454,44 @@ class Editor:
             elif key == KEY_QUIT: ## Abort
                 self.hilite(0)
                 return None
+            elif key == KEY_LEFT:
+                if pos > 0:
+                    self.wr("\b")
+                    pos -= 1
+            elif key == KEY_RIGHT:
+                if pos < len(res):
+                    self.wr(res[pos])
+                    pos += 1
+            elif key == KEY_DELETE: ## Delete
+                if pos < len(res):
+                    res = res[:pos] + res[pos+1:]
+                    push_msg(res[pos:] + ' ') ## update tail
             elif key == KEY_BACKSPACE: ## Backspace
-                if (len(res) > 0):
-                    res = res[:len(res)-1]
-                    self.wr('\b \b')
-            elif key == KEY_DELETE: ## Delete prev. Entry
-                self.wr('\b \b' * len(res))
-                res = ''
+                if pos > 0:
+                    res = res[:pos-1] + res[pos:]
+                    self.wr("\b")
+                    pos -= 1
+                    push_msg(res[pos:] + ' ') ## update tail
 #ifndef BASIC
-            elif key == KEY_ZAP: ## Get from paste buffer
+            elif key == KEY_HOME:
+                self.wr("\b" * pos)
+                pos = 0
+            elif key == KEY_END:
+                self.wr(res[pos:])
+                pos = len(res)
+            elif key == KEY_ZAP: ## Get from content
                 if Editor.yank_buffer:
-                    self.wr('\b \b' * len(res))
+                    self.wr('\b' * pos + ' ' * len(res) + '\b' * len(res))
                     res = Editor.yank_buffer[0].strip()[:Editor.width - len(prompt) - 2]
                     self.wr(res)
+                    pos = len(res)
 #endif
-            elif key == KEY_NONE: ## character to be added
-                if len(prompt) + len(res) < Editor.width - 2:
-                    res += char
-                    self.wr(char)
+            elif key == KEY_NONE: ## char to be inserted
+                if len(prompt) + len(res) < self.width - 2:
+                    res = res[:pos] + char + res[pos:]
+                    self.wr(res[pos])
+                    pos += len(char)
+                    push_msg(res[pos:]) ## update tail
 
     def find_in_file(self, pattern, pos, end):
         Editor.find_pattern = pattern # remember it
@@ -916,8 +939,8 @@ class Editor:
 #ifndef BASIC
                 Editor.tab_seen = 'n'
 #endif
-                for i in range(len(self.content)):  ## strip and convert
-                    self.content[i] = expandtabs(self.content[i].rstrip('\r\n\t '))
+                for i, l in enumerate(self.content): 
+                    self.content[i] = expandtabs(l.rstrip('\r\n\t '))
 #ifndef BASIC
                 self.write_tabs = Editor.tab_seen
 #endif
@@ -977,8 +1000,10 @@ def pye(*content, tab_size = 4, undo = 50, device = 0, baud = 115200):
         for f in content:
             if index: slot.append(Editor(tab_size, undo))
             if type(f) == str and f: ## String = non-empty Filename
-                try: slot[index].get_file(f)
-                except: slot[index].message = "File not found"
+                try: 
+                    slot[index].get_file(f)
+                except Exception as err:
+                    slot[index].message = "{!r}".format(err)
             elif type(f) == list and len(f) > 0 and type(f[0]) == str:
                 slot[index].content = f ## non-empty list of strings -> edit
             index += 1
@@ -1022,8 +1047,8 @@ if __name__ == "__main__":
                     name = sys.stdin.readlines()
                     os.close(0) ## close and repopen /dev/tty
                     fd_tty = os.open("/dev/tty", os.O_RDONLY) ## memorized, if new fd
-                    for i in range(len(name)):  ## strip and convert
-                        name[i] = expandtabs(name[i].rstrip('\r\n\t '))
+                    for i, l in enumerate(name):  ## strip and convert
+                        name[i] = expandtabs(l.rstrip('\r\n\t '))
             pye(name, undo = 500, device=fd_tty)
     else:
         print ("\nSorry, this OS is not supported (yet)")

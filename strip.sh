@@ -1,22 +1,31 @@
 # !sh
+# cpp -D ESP8266 -D DEFINES -D BASIC -D SCROLL pye.py | sed "s/#.*$//" | sed "/^$/d" >pesp8266.py
+cpp -D ESP8266 -D DEFINES -D SCROLL pye.py | sed "s/#.*$//" | sed "/^$/d" >pesp8266.py
+#
 cpp -D BASIC -D WIPY -D DEFINES pye.py | sed "s/#.*$//" | sed "/^$/d" >wipye.py
-cpp -D BASIC -D WIPY -D DEFINES -D MOUSE pye.py | sed "s/#.*$//" | sed "/^$/d" >wipye_mouse.py
 cpp -D BASIC -D WIPY -D DEFINES -D INDENT pye.py | sed "s/#.*$//" | sed "/^$/d" >wipye_indt.py
 cpp -D BASIC -D WIPY -D DEFINES -D REPLACE pye.py | sed "s/#.*$//" | sed "/^$/d" >wipye_rplc.py
-cpp -D BASIC -D WIPY -D DEFINES -D SCROLL pye.py | sed "s/#.*$//" | sed "/^$/d" >wipye_scrl.py
-cpp -D BASIC -D WIPY -D DEFINES -D BRACKET pye.py | sed "s/#.*$//" | sed "/^$/d" >wipye_brkt.py
+#
 cpp -D BASIC -D PYBOARD -D DEFINES -D REPLACE -D INDENT pye.py | sed "s/#.*$//" | sed "/^$/d" >pemin.py
-cpp -D PYBOARD -D DEFINES pye.py | sed "s/#.*$//" | sed "/^$/d" >pe.py
-cpp -D LINUX -D SCROLL -D DEFINES pye.py | sed "s/#.*$//" | sed "/^$/d" >pex.py
+cpp -D PYBOARD -D DEFINES -D MOUSE pye.py | sed "s/#.*$//" | sed "/^$/d" >pe.py
+cpp -D LINUX -D SCROLL -D DEFINES -D MOUSE pye.py | sed "s/#.*$//" | sed "/^$/d" >pex.py
 cat shebang pex.py >pye
 chmod +x pye
 rm pex.py
 #
-cpp -D BASIC -D WIPY -D DEFINES pye2.py | sed "s/#.*$//" | sed "/^$/d" >wipye2.py
-cpp -D PYBOARD -D DEFINES pye2.py | sed "s/#.*$//" | sed "/^$/d" >pe2.py
-cpp -D LINUX -D SCROLL pye2.py | grep -v "^# .*$" >pex2.py
+cpp -D PYBOARD -D DEFINES -D MOUSE pye2.py | sed "s/#.*$//" | sed "/^$/d" >pe2.py
+cpp -D LINUX  -D DEFINES -D SCROLL -D MOUSE pye2.py | grep -v "^# .*$" >pex2.py
 cat shebang pex2.py >pye2
 chmod +x pye2
 rm pex2.py
 #
+cpp -D PYBOARD -D DEFINES -D MOUSE pye_full.py | sed "s/#.*$//" | sed "/^$/d" >pefull.py
+cpp -D LINUX -D SCROLL -D MOUSE -D DEFINES pye_full.py | sed "s/#.*$//" | sed "/^$/d" >pex.py
+cat shebang pex.py >pye_full
+chmod +x pye_full
+rm pex.py
+#
+mpy-cross -o wipye.mpy pesp8266.py
+cp pesp8266.py peteensy.py
+
 
