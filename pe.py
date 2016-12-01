@@ -62,7 +62,7 @@ class Editor:
         self.autoindent = "y"
         self.mark = None
         self.write_tabs = "n"
-    if sys.platform == "pyboard":
+    if sys.platform in ("pyboard", "teensy-3.5", "teensy-3.6"):
         def wr(self,s):
             ns = 0
             while ns < len(s): 
@@ -108,6 +108,18 @@ class Editor:
             self.wr("\x1b[0m")
     def mouse_reporting(self, onoff):
         self.wr('\x1b[?9h' if onoff else '\x1b[?9l') 
+    def scroll_region(self, stop):
+        self.wr('\x1b[1;{}r'.format(stop) if stop else '\x1b[r') 
+    def scroll_up(self, scrolling):
+        Editor.scrbuf[scrolling:] = Editor.scrbuf[:-scrolling]
+        Editor.scrbuf[:scrolling] = [''] * scrolling
+        self.goto(0, 0)
+        self.wr("\x1bM" * scrolling)
+    def scroll_down(self, scrolling):
+        Editor.scrbuf[:-scrolling] = Editor.scrbuf[scrolling:]
+        Editor.scrbuf[-scrolling:] = [''] * scrolling
+        self.goto(Editor.height - 1, 0)
+        self.wr("\x1bD " * scrolling)
     def get_screen_size(self):
         self.wr('\x1b[999;999H\x1b[6n')
         pos = ''
@@ -122,6 +134,7 @@ class Editor:
         Editor.height -= 1
         Editor.scrbuf = [(False,"\x00")] * Editor.height 
         self.row = min(Editor.height - 1, self.row)
+        self.scroll_region(Editor.height)
         self.mouse_reporting(True) 
         if sys.implementation.name == "micropython":
             gc.collect()
@@ -291,19 +304,29 @@ class Editor:
     def handle_edit_keys(self, key, char): 
         l = self.content[self.cur_line]
         if key == 0x0d:
+            if self.cur_line < self.total_lines - 1:
                 self.cur_line += 1
+                if self.cur_line == self.top_line + Editor.height:
+                    self.scroll_down(1)
         elif key == 0x0b:
+            if self.cur_line > 0:
                 self.cur_line -= 1
+                if self.cur_line < self.top_line:
+                    self.scroll_up(1)
         elif key == 0x1f:
             if self.col == 0 and self.cur_line > 0:
                 self.cur_line -= 1
                 self.col = len(self.content[self.cur_line])
+                if self.cur_line < self.top_line:
+                    self.scroll_up(1)
             else:
                 self.col -= 1
         elif key == 0x1e:
             if self.col >= len(l) and self.cur_line < self.total_lines - 1:
                 self.col = 0
                 self.cur_line += 1
+                if self.cur_line == self.top_line + Editor.height:
+                    self.scroll_down(1)
             else:
                 self.col += 1
         elif key == 0x7f:
@@ -386,10 +409,12 @@ class Editor:
             if self.top_line > 0:
                 self.top_line = max(self.top_line - 3, 0)
                 self.cur_line = min(self.cur_line, self.top_line + Editor.height - 1)
+                self.scroll_up(3)
         elif key == 0x1d: 
             if self.top_line + Editor.height < self.total_lines:
                 self.top_line = min(self.top_line + 3, self.total_lines - 1)
                 self.cur_line = max(self.cur_line, self.top_line)
+                self.scroll_down(3)
         elif key == 0xfffd:
             if self.col < len(l): 
                 opening = "([{<"
@@ -556,6 +581,7 @@ class Editor:
                     res = self.line_edit("Content changed! Quit without saving (y/N)? ", "N")
                     if not res or res[0].upper() != 'Y':
                         continue
+                self.scroll_region(0)
                 self.mouse_reporting(False) 
                 self.goto(Editor.height, 0)
                 self.clear_to_eol()

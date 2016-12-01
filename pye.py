@@ -228,8 +228,8 @@ class Editor:
             Editor.winch = True
             return True
 #endif
-#ifdef PYBOARD
-    if sys.platform == "pyboard":
+#if defined (PYBOARD) || defined (TEENSY)
+    if sys.platform in ("pyboard", "teensy-3.5", "teensy-3.6"):
         def wr(self,s):
             ns = 0
             while ns < len(s): # complicated but needed, since USB_VCP.write() has issues
@@ -265,8 +265,8 @@ class Editor:
             if not Editor.sdev:
                 Editor.serialcomm.setinterrupt(3)
 #endif
-#if defined(WIPY) || defined(ESP8266) || defined(TEENSY)
-    if sys.platform in ("WiPy", "LoPy", "esp8266") or sys.platform.startswith("teensy"):
+#if defined(WIPY) || defined(ESP8266)
+    if sys.platform in ("WiPy", "LoPy", "esp8266"):
         def wr(self, s):
             sys.stdout.write(s)
 

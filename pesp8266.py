@@ -61,7 +61,7 @@ class Editor:
         self.autoindent = "y"
         self.mark = None
         self.write_tabs = "n"
-    if sys.platform in ("WiPy", "LoPy", "esp8266") or sys.platform.startswith("teensy"):
+    if sys.platform in ("WiPy", "LoPy", "esp8266"):
         def wr(self, s):
             sys.stdout.write(s)
         def rd_any(self):
