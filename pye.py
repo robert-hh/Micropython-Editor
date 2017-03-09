@@ -265,8 +265,8 @@ class Editor:
             if not Editor.sdev:
                 Editor.serialcomm.setinterrupt(3)
 #endif
-#if defined(WIPY) || defined(ESP8266)
-    if sys.platform in ("WiPy", "LoPy", "esp8266"):
+#if defined(WIPY) || defined(ESP8266) || defined(ESP32)
+    if sys.platform in ("WiPy", "LoPy", "esp8266", "esp32"):
         def wr(self, s):
             sys.stdout.write(s)
 
@@ -276,7 +276,7 @@ class Editor:
         def rd(self):
             while True:
                 try: return sys.stdin.read(1)
-                except: return '\x03'
+                except KeyboardInterrupt: return '\x03'
 
         @staticmethod
         def init_tty(device, baud):
@@ -367,15 +367,15 @@ class Editor:
                     return c, ""
 #ifdef MOUSE
                 else: ## special for mice
-                    self.mouse_fct = ord((self.rd())) ## read 3 more chars
-                    self.mouse_x = ord(self.rd()) - 33
-                    self.mouse_y = ord(self.rd()) - 33
-                    if self.mouse_fct == 0x61:
+                    mouse_fct = ord((self.rd())) ## read 3 more chars
+                    mouse_x = ord(self.rd()) - 33
+                    mouse_y = ord(self.rd()) - 33
+                    if mouse_fct == 0x61:
                         return KEY_SCRLDN, ""
-                    elif self.mouse_fct == 0x60:
+                    elif mouse_fct == 0x60:
                         return KEY_SCRLUP, ""
                     else:
-                        return KEY_MOUSE, "" ## do nothing but set the cursor
+                        return KEY_MOUSE, [mouse_x, mouse_y, mouse_fct] ## set the cursor
 #endif
             elif ord(in_buffer[0]) >= 32:
                 return KEY_NONE, in_buffer
@@ -660,10 +660,10 @@ class Editor:
                 pass
 #ifdef MOUSE
         elif key == KEY_MOUSE: ## Set Cursor
-            if self.mouse_y < Editor.height:
-                self.col = self.mouse_x + self.margin
-                self.cur_line = self.mouse_y + self.top_line
-                if self.mouse_fct in (0x22, 0x30): ## Right/Ctrl button on Mouse
+            if char[1] < Editor.height:
+                self.col = char[0] + self.margin
+                self.cur_line = char[1] + self.top_line
+                if char[2] in (0x22, 0x30): ## Right/Ctrl button on Mouse
                     self.mark = self.cur_line if self.mark == None else None
         elif key == KEY_SCRLUP: ##
             if self.top_line > 0:

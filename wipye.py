@@ -58,7 +58,7 @@ class Editor:
         self.undo_zero = 0
         self.autoindent = "y"
         self.mark = None
-    if sys.platform in ("WiPy", "LoPy", "esp8266"):
+    if sys.platform in ("WiPy", "LoPy", "esp8266", "esp32"):
         def wr(self, s):
             sys.stdout.write(s)
         def rd_any(self):
@@ -66,7 +66,7 @@ class Editor:
         def rd(self):
             while True:
                 try: return sys.stdin.read(1)
-                except: return '\x03'
+                except KeyboardInterrupt: return '\x03'
         @staticmethod
         def init_tty(device, baud):
             pass

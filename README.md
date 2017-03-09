@@ -246,3 +246,7 @@ autoindent flag and the search case flag
 **2.9** Support for teensy 3.5 and 3.6
 - The only change was to add the teensy names to the platform detection
 - Implement full function set for line-edit by default
+
+**2.10** Support for esp32; simplified mouse handling
+- The only change was adding the esp32  name to the platformn detection
+- Do not use global symbols for mouse parameters

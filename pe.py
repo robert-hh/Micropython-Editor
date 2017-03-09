@@ -153,15 +153,15 @@ class Editor:
                 if c != 0x1b:
                     return c, ""
                 else: 
-                    self.mouse_fct = ord((self.rd())) 
-                    self.mouse_x = ord(self.rd()) - 33
-                    self.mouse_y = ord(self.rd()) - 33
-                    if self.mouse_fct == 0x61:
+                    mouse_fct = ord((self.rd())) 
+                    mouse_x = ord(self.rd()) - 33
+                    mouse_y = ord(self.rd()) - 33
+                    if mouse_fct == 0x61:
                         return 0x1d, ""
-                    elif self.mouse_fct == 0x60:
+                    elif mouse_fct == 0x60:
                         return 0x1c, ""
                     else:
-                        return 0x1b, "" 
+                        return 0x1b, [mouse_x, mouse_y, mouse_fct] 
             elif ord(in_buffer[0]) >= 32:
                 return 0, in_buffer
     def display_window(self): 
@@ -400,10 +400,10 @@ class Editor:
             except:
                 pass
         elif key == 0x1b: 
-            if self.mouse_y < Editor.height:
-                self.col = self.mouse_x + self.margin
-                self.cur_line = self.mouse_y + self.top_line
-                if self.mouse_fct in (0x22, 0x30): 
+            if char[1] < Editor.height:
+                self.col = char[0] + self.margin
+                self.cur_line = char[1] + self.top_line
+                if char[2] in (0x22, 0x30): 
                     self.mark = self.cur_line if self.mark == None else None
         elif key == 0x1c: 
             if self.top_line > 0:

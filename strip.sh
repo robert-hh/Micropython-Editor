@@ -20,6 +20,7 @@ chmod +x pye2
 rm pex2.py
 #
 cpp -D PYBOARD -D DEFINES -D MOUSE  -D SCROLL pye_full.py | sed "s/#.*$//" | sed "/^$/d" >pefull.py
+cpp -D ESP32 -D DEFINES -D MOUSE  -D SCROLL pye_full.py | sed "s/#.*$//" | sed "/^$/d" >pesp32.py
 cpp -D LINUX -D SCROLL -D MOUSE -D DEFINES pye_full.py | sed "s/#.*$//" | sed "/^$/d" >pex.py
 cat shebang pex.py >pye_full
 chmod +x pye_full
