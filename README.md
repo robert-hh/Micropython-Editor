@@ -26,7 +26,7 @@ shows most of the commands. Commands marked with (opt) may not be supported in m
 |Ctrl-O|Open a new file. If the file name is left empty, an empty buffer is opened|
 |Ctrl-W|Toggle to the next file buffer|
 |Ctrl-Q|Close a file buffer or end line-edit|
-|Ctrl-S|Save to file|
+|Ctrl-S|Save to file with the option to change the file name|
 |Ctrl-W|Switch to the next file buffer|
 |Ctrl-F|Find|
 |Ctrl-N|Repeat last find|

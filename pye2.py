@@ -846,7 +846,7 @@ class Editor:
                 self.put_file(fname)
                 self.changed = '' ## clear change flag
                 self.undo_zero = len(self.undo) ## remember state
-                if not self.fname: self.fname = fname ## remember (new) name
+                self.fname = fname ## remember (new) name
         elif key == KEY_UNDO:
             if len(self.undo) > 0:
                 action = self.undo.pop(-1) ## get action from stack

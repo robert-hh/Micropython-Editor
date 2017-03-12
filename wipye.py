@@ -349,7 +349,7 @@ class Editor:
                 self.put_file(fname)
                 self.changed = '' 
                 self.undo_zero = len(self.undo) 
-                if not self.fname: self.fname = fname 
+                self.fname = fname 
         elif key == 0x1a:
             if len(self.undo) > 0:
                 action = self.undo.pop(-1) 

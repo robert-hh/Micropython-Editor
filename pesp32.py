@@ -1,8 +1,4 @@
-#!/usr/bin/env python3
-
 import sys, gc
-if sys.platform in ("linux", "darwin"):
-    import os, signal, tty, termios, select
 class Editor:
     KEYMAP = { 
     "\x1b[A" : 0x0b,
@@ -66,43 +62,21 @@ class Editor:
         self.autoindent = "y"
         self.mark = None
         self.write_tabs = "n"
-    if sys.platform in ("linux", "darwin"):
-        def wr(self,s):
-            if isinstance(s, str):
-                s = bytes(s, "utf-8")
-            os.write(1, s)
+    if sys.platform in ("WiPy", "LoPy", "esp8266", "esp32"):
+        def wr(self, s):
+            sys.stdout.write(s)
         def rd_any(self):
-            if sys.implementation.name == "cpython":
-                return select.select([self.sdev], [], [], 0)[0] != []
-            else:
-                return False
+            return False
         def rd(self):
             while True:
-                try: 
-                    c = os.read(self.sdev,1)
-                    flag = c[0]
-                    while (flag & 0xc0) == 0xc0: 
-                        c += os.read(self.sdev,1)
-                        flag <<= 1
-                    return c.decode("UTF-8")
-                except:
-                    if Editor.winch: 
-                        Editor.winch = False
-                        return '\x05'
+                try: return sys.stdin.read(1)
+                except KeyboardInterrupt: return '\x03'
         @staticmethod
         def init_tty(device, baud):
-            Editor.org_termios = termios.tcgetattr(device)
-            tty.setraw(device)
-            Editor.sdev = device
-            Editor.winch = False
+            pass
         @staticmethod
         def deinit_tty():
-            termios.tcsetattr(Editor.sdev, termios.TCSANOW, Editor.org_termios)
-        @staticmethod
-        def signal_handler(sig, frame):
-            signal.signal(signal.SIGWINCH, signal.SIG_IGN)
-            Editor.winch = True
-            return True
+            pass
     def goto(self, row, col):
         self.wr("\x1b[{};{}H".format(row + 1, col + 1))
     def clear_to_eol(self):
@@ -146,8 +120,6 @@ class Editor:
         self.row = min(Editor.height - 1, self.row)
         self.scroll_region(Editor.height)
         self.mouse_reporting(True) 
-        if sys.platform in ("linux", "darwin") and sys.implementation.name == "cpython":
-            signal.signal(signal.SIGWINCH, Editor.signal_handler)
         if sys.implementation.name == "micropython":
             gc.collect()
             if flag: self.message = "{} Bytes Memory available".format(gc.mem_free())
@@ -247,6 +219,12 @@ class Editor:
                 if pos < len(res):
                     self.wr(res[pos])
                     pos += 1
+            elif key == 0x10:
+                self.wr("\b" * pos)
+                pos = 0
+            elif key == 0x03:
+                self.wr(res[pos:])
+                pos = len(res)
             elif key == 0x7f: 
                 if pos < len(res):
                     res = res[:pos] + res[pos+1:]
@@ -257,12 +235,6 @@ class Editor:
                     self.wr("\b")
                     pos -= 1
                     push_msg(res[pos:] + ' ') 
-            elif key == 0x10:
-                self.wr("\b" * pos)
-                pos = 0
-            elif key == 0x03:
-                self.wr(res[pos:])
-                pos = len(res)
             elif key == 0x16: 
                 if Editor.yank_buffer:
                     self.wr('\b' * pos + ' ' * len(res) + '\b' * len(res))
@@ -275,23 +247,32 @@ class Editor:
                     self.wr(res[pos])
                     pos += len(char)
                     push_msg(res[pos:]) 
-    def find_in_file(self, pattern, pos, end):
+    def find_in_file(self, pattern, col, end):
+        try: from ure import compile
+        except: from re import compile
         Editor.find_pattern = pattern 
         if Editor.case != "y":
             pattern = pattern.lower()
-        spos = pos
+        try:
+            rex = compile(pattern)
+        except:
+            self.message = "Invalid pattern: " + pattern
+            return -1
+        scol = col
         for line in range(self.cur_line, end):
+            l = self.content[line]
             if Editor.case != "y":
-                match = self.content[line][spos:].lower().find(pattern)
-            else:
-                match = self.content[line][spos:].find(pattern)
-            if match >= 0: 
-                self.col = match + spos
-                self.cur_line = line
-                return len(pattern)
-            spos = 0
+                l = l.lower()
+            ecol = 1 if pattern[0] == '^' else len(l) + 1
+            for i in range(scol, ecol):
+                match = rex.match(l[i:])
+                if match: 
+                    self.col = i
+                    self.cur_line = line
+                    return len(match.group(0))
+            scol = 0
         else:
-            self.message = "No match: " + pattern
+            self.message = pattern + " not found"
             return -1
     def undo_add(self, lnum, text, key, span = 1):
         self.changed = '*'
@@ -536,6 +517,9 @@ class Editor:
                                 count += 1
                             else: 
                                  self.col += 1
+                            if self.col >= len(self.content[self.cur_line]): 
+                                self.cur_line += 1
+                                self.col = 0
                         else: 
                             break
                     self.cur_line = cur_line 
@@ -626,11 +610,6 @@ class Editor:
                 self.content = ["Directory '{}'".format(fname), ""] + sorted(listdir(fname))
             else:
                 if True:
-                    pass
-                if sys.implementation.name == "cpython":
-                    with open(fname, errors="ignore") as f:
-                        self.content = f.readlines()
-                else:
                     with open(fname) as f:
                         self.content = f.readlines()
                 Editor.tab_seen = 'n'
@@ -639,11 +618,6 @@ class Editor:
                 self.write_tabs = Editor.tab_seen
     def put_file(self, fname):
         if True:
-            pass
-        if sys.platform in ("linux", "darwin"):
-            from os import unlink, rename
-            remove = unlink
-        else:
             from uos import remove, rename
         tmpfile = fname + ".pyetmp"
         with open(tmpfile, "w") as f:
@@ -707,23 +681,3 @@ def pye(*content, tab_size = 4, undo = 50, device = 0, baud = 115200):
     Editor.deinit_tty()
     Editor.yank_buffer = []
     return slot[0].content if (slot[0].fname == "") else slot[0].fname
-if __name__ == "__main__":
-    if sys.platform in ("linux", "darwin"):
-        import stat
-        fd_tty = 0
-        if len(sys.argv) > 1:
-            name = sys.argv[1:]
-            pye(*name, undo = 500, device=fd_tty)
-        else:
-            name = ""
-            if sys.implementation.name == "cpython":
-                mode = os.fstat(0).st_mode
-                if stat.S_ISFIFO(mode) or stat.S_ISREG(mode):
-                    name = sys.stdin.readlines()
-                    os.close(0) 
-                    fd_tty = os.open("/dev/tty", os.O_RDONLY) 
-                    for i, l in enumerate(name): 
-                        name[i] = expandtabs(l.rstrip('\r\n\t '))
-            pye(name, undo = 500, device=fd_tty)
-    else:
-        print ("\nSorry, this OS is not supported (yet)")
