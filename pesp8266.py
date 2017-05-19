@@ -44,6 +44,7 @@ class Editor:
     "\x1b[1;5F": 0x02, 
     "\x1b[3;5~": 0x18, 
     "\x0b" : 0xfffd,
+    "\x1b[M" : 0x1b,
     }
     yank_buffer = []
     find_pattern = ""
@@ -65,6 +66,11 @@ class Editor:
         def wr(self, s):
             sys.stdout.write(s)
         def rd_any(self):
+            try:
+                if sys.platform == "esp8266" and Editor.uart.any():
+                    return True
+            except:
+                pass
             return False
         def rd(self):
             while True:
@@ -72,7 +78,9 @@ class Editor:
                 except KeyboardInterrupt: return '\x03'
         @staticmethod
         def init_tty(device, baud):
-            pass
+            if sys.platform == "esp8266" :
+                from machine import UART
+                Editor.uart = UART(0)
         @staticmethod
         def deinit_tty():
             pass
@@ -89,6 +97,8 @@ class Editor:
             self.wr("\x1b[43m")
         else: 
             self.wr("\x1b[0m")
+    def mouse_reporting(self, onoff):
+        self.wr('\x1b[?9h' if onoff else '\x1b[?9l') 
     def scroll_region(self, stop):
         self.wr('\x1b[1;{}r'.format(stop) if stop else '\x1b[r') 
     def scroll_up(self, scrolling):
@@ -116,6 +126,7 @@ class Editor:
         Editor.scrbuf = [(False,"\x00")] * Editor.height 
         self.row = min(Editor.height - 1, self.row)
         self.scroll_region(Editor.height)
+        self.mouse_reporting(True) 
         if sys.implementation.name == "micropython":
             gc.collect()
             if flag: self.message = "{} Bytes Memory available".format(gc.mem_free())
@@ -132,6 +143,16 @@ class Editor:
                 c = self.KEYMAP[in_buffer]
                 if c != 0x1b:
                     return c, ""
+                else: 
+                    mouse_fct = ord((self.rd())) 
+                    mouse_x = ord(self.rd()) - 33
+                    mouse_y = ord(self.rd()) - 33
+                    if mouse_fct == 0x61:
+                        return 0x1d, ""
+                    elif mouse_fct == 0x60:
+                        return 0x1c, ""
+                    else:
+                        return 0x1b, [mouse_x, mouse_y, mouse_fct] 
             elif ord(in_buffer[0]) >= 32:
                 return 0, in_buffer
     def display_window(self): 
@@ -369,6 +390,22 @@ class Editor:
                 if res[3]: self.write_tabs = 'y' if res[3][0] == 'y' else 'n'
             except:
                 pass
+        elif key == 0x1b: 
+            if char[1] < Editor.height:
+                self.col = char[0] + self.margin
+                self.cur_line = char[1] + self.top_line
+                if char[2] in (0x22, 0x30): 
+                    self.mark = self.cur_line if self.mark == None else None
+        elif key == 0x1c: 
+            if self.top_line > 0:
+                self.top_line = max(self.top_line - 3, 0)
+                self.cur_line = min(self.cur_line, self.top_line + Editor.height - 1)
+                self.scroll_up(3)
+        elif key == 0x1d: 
+            if self.top_line + Editor.height < self.total_lines:
+                self.top_line = min(self.top_line + 3, self.total_lines - 1)
+                self.cur_line = max(self.cur_line, self.top_line)
+                self.scroll_down(3)
         elif key == 0xfffd:
             if self.col < len(l): 
                 opening = "([{<"
@@ -536,6 +573,7 @@ class Editor:
                     if not res or res[0].upper() != 'Y':
                         continue
                 self.scroll_region(0)
+                self.mouse_reporting(False) 
                 self.goto(Editor.height, 0)
                 self.clear_to_eol()
                 self.undo = []

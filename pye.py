@@ -25,7 +25,7 @@
 ##define MOUSE 1
 #endif
 import sys, gc
-#ifdef LINUX
+#if defined (LINUX)
 if sys.platform in ("linux", "darwin"):
     import os, signal, tty, termios, select
 #endif
@@ -271,6 +271,11 @@ class Editor:
             sys.stdout.write(s)
 
         def rd_any(self):
+            try:
+                if sys.platform == "esp8266" and Editor.uart.any():
+                    return True
+            except:
+                pass
             return False
 
         def rd(self):
@@ -280,7 +285,9 @@ class Editor:
 
         @staticmethod
         def init_tty(device, baud):
-            pass
+            if sys.platform == "esp8266" :
+                from machine import UART
+                Editor.uart = UART(0)
 
         @staticmethod
         def deinit_tty():

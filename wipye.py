@@ -62,6 +62,11 @@ class Editor:
         def wr(self, s):
             sys.stdout.write(s)
         def rd_any(self):
+            try:
+                if sys.platform == "esp8266" and Editor.uart.any():
+                    return True
+            except:
+                pass
             return False
         def rd(self):
             while True:
@@ -69,7 +74,9 @@ class Editor:
                 except KeyboardInterrupt: return '\x03'
         @staticmethod
         def init_tty(device, baud):
-            pass
+            if sys.platform == "esp8266" :
+                from machine import UART
+                Editor.uart = UART(0)
         @staticmethod
         def deinit_tty():
             pass
