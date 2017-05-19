@@ -1,6 +1,6 @@
 # !sh
 # cpp -D ESP8266 -D DEFINES -D BASIC -D SCROLL pye.py | sed "s/#.*$//" | sed "/^$/d" >pesp8266.py
-cpp -D ESP8266 -D DEFINES -D SCROLL pye.py | sed "s/#.*$//" | sed "/^$/d" >pesp8266.py
+cpp -D ESP8266 -D DEFINES -D SCROLL -D MOUSE pye.py | sed "s/#.*$//" | sed "/^$/d" >pesp8266.py
 #
 cpp -D BASIC -D WIPY -D DEFINES pye.py | sed "s/#.*$//" | sed "/^$/d" >wipye.py
 cpp -D BASIC -D WIPY -D DEFINES -D INDENT pye.py | sed "s/#.*$//" | sed "/^$/d" >wipye_indt.py
