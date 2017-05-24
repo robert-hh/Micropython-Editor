@@ -2,14 +2,18 @@
 
 **Description**
 
-A small text editor written in Python running on PYBoard, WiPy, LoPy, ESP8266 modules and teensy 3.5/3.6, allowing to edit files locally. It is based on the editor widget of pfalcon at https://github.com/pfalcon/pyedit. I ported it to PyBoard, WiPy and ESP8266 and added a few functions:
+A small text editor written in Python running on PYBoard, WiPy, LoPy, ESP8266 modules and teensy 3.5/3.6, allowing to edit files locally. It is based on the editor widget of pfalcon at https://github.com/pfalcon/pyedit. I ported it to PyBoard, WiPy 1, ESP8266, Teensy, ESP32 and the Pycom.io devices, and added a few functions:
 
-- Use USB_VCP/Telnet or UART (PybOard only) for input and output.
+- Use  stdin/stdout or USB_VCP/UART (Pyboard & Teensy) for input and output.
 - Changed the read keyboard function to comply with slow byte-by-byte input on serial lines.
 - Added support for Tab, BackTab, Save, Del and Backspace joining lines, Find, Replace, Goto Line, Undo, Get file, Auto-Indent, Set Flags, Copy/Delete & Paste, Indent, Un-Indent
 - Handling tab (0x09) on reading & writing files,
 - Added a status line, and single line prompts for Quit, Save, Find, Replace, Goto, Get file and Flag settings.
 - Optional support of the basic mouse functions scrolling up/down and setting the cursor.
+
+**Warning: Due to a glitch in the pycom.io port of micropython Ctrl-C must
+not be used for copying. Use Ctrl-D instead. Unfortunately,
+Ctrl-C will terminate the editor.**
 
 The editor assumes a VT100 terminal. It works in Insert mode. The following list
 shows most of the commands. Commands marked with (opt) may not be supported in minimal versions:
@@ -248,5 +252,9 @@ autoindent flag and the search case flag
 - Implement full function set for line-edit by default
 
 **2.10** Support for esp32; simplified mouse handling
-- The only change was adding the esp32  name to the platformn detection
+- The only change was adding the esp32  name to the platform detection
 - Do not use global symbols for mouse parameters
+
+**2.11** Small changes to the esp8266 version
+- Faster paste from the keyboard
+- Enabled Mouse support as default
