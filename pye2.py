@@ -272,7 +272,7 @@ class Editor:
 
         def rd_any(self):
             try:
-                if sys.platform == "esp8266" and Editor.uart.any():
+                if Editor.uart is not None and Editor.uart.any():
                     return True
             except:
                 pass
@@ -285,9 +285,12 @@ class Editor:
 
         @staticmethod
         def init_tty(device, baud):
-            if sys.platform == "esp8266" :
+            Editor.uart = None
+            if sys.platform  =="esp8266":
                 from machine import UART
-                Editor.uart = UART(0)
+                uart = UART(0, 115200)
+                if hasattr(uart, "any"):
+                    Editor.uart = uart
 
         @staticmethod
         def deinit_tty():
@@ -500,25 +503,35 @@ class Editor:
                     pos += len(char)
                     push_msg(res[pos:]) ## update tail
 
-    def find_in_file(self, pattern, pos, end):
-        Editor.find_pattern = pattern # remember it
+## This is the regex version of find.
+    def find_in_file(self, pattern, col, end):
+        try: from ure import compile
+        except: from re import compile
+#define REGEXP 1
+        Editor.find_pattern = pattern ## remember it
         if Editor.case != "y":
             pattern = pattern.lower()
-        spos = pos
+        try:
+            rex = compile(pattern)
+        except:
+            self.message = "Invalid pattern: " + pattern
+            return -1
+        scol = col
         for line in range(self.cur_line, end):
+            l = self.content[line]
             if Editor.case != "y":
-                match = self.content[line][spos:].lower().find(pattern)
-#ifndef BASIC
-            else:
-                match = self.content[line][spos:].find(pattern)
-#endif
-            if match >= 0: ## Bingo!
-                self.col = match + spos
-                self.cur_line = line
-                return len(pattern)
-            spos = 0
+                l = l.lower()
+## since micropython does not support span, a step-by_step match has to be performed
+            ecol = 1 if pattern[0] == '^' else len(l) + 1
+            for i in range(scol, ecol):
+                match = rex.match(l[i:])
+                if match: ## bingo!
+                    self.col = i
+                    self.cur_line = line
+                    return len(match.group(0))
+            scol = 0
         else:
-            self.message = "No match: " + pattern
+            self.message = pattern + " not found"
             return -1
 
     def undo_add(self, lnum, text, key, span = 1):

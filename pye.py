@@ -272,7 +272,7 @@ class Editor:
 
         def rd_any(self):
             try:
-                if sys.platform == "esp8266" and Editor.uart.any():
+                if Editor.uart is not None and Editor.uart.any():
                     return True
             except:
                 pass
@@ -285,9 +285,12 @@ class Editor:
 
         @staticmethod
         def init_tty(device, baud):
-            if sys.platform == "esp8266" :
+            Editor.uart = None
+            if sys.platform  =="esp8266":
                 from machine import UART
-                Editor.uart = UART(0)
+                uart = UART(0, 115200)
+                if hasattr(uart, "any"):
+                    Editor.uart = uart
 
         @staticmethod
         def deinit_tty():
@@ -929,7 +932,7 @@ class Editor:
 #ifndef BASIC
                 Editor.tab_seen = 'n'
 #endif
-                for i, l in enumerate(self.content): 
+                for i, l in enumerate(self.content):
                     self.content[i] = expandtabs(l.rstrip('\r\n\t '))
 #ifndef BASIC
                 self.write_tabs = Editor.tab_seen
@@ -990,7 +993,7 @@ def pye(*content, tab_size = 4, undo = 50, device = 0, baud = 115200):
         for f in content:
             if index: slot.append(Editor(tab_size, undo))
             if type(f) == str and f: ## String = non-empty Filename
-                try: 
+                try:
                     slot[index].get_file(f)
                 except Exception as err:
                     slot[index].message = "{!r}".format(err)
