@@ -20,6 +20,7 @@ Goto, Get file and Flag settings.
 **Warning: Due to a glitch in the pycom.io ports of micropython Ctrl-C must
 not be used for copying in these ports. Use Ctrl-D instead. Unfortunately,
 Ctrl-C will terminate the editor (Bug catching KeyboardInterrupts Exceptions).**
+The lastest update of the pye code will change that, once the method kbd_intr() is supported by the pycom.io ports.
 
 The editor assumes a VT100 terminal. It works in Insert mode. The following list
 shows most of the commands. Commands marked with (opt) may not be supported in
