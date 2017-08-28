@@ -76,6 +76,7 @@ class Editor:
             while True:
                 try: return sys.stdin.read(1)
                 except KeyboardInterrupt: return '\x03'
+        @staticmethod
         def init_tty(device, baud):
             Editor.uart = None
             if sys.platform =="esp8266":
@@ -83,9 +84,17 @@ class Editor:
                 uart = UART(0, 115200)
                 if hasattr(uart, "any"):
                     Editor.uart = uart
+            try:
+                from micropython import kbd_intr
+                kbd_intr(-1)
+            except:
+                pass
         @staticmethod
         def deinit_tty():
-            pass
+            try:
+                kbd_intr(3)
+            except:
+                pass
     def goto(self, row, col):
         self.wr("\x1b[{};{}H".format(row + 1, col + 1))
     def clear_to_eol(self):

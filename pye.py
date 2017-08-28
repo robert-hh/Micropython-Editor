@@ -291,10 +291,18 @@ class Editor:
                 uart = UART(0, 115200)
                 if hasattr(uart, "any"):
                     Editor.uart = uart
+            try:
+                from micropython import kbd_intr
+                kbd_intr(-1)
+            except:
+                pass
 
         @staticmethod
         def deinit_tty():
-            pass
+            try:
+                kbd_intr(3)
+            except:
+                pass
 #endif
     def goto(self, row, col):
         self.wr("\x1b[{};{}H".format(row + 1, col + 1))
