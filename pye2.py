@@ -251,19 +251,16 @@ class Editor:
             return c.decode("UTF-8")
 
         @staticmethod
-        def init_tty(device, baud):
-            import pyb
-            Editor.sdev = device
-            if Editor.sdev:
-                Editor.serialcomm = pyb.UART(device, baud)
-            else:
-                Editor.serialcomm = pyb.USB_VCP()
-                Editor.serialcomm.setinterrupt(-1)
+        def init_tty(device):
+            from pyb import USB_VCP
+            from micropython import kbd_intr
+            kbd_intr(-1)
+            Editor.serialcomm = USB_VCP()
 
         @staticmethod
         def deinit_tty():
-            if not Editor.sdev:
-                Editor.serialcomm.setinterrupt(3)
+            from micropython import kbd_intr
+            kbd_intr(3)
 #endif
 #if defined(WIPY) || defined(ESP8266) || defined(ESP32)
     if sys.platform in ("WiPy", "LoPy", "esp8266", "esp32"):
@@ -284,7 +281,7 @@ class Editor:
                 except: return '\x03'
 
         @staticmethod
-        def init_tty(device, baud):
+        def init_tty(device):
             Editor.uart = None
             if sys.platform  =="esp8266":
                 from machine import UART
@@ -300,6 +297,7 @@ class Editor:
         @staticmethod
         def deinit_tty():
             try:
+                from micropython import kbd_intr
                 kbd_intr(3)
             except:
                 pass

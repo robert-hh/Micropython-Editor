@@ -62,40 +62,34 @@ class Editor:
         self.autoindent = "y"
         self.mark = None
         self.write_tabs = "n"
-    if sys.platform in ("WiPy", "LoPy", "esp8266", "esp32"):
-        def wr(self, s):
-            sys.stdout.write(s)
+    if sys.platform in ("pyboard", "teensy-3.5", "teensy-3.6"):
+        def wr(self,s):
+            ns = 0
+            while ns < len(s): 
+                res = self.serialcomm.write(s[ns:])
+                if res != None:
+                    ns += res
         def rd_any(self):
-            try:
-                if Editor.uart is not None and Editor.uart.any():
-                    return True
-            except:
-                pass
-            return False
+            return self.serialcomm.any()
         def rd(self):
-            while True:
-                try: return sys.stdin.read(1)
-                except KeyboardInterrupt: return '\x03'
+            while not self.serialcomm.any():
+                pass
+            c = self.serialcomm.read(1)
+            flag = c[0]
+            while (flag & 0xc0) == 0xc0: 
+                c += self.serialcomm.read(1)
+                flag <<= 1
+            return c.decode("UTF-8")
         @staticmethod
         def init_tty(device):
-            Editor.uart = None
-            if sys.platform =="esp8266":
-                from machine import UART
-                uart = UART(0, 115200)
-                if hasattr(uart, "any"):
-                    Editor.uart = uart
-            try:
-                from micropython import kbd_intr
-                kbd_intr(-1)
-            except:
-                pass
+            from pyb import USB_VCP
+            from micropython import kbd_intr
+            kbd_intr(-1)
+            Editor.serialcomm = USB_VCP()
         @staticmethod
         def deinit_tty():
-            try:
-                from micropython import kbd_intr
-                kbd_intr(3)
-            except:
-                pass
+            from micropython import kbd_intr
+            kbd_intr(3)
     def goto(self, row, col):
         self.wr("\x1b[{};{}H".format(row + 1, col + 1))
     def clear_to_eol(self):

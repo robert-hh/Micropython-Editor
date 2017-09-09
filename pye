@@ -90,7 +90,7 @@ class Editor:
                         Editor.winch = False
                         return '\x05'
         @staticmethod
-        def init_tty(device, baud):
+        def init_tty(device):
             Editor.org_termios = termios.tcgetattr(device)
             tty.setraw(device)
             Editor.sdev = device
@@ -684,7 +684,7 @@ def expandtabs(s):
         return sb.getvalue()
     else:
         return s
-def pye(*content, tab_size = 4, undo = 50, device = 0, baud = 115200):
+def pye(*content, tab_size = 4, undo = 50, device = 0):
     gc.collect() 
     slot = [Editor(tab_size, undo)]
     index = 0
@@ -699,7 +699,7 @@ def pye(*content, tab_size = 4, undo = 50, device = 0, baud = 115200):
             elif type(f) == list and len(f) > 0 and type(f[0]) == str:
                 slot[index].content = f 
             index += 1
-    Editor.init_tty(device, baud)
+    Editor.init_tty(device)
     while True:
         try:
             index %= len(slot)

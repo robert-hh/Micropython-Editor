@@ -212,7 +212,7 @@ class Editor:
                         return '\x05'
 
         @staticmethod
-        def init_tty(device, baud):
+        def init_tty(device):
             Editor.org_termios = termios.tcgetattr(device)
             tty.setraw(device)
             Editor.sdev = device
@@ -230,6 +230,7 @@ class Editor:
 #endif
 #if defined (PYBOARD) || defined (TEENSY)
     if sys.platform in ("pyboard", "teensy-3.5", "teensy-3.6"):
+
         def wr(self,s):
             ns = 0
             while ns < len(s): # complicated but needed, since USB_VCP.write() has issues
@@ -251,22 +252,20 @@ class Editor:
             return c.decode("UTF-8")
 
         @staticmethod
-        def init_tty(device, baud):
-            import pyb
-            Editor.sdev = device
-            if Editor.sdev:
-                Editor.serialcomm = pyb.UART(device, baud)
-            else:
-                Editor.serialcomm = pyb.USB_VCP()
-                Editor.serialcomm.setinterrupt(-1)
+        def init_tty(device):
+            from pyb import USB_VCP
+            from micropython import kbd_intr
+            kbd_intr(-1)
+            Editor.serialcomm = USB_VCP()
 
         @staticmethod
         def deinit_tty():
-            if not Editor.sdev:
-                Editor.serialcomm.setinterrupt(3)
+            from micropython import kbd_intr
+            kbd_intr(3)
 #endif
 #if defined(WIPY) || defined(ESP8266) || defined(ESP32)
     if sys.platform in ("WiPy", "LoPy", "esp8266", "esp32"):
+
         def wr(self, s):
             sys.stdout.write(s)
 
@@ -284,7 +283,7 @@ class Editor:
                 except KeyboardInterrupt: return '\x03'
 
         @staticmethod
-        def init_tty(device, baud):
+        def init_tty(device):
             Editor.uart = None
             if sys.platform  =="esp8266":
                 from machine import UART
@@ -300,6 +299,7 @@ class Editor:
         @staticmethod
         def deinit_tty():
             try:
+                from micropython import kbd_intr
                 kbd_intr(3)
             except:
                 pass
@@ -1000,7 +1000,7 @@ def expandtabs(s):
     else:
         return s
 
-def pye(*content, tab_size = 4, undo = 50, device = 0, baud = 115200):
+def pye(*content, tab_size = 4, undo = 50, device = 0):
 ## prepare content
     gc.collect() ## all (memory) is mine
     slot = [Editor(tab_size, undo)]
@@ -1017,7 +1017,7 @@ def pye(*content, tab_size = 4, undo = 50, device = 0, baud = 115200):
                 slot[index].content = f ## non-empty list of strings -> edit
             index += 1
 ## edit
-    Editor.init_tty(device, baud)
+    Editor.init_tty(device)
     while True:
         try:
             index %= len(slot)
