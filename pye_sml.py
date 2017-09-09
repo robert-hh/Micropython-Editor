@@ -2,11 +2,11 @@
 ## Small python text editor based on the
 ## Very simple VT100 terminal text editor widget
 ## Copyright (c) 2015 Paul Sokolovsky (initial code)
-## Copyright (c) 2015 Robert Hammelrath (additional code)
+## Copyright (c) 2015, 2016 Robert Hammelrath (additional code)
 ## Distributed under MIT License
 ## Changes:
-## - Ported the code to PyBoard and Wipy (still runs on Linux or Darwin)
-##   It uses VCP_USB on Pyboard and sys.stdin on WiPy, or UART, if selected.
+## - Ported the code to PyBoard, Wipy, ESP8266, teensy and LoPy (still runs on Linux or Darwin)
+##   It uses VCP_USB or UART on Pyboard and sys.stdin on WiPy if selected.
 ## - changed read keyboard function to comply with char-by-char input
 ## - added support for TAB, BACKTAB, SAVE, DEL and Backspace joining lines,
 ##   Find, Replace, Goto Line, UNDO, GET file, Auto-Indent, Set Flags,
@@ -25,7 +25,7 @@
 ##define MOUSE 1
 #endif
 import sys, gc
-#ifdef LINUX
+#if defined (LINUX)
 if sys.platform in ("linux", "darwin"):
     import os, signal, tty, termios, select
 #endif
@@ -478,12 +478,6 @@ class Editor:
                 if pos < len(res):
                     self.wr(res[pos])
                     pos += 1
-            elif key == KEY_HOME:
-                self.wr("\b" * pos)
-                pos = 0
-            elif key == KEY_END:
-                self.wr(res[pos:])
-                pos = len(res)
             elif key == KEY_DELETE: ## Delete
                 if pos < len(res):
                     res = res[:pos] + res[pos+1:]
@@ -494,12 +488,20 @@ class Editor:
                     self.wr("\b")
                     pos -= 1
                     push_msg(res[pos:] + ' ') ## update tail
+#ifndef BASIC
+            elif key == KEY_HOME:
+                self.wr("\b" * pos)
+                pos = 0
+            elif key == KEY_END:
+                self.wr(res[pos:])
+                pos = len(res)
             elif key == KEY_ZAP: ## Get from content
                 if Editor.yank_buffer:
                     self.wr('\b' * pos + ' ' * len(res) + '\b' * len(res))
                     res = Editor.yank_buffer[0].strip()[:Editor.width - len(prompt) - 2]
                     self.wr(res)
                     pos = len(res)
+#endif
             elif key == KEY_NONE: ## char to be inserted
                 if len(prompt) + len(res) < self.width - 2:
                     res = res[:pos] + char + res[pos:]
@@ -507,35 +509,25 @@ class Editor:
                     pos += len(char)
                     push_msg(res[pos:]) ## update tail
 
-## This is the regex version of find.
-    def find_in_file(self, pattern, col, end):
-        try: from ure import compile
-        except: from re import compile
-#define REGEXP 1
-        Editor.find_pattern = pattern ## remember it
+    def find_in_file(self, pattern, pos, end):
+        Editor.find_pattern = pattern # remember it
         if Editor.case != "y":
             pattern = pattern.lower()
-        try:
-            rex = compile(pattern)
-        except:
-            self.message = "Invalid pattern: " + pattern
-            return -1
-        scol = col
+        spos = pos
         for line in range(self.cur_line, end):
-            l = self.content[line]
             if Editor.case != "y":
-                l = l.lower()
-## since micropython does not support span, a step-by_step match has to be performed
-            ecol = 1 if pattern[0] == '^' else len(l) + 1
-            for i in range(scol, ecol):
-                match = rex.match(l[i:])
-                if match: ## bingo!
-                    self.col = i
-                    self.cur_line = line
-                    return len(match.group(0))
-            scol = 0
+                match = self.content[line][spos:].lower().find(pattern)
+#ifndef BASIC
+            else:
+                match = self.content[line][spos:].find(pattern)
+#endif
+            if match >= 0: ## Bingo!
+                self.col = match + spos
+                self.cur_line = line
+                return len(pattern)
+            spos = 0
         else:
-            self.message = pattern + " not found"
+            self.message = "No match: " + pattern
             return -1
 
     def undo_add(self, lnum, text, key, span = 1):
@@ -560,7 +552,7 @@ class Editor:
         self.cur_line = lrange[0]
         self.mark = None ## unset line mark
 
-    def handle_edit_keys(self, key, char): ## keys which change content
+    def handle_edit_keys(self, key, char): ## keys which edit the buffer
         l = self.content[self.cur_line]
         if key == KEY_DOWN:
 #ifdef SCROLL
@@ -948,7 +940,7 @@ class Editor:
 #ifndef BASIC
                 Editor.tab_seen = 'n'
 #endif
-                for i, l in enumerate(self.content): 
+                for i, l in enumerate(self.content):
                     self.content[i] = expandtabs(l.rstrip('\r\n\t '))
 #ifndef BASIC
                 self.write_tabs = Editor.tab_seen
@@ -1009,7 +1001,7 @@ def pye(*content, tab_size = 4, undo = 50, device = 0, baud = 115200):
         for f in content:
             if index: slot.append(Editor(tab_size, undo))
             if type(f) == str and f: ## String = non-empty Filename
-                try: 
+                try:
                     slot[index].get_file(f)
                 except Exception as err:
                     slot[index].message = "{!r}".format(err)

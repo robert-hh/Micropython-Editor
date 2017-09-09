@@ -72,29 +72,24 @@ CPython also accepts data from a pipe or redirection.
 - pye.py: Source file with comments and code for PyBoard, WiPy and Linux
 micropython/python3. Runs on PyBoard as well, but the file size is much larger
 than the stripped down version.
+- pye_sml.py: Source file without RE search and reduced line edit.
 - pye2.py: a variant of pye.py which does not change the cursor column during
-vertical moves.
+vertical moves, bysed on the extended variant.
 - Pyboard Editor.pdf: A short documentation
 - README.md: This one
-- pe.py: Condensed source file for PyBoard with all functions
-- pemin.py: Condensed source file with a reduced function set for PyBoard
-- peteensy.py: Condensed source file for teensy 3.6 and 3.5 with all functions,
-but w/o regular expression search (no re in teensy yet).
-- wipye.py: Condensed source file with a reduced function set for WiPy
-- wipye.mpy: Pre-compiled version of pye.py for WiPy with all functions enabled.
-To be able to run it, you have to add:  
-
-    `#define MICROPY_PERSISTENT_CODE_LOAD (1)`  
-
-    to the file mpconfigport.h of the cc3200 branch, rebuild the binary, and load it to WiPy.
-- pesp8266.py: A version of for the esp8266 port. It requires frozen byte code
-to be enabled, which is available from version 1.8.2 on. In order to use it, you have to
-put pesp8266 into the directory esp8266/modules and rebuild micropython.
-A cross-compiled version may executed from the file system.
-- tuning_pye.py: A file with some improved replacements for functions of pye:
-a) find_in_file() supporting regular expressions,
-b) line_edit() fewer function keys for minimal code size, and
-c) expandtabs() and packtabs() with a second argument for tab size (not for pye, but maybe useful)
+- pe.py: Condensed source file for PyBoard and Teensy 3.6/3.5 with all functions
+- pe2.py: Condensed source file for PyBoard and Teensy 3.6/3.5 with all functions based on
+pye3.py
+- pemin.py: Condensed source file with a reduced function set for PyBoard and Teensy 3.6/3.5
+- wipye.py: Condensed source file with a reduced function set for WiPy1
+- wipye.mpy: Pre-compiled version of pye.py for WiPy1 with all functions enabled.
+- pesp.py: A version of for the esp8266 and esp32 port.s
+It requires frozen byte code to be enabled, which is available from
+version 1.8.2 on. In order to use it, you have to put pesp8266
+into the directory esp8266/modules, esp32/modules (micropython.org) or
+esp32/frozen (pycom.io) and rebuild micropython.
+ A cross-compiled version may executed from the
+file system.
 - strip.sh: sample Shell script which creates the different variants out of pye.py
 using cpp, including all variants of wipye.py with either speed up scrolling or
 support replace or support goto bracket or support indent/un-indent or support mouse.
@@ -328,3 +323,8 @@ the lower   levels of sys.stdin.
 **2.11** Small changes to the esp8266 version
 - Faster paste from the keyboard
 - Enabled Mouse support as default
+
+**2.12** Use the kbd_intr() method to disable Keyboard Interrupts on Ctrl-C.
+This method is supported by (almost) all micropython.org ports and maybe
+sometime also supported by the pycom.io ports. The method of trying to catch
+KeyboardInterrupt is still present.

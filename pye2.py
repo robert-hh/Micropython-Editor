@@ -490,7 +490,6 @@ class Editor:
                     self.wr("\b")
                     pos -= 1
                     push_msg(res[pos:] + ' ') ## update tail
-#ifndef BASIC
             elif key == KEY_HOME:
                 self.wr("\b" * pos)
                 pos = 0
@@ -503,7 +502,6 @@ class Editor:
                     res = Editor.yank_buffer[0].strip()[:Editor.width - len(prompt) - 2]
                     self.wr(res)
                     pos = len(res)
-#endif
             elif key == KEY_NONE: ## char to be inserted
                 if len(prompt) + len(res) < self.width - 2:
                     res = res[:pos] + char + res[pos:]
