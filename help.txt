@@ -24,7 +24,7 @@ Mouse Scroll Wheel  Scroll Up/Down the screen content by 3 lines per tick.
                     if -D MOUSE was set during code stripping.
 Enter   \n          Insert a line break at the cursor position.
                     Auto-indent is supported.
-Backspc. Ctrl-H     Delete the char left hand to the cursor.  If the mark
+Backspc.            Delete the char left hand to the cursor.  If the mark
                     is set, just delete the marked line range.
                     At the beginning of the line Backspace joins the
                     previous line. (*)
@@ -60,7 +60,7 @@ Ctrl-F              Find text. The last search string is memorized, even across
                     buffers. Search stops at the end. Whether the search is
                     case sensitive or not, can be set by the Ctrl-A command.
 Ctrl-N              Repeat find starting at the column right to the cursor.
-Ctrl-R              Find and replace. If the mark is set, it affects the marked
+Ctrl-R  Ctrl-H      Find and replace. If the mark is set, it affects the marked
                     region only. In the WiPy version this is only supported, if
                     -D REPLACE was set during code stripping.
 Ctrl-G              Go to Line. It prompts for the line number.
@@ -112,7 +112,7 @@ below). The editor is contained in the file pye.py. Start pye from the REPL
 prompt e.g. with
 
         from pye import pye
-        res = pye(object_1, object_2, ..[, tabsize][, undo][, device][, baud])
+        res = pye(object_1, object_2, ..[, tabsize][, undo])
 
 If object_n is a string, it's considered as the name of a file to be edited, 
 and the name of the file will be returned. If object_n is a list of strings, 
@@ -127,11 +127,6 @@ Optional named parameters:
 tabsize=n   Tab step (integer). The default is 4
 undo=n      Size of the undo stack (integer). A value of 0 or False disables
             undo.
-device=n    Device to be used for screen/keyboard on PyBoard (integer). On
-            PyBoard, 0 is USB_VCP. 1 is UART 1, and so on. The default is 0
-            (USB_VCP). This Option is not available on WiPy. You'll get the
-            output on UART by redirecting the REPL prompt.
-baud=n      UART baud rate (integer). The default is 115200.
 
 The Linux/Darwin version can be called from the command line with:
 
@@ -154,6 +149,6 @@ by copying a single line into it. Up to about 300 lines on WiPy and 600 lines
 on PyBoard should be safe to edit. The largest suitable file size is in the
 same order of what WiPy/PyBoard can handle as source file.
 
-When you save a file on PyBoard/WiPy, these changes may not be visible in the
+When you save a file on PyBoard, these changes may not be visible in the
 file system of a connected PC until you disconnect and reconnect the
-Pyboard/WiPy drive. See also the related discussion in the MicroPython Forum.
+Pyboard drive. See also the related discussion in the MicroPython Forum.

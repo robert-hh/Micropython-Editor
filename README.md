@@ -331,3 +331,6 @@ KeyboardInterrupt is still present.
 
 **2.13** Reduce the numer of derived variants and make the full version the
 default one. Update the documentation.
+
+**2.14** Remove the PyBoard support using an UART as keyboard/display interface.
+Use kbd_intr() too on Pyboard.
