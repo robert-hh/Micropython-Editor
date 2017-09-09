@@ -328,3 +328,6 @@ the lower   levels of sys.stdin.
 This method is supported by (almost) all micropython.org ports and maybe
 sometime also supported by the pycom.io ports. The method of trying to catch
 KeyboardInterrupt is still present.
+
+**2.13** Reduce the numer of derived variants and make the full version the
+default one. Update the documentation.
