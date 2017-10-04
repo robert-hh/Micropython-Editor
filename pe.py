@@ -62,41 +62,40 @@ class Editor:
         self.autoindent = "y"
         self.mark = None
         self.write_tabs = "n"
-    if sys.platform in ("pyboard", "teensy-3.5", "teensy-3.6"):
-        def wr(self,s):
-            ns = 0
-            while ns < len(s): 
-                res = self.serialcomm.write(s[ns:])
-                if res != None:
-                    ns += res
+    if sys.implementation.name == "micropython":
+        def wr(self, s):
+            sys.stdout.write(s)
         def rd_any(self):
-            return self.serialcomm.any()
+            if Editor.uart is not None and Editor.uart.any():
+                return True
+            return False
         def rd(self):
-            while not self.serialcomm.any():
-                pass
-            c = self.serialcomm.read(1)
-            flag = c[0]
-            while (flag & 0xc0) == 0xc0: 
-                c += self.serialcomm.read(1)
-                flag <<= 1
-            return c.decode("UTF-8")
+            while True:
+                try: return sys.stdin.read(1)
+                except KeyboardInterrupt: return '\x03'
         @staticmethod
         def init_tty(device):
-            from pyb import USB_VCP
-            if sys.platform == "pyboard":
+            Editor.uart = None
+            if sys.platform == "esp8266":
+                from machine import UART
+                uart = UART(0, 115200)
+                if hasattr(uart, "any"):
+                    Editor.uart = uart
+            elif sys.platform == "pyboard":
+                from pyb import USB_VCP
+                Editor.uart = USB_VCP()
+            try:
                 from micropython import kbd_intr
                 kbd_intr(-1)
-            else:
-                USB_VCP().setinterrupt(-1)
-            Editor.serialcomm = USB_VCP()
+            except:
+                pass
         @staticmethod
         def deinit_tty():
-            if sys.platform == "pyboard":
+            try:
                 from micropython import kbd_intr
                 kbd_intr(3)
-            else:
-                from pyb import USB_VCP
-                USB_VCP().setinterrupt(3)
+            except:
+                pass
     def goto(self, row, col):
         self.wr("\x1b[{};{}H".format(row + 1, col + 1))
     def clear_to_eol(self):

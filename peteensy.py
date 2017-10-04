@@ -62,15 +62,12 @@ class Editor:
         self.autoindent = "y"
         self.mark = None
         self.write_tabs = "n"
-    if sys.platform in ("WiPy", "LoPy", "esp8266", "esp32"):
+    if sys.implementation.name == "micropython":
         def wr(self, s):
             sys.stdout.write(s)
         def rd_any(self):
-            try:
-                if Editor.uart is not None and Editor.uart.any():
-                    return True
-            except:
-                pass
+            if Editor.uart is not None and Editor.uart.any():
+                return True
             return False
         def rd(self):
             while True:
@@ -79,23 +76,23 @@ class Editor:
         @staticmethod
         def init_tty(device):
             Editor.uart = None
-            if sys.platform =="esp8266":
+            if sys.platform == "esp8266":
                 from machine import UART
                 uart = UART(0, 115200)
                 if hasattr(uart, "any"):
                     Editor.uart = uart
-            try:
-                from micropython import kbd_intr
-                kbd_intr(-1)
-            except:
-                pass
+            elif sys.platform == "pyboard":
+                from pyb import USB_VCP
+                Editor.uart = USB_VCP()
+            elif sys.platform in ("teensy-3.5", "teensy-3.6"):
+                from pyb import USB_VCP
+                USB_VCP().setinterrupt(-1)
+                Editor.uart = USB_VCP()
         @staticmethod
         def deinit_tty():
-            try:
-                from micropython import kbd_intr
-                kbd_intr(3)
-            except:
-                pass
+            if sys.platform in ("teensy-3.5", "teensy-3.6"):
+                from pyb import USB_VCP
+                USB_VCP().setinterrupt(3)
     def goto(self, row, col):
         self.wr("\x1b[{};{}H".format(row + 1, col + 1))
     def clear_to_eol(self):

@@ -228,54 +228,15 @@ class Editor:
             Editor.winch = True
             return True
 #endif
-#if defined (PYBOARD) || defined (TEENSY)
-    if sys.platform in ("pyboard", "teensy-3.5", "teensy-3.6"):
-        def wr(self,s):
-            ns = 0
-            while ns < len(s): # complicated but needed, since USB_VCP.write() has issues
-                res = self.serialcomm.write(s[ns:])
-                if res != None:
-                    ns += res
+#if defined(MICROPYTHON)
+    if sys.implementation.name == "micropython":
 
-        def rd_any(self):
-            return self.serialcomm.any()
-
-        def rd(self):
-            while not self.serialcomm.any():
-                pass
-            c = self.serialcomm.read(1)
-            flag = c[0]
-            while (flag & 0xc0) == 0xc0:   ## utf-8 char collection
-                c += self.serialcomm.read(1)
-                flag <<= 1
-            return c.decode("UTF-8")
-
-        @staticmethod
-        def init_tty(device, baud):
-            import pyb
-            Editor.sdev = device
-            if Editor.sdev:
-                Editor.serialcomm = pyb.UART(device, baud)
-            else:
-                Editor.serialcomm = pyb.USB_VCP()
-                Editor.serialcomm.setinterrupt(-1)
-
-        @staticmethod
-        def deinit_tty():
-            if not Editor.sdev:
-                Editor.serialcomm.setinterrupt(3)
-#endif
-#if defined(WIPY) || defined(ESP8266) || defined(ESP32)
-    if sys.platform in ("WiPy", "LoPy", "esp8266", "esp32"):
         def wr(self, s):
             sys.stdout.write(s)
 
         def rd_any(self):
-            try:
-                if Editor.uart is not None and Editor.uart.any():
-                    return True
-            except:
-                pass
+            if Editor.uart is not None and Editor.uart.any():
+                return True
             return False
 
         def rd(self):
@@ -284,25 +245,41 @@ class Editor:
                 except KeyboardInterrupt: return '\x03'
 
         @staticmethod
-        def init_tty(device, baud):
+        def init_tty(device):
             Editor.uart = None
-            if sys.platform  =="esp8266":
+            if sys.platform == "esp8266":
                 from machine import UART
                 uart = UART(0, 115200)
                 if hasattr(uart, "any"):
                     Editor.uart = uart
+            elif sys.platform == "pyboard":
+                from pyb import USB_VCP
+                Editor.uart = USB_VCP()
+#if defined (TEENSY)                
+            elif sys.platform in ("teensy-3.5", "teensy-3.6"):
+                from pyb import USB_VCP
+                USB_VCP().setinterrupt(3)
+                Editor.uart = USB_VCP()
+#else
             try:
                 from micropython import kbd_intr
                 kbd_intr(-1)
             except:
                 pass
-
+#endif
         @staticmethod
         def deinit_tty():
+#if defined (TEENSY)                
+            if sys.platform in ("teensy-3.5", "teensy-3.6"):
+                from pyb import USB_VCP
+                USB_VCP().setinterrupt(-1)
+#else
             try:
+                from micropython import kbd_intr
                 kbd_intr(3)
             except:
                 pass
+#endif
 #endif
     def goto(self, row, col):
         self.wr("\x1b[{};{}H".format(row + 1, col + 1))
