@@ -77,19 +77,14 @@ than the stripped down version.
 vertical moves, bysed on the extended variant.
 - Pyboard Editor.pdf: A short documentation
 - README.md: This one
-- pe.py: Condensed source file for PyBoard and Teensy 3.6/3.5 with all functions
-- pe2.py: Condensed source file for PyBoard and Teensy 3.6/3.5 with all functions based on
-pye3.py
-- pemin.py: Condensed source file with a reduced function set for PyBoard and Teensy 3.6/3.5
-- wipye.py: Condensed source file with a reduced function set for WiPy1
-- wipye.mpy: Pre-compiled version of pye.py for WiPy1 with all functions enabled.
-- pesp.py: A version of for the esp8266 and esp32 port.s
-It requires frozen byte code to be enabled, which is available from
-version 1.8.2 on. In order to use it, you have to put pesp8266
+- pe.py: Condensed source file for all MicroPython board except Teensy 3.5/3.6.
+In order to use it on an esp8266, you have to put pe.py
 into the directory esp8266/modules, esp32/modules (micropython.org) or
-esp32/frozen (pycom.io) and rebuild micropython.
- A cross-compiled version may executed from the
-file system.
+esp32/frozen (pycom.io) and rebuild micropython.  A cross-compiled version may
+executed from the file system.
+- pemin.py: Condensed source file with a reduced function set for all MicroPython board except Teensy 3.5/3.6
+- wipye.mpy: Pre-compiled version of pye.py for WiPy1 with all functions enabled.
+- peteensy.py: A variant of pe.py for Teensy 3.5/3.6
 - strip.sh: sample Shell script which creates the different variants out of pye.py
 using cpp, including all variants of wipye.py with either speed up scrolling or
 support replace or support goto bracket or support indent/un-indent or support mouse.
@@ -334,3 +329,5 @@ default one. Update the documentation.
 
 **2.14** Remove the PyBoard support using an UART as keyboard/display interface.
 Use kbd_intr() too on Pyboard.
+
+**2.15** Make a combined MicroPython version, which runs on all boards except Teensy 3.5 / 3.6. The latter gets an own variant.
