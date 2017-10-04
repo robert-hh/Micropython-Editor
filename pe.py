@@ -83,13 +83,20 @@ class Editor:
         @staticmethod
         def init_tty(device):
             from pyb import USB_VCP
-            from micropython import kbd_intr
-            kbd_intr(-1)
+            if sys.platform == "pyboard":
+                from micropython import kbd_intr
+                kbd_intr(-1)
+            else:
+                USB_VCP().setinterrupt(-1)
             Editor.serialcomm = USB_VCP()
         @staticmethod
         def deinit_tty():
-            from micropython import kbd_intr
-            kbd_intr(3)
+            if sys.platform == "pyboard":
+                from micropython import kbd_intr
+                kbd_intr(3)
+            else:
+                from pyb import USB_VCP
+                USB_VCP().setinterrupt(3)
     def goto(self, row, col):
         self.wr("\x1b[{};{}H".format(row + 1, col + 1))
     def clear_to_eol(self):

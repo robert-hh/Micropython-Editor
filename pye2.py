@@ -253,14 +253,21 @@ class Editor:
         @staticmethod
         def init_tty(device):
             from pyb import USB_VCP
-            from micropython import kbd_intr
-            kbd_intr(-1)
+            if sys.platform == "pyboard":
+                from micropython import kbd_intr
+                kbd_intr(-1)
+            else:
+                USB_VCP().setinterrupt(-1)
             Editor.serialcomm = USB_VCP()
 
         @staticmethod
         def deinit_tty():
-            from micropython import kbd_intr
-            kbd_intr(3)
+            if sys.platform == "pyboard":
+                from micropython import kbd_intr
+                kbd_intr(3)
+            else:
+                from pyb import USB_VCP
+                USB_VCP().setinterrupt(3)
 #endif
 #if defined(WIPY) || defined(ESP8266) || defined(ESP32)
     if sys.platform in ("WiPy", "LoPy", "esp8266", "esp32"):
