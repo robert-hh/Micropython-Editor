@@ -398,15 +398,15 @@ class Editor:
             self.cur_line = self.total_lines - 1
             self.row = Editor.height - 1 
         elif key == 0x01: 
-            pat = self.line_edit("Case Sensitive Search {}, Autoindent {}"
+            pat = self.line_edit("Autoindent {}, Case Sensitive Search {}"
             ", Tab Size {}, Write Tabs {}"
-            ": ".format(Editor.case, self.autoindent
+            ": ".format(self.autoindent, Editor.case
             , self.tab_size, self.write_tabs
             ), "")
             try:
                 res = [i.strip().lower() for i in pat.split(",")]
-                if res[0]: Editor.case = 'y' if res[0][0] == 'y' else 'n'
-                if res[1]: self.autoindent = 'y' if res[1][0] == 'y' else 'n'
+                if res[0]: self.autoindent = 'y' if res[0][0] == 'y' else 'n'
+                if res[1]: Editor.case = 'y' if res[1][0] == 'y' else 'n'
                 if res[2]: self.tab_size = int(res[2])
                 if res[3]: self.write_tabs = 'y' if res[3][0] == 'y' else 'n'
             except:

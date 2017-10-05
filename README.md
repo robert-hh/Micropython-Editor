@@ -17,10 +17,8 @@ Replace, Goto Line, Undo, Get file, Auto-Indent, Set Flags, Copy/Delete & Paste,
 Goto, Get file and Flag settings.
 - Optional support of the basic mouse functions scrolling up/down, setting the cursor and marking lines.
 
-**Warning: Due to a glitch in the pycom.io ports of micropython Ctrl-C must
-not be used for copying in these ports. Use Ctrl-D instead. Unfortunately,
-Ctrl-C will terminate the editor (Bug catching KeyboardInterrupts Exceptions).**
-The lastest update of the pye code will change that, once the method kbd_intr() is supported by the pycom.io ports.
+**Warning: Due to a glitch in the pycom.io ports of micropython before V1.9.0
+ Ctrl-C must not be used for copying in these ports. Use Ctrl-D instead. Unfortunately, Ctrl-C will terminate the editor (Bug catching KeyboardInterrupts Exceptions).**  
 
 The editor assumes a VT100 terminal. It works in Insert mode. The following list
 shows most of the commands. Commands marked with (opt) may not be supported in

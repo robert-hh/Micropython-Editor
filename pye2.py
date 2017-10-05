@@ -651,23 +651,23 @@ class Editor:
             self.row = Editor.height - 1 ## will be fixed if required
 #endif
         elif key == KEY_TOGGLE: ## Toggle Autoindent/Statusline/Search case
-            pat = self.line_edit("Case Sensitive Search {}, Autoindent {}, Straight Cursor {}"
+            pat = self.line_edit("Autoindent {}, Case Sensitive Search {}, Straight Cursor {}"
 #ifndef BASIC
             ", Tab Size {}, Write Tabs {}"
 #endif
-            ": ".format(Editor.case, self.autoindent, self.straight
+            ": ".format(self.autoindent, Editor.case, self.straight
 #ifndef BASIC
             , self.tab_size, self.write_tabs
 #endif
             ), "")
             try:
                 res =  [i.strip().lower() for i in pat.split(",")]
-                if res[0]: Editor.case       = 'y' if res[0][0] == 'y' else 'n'
-                if res[1]: self.autoindent = 'y' if res[1][0] == 'y' else 'n'
+                if res[0]: self.autoindent = 'y' if res[0][0] == 'y' else 'n'
+                if res[1]: Editor.case     = 'y' if res[1][0] == 'y' else 'n'
+                if res[2]: self.straight   = 'y' if res[2][0] == 'y' else 'n'
 #ifndef BASIC
-                if res[2]: self.tab_size = int(res[2])
-                if res[3]: self.write_tabs = 'y' if res[3][0] == 'y' else 'n'
-                if res[4]: self.straight = 'y' if res[4][0] == 'y' else 'n'
+                if res[3]: self.tab_size   = int(res[3])
+                if res[4]: self.write_tabs = 'y' if res[4][0] == 'y' else 'n'
 #endif
             except:
                 pass
