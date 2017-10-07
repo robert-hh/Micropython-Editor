@@ -68,9 +68,7 @@ class Editor:
         self.write_tabs = "n"
     if sys.platform in ("linux", "darwin"):
         def wr(self,s):
-            if isinstance(s, str):
-                s = bytes(s, "utf-8")
-            os.write(1, s)
+            os.write(1, s.encode("utf-8"))
         def rd_any(self):
             if sys.implementation.name == "cpython":
                 return select.select([self.sdev], [], [], 0)[0] != []

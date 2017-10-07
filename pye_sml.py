@@ -187,9 +187,7 @@ class Editor:
     if sys.platform in ("linux", "darwin"):
 
         def wr(self,s):
-            if isinstance(s, str):
-                s = bytes(s, "utf-8")
-            os.write(1, s)
+            os.write(1, s.encode("utf-8"))
 
         def rd_any(self):
             if sys.implementation.name == "cpython":
@@ -212,7 +210,7 @@ class Editor:
                         return '\x05'
 
         @staticmethod
-        def init_tty(device, baud):
+        def init_tty(device):
             Editor.org_termios = termios.tcgetattr(device)
             tty.setraw(device)
             Editor.sdev = device
@@ -229,25 +227,24 @@ class Editor:
             return True
 #endif
 #if defined(MICROPYTHON)
-    if sys.implementation.name == "micropython":
+    if sys.implementation.name == "micropython" and not sys.platform in ("linux", "darwin"):
 
         def wr(self, s):
             sys.stdout.write(s)
 
         def rd_any(self):
-            if Editor.uart is not None and Editor.uart.any():
-                return True
-            return False
+            if Editor.uart is not None:
+                return Editor.uart.any()
+            else:
+                return False
 
         def rd(self):
-            while True:
-                try: return sys.stdin.read(1)
-                except KeyboardInterrupt: return '\x03'
+            return sys.stdin.read(1)
 
         @staticmethod
         def init_tty(device):
             Editor.uart = None
-            if sys.platform == "esp8266":
+            if sys.platform == "esp8266" or sys.platform[2:4] == "Py":
                 from machine import UART
                 uart = UART(0, 115200)
                 if hasattr(uart, "any"):
@@ -986,7 +983,7 @@ def pye(*content, tab_size = 4, undo = 50, device = 0, baud = 115200):
                 slot[index].content = f ## non-empty list of strings -> edit
             index += 1
 ## edit
-    Editor.init_tty(device, baud)
+    Editor.init_tty(device)
     while True:
         try:
             index %= len(slot)
