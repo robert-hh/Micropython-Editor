@@ -65,35 +65,21 @@ class Editor:
     if sys.implementation.name == "micropython" and not sys.platform in ("linux", "darwin"):
         def wr(self, s):
             sys.stdout.write(s)
-        def rd_any(self):
-            if Editor.uart is not None:
-                return Editor.uart.any() > 0
-            else:
-                return False
         def rd(self):
             return sys.stdin.read(1)
         @staticmethod
         def init_tty(device):
-            Editor.uart = None
-            if sys.platform == "esp8266" or sys.platform[2:4] == "Py":
-                from machine import UART
-                uart = UART(0, 115200)
-                if hasattr(uart, "any"):
-                    Editor.uart = uart
-            elif sys.platform == "pyboard":
-                from pyb import USB_VCP
-                Editor.uart = USB_VCP()
             try:
                 from micropython import kbd_intr
                 kbd_intr(-1)
-            except:
+            except ImportError:
                 pass
         @staticmethod
         def deinit_tty():
             try:
                 from micropython import kbd_intr
                 kbd_intr(3)
-            except:
+            except ImportError:
                 pass
     def goto(self, row, col):
         self.wr("\x1b[{};{}H".format(row + 1, col + 1))
@@ -586,8 +572,7 @@ class Editor:
         self.total_lines = len(self.content)
         self.redraw(self.message == "")
         while True:
-            if not self.rd_any(): 
-                self.display_window() 
+            self.display_window() 
             key, char = self.get_input() 
             self.message = '' 
             if key == 0x11:

@@ -189,12 +189,6 @@ class Editor:
         def wr(self,s):
             os.write(1, s.encode("utf-8"))
 
-        def rd_any(self):
-            if sys.implementation.name == "cpython":
-                return select.select([self.sdev], [], [], 0)[0] != []
-            else:
-                return False
-
         def rd(self):
             while True:
                 try: ## WINCH causes interrupt
@@ -232,51 +226,24 @@ class Editor:
         def wr(self, s):
             sys.stdout.write(s)
 
-        def rd_any(self):
-            if Editor.uart is not None:
-                return Editor.uart.any()
-            else:
-                return False
-
         def rd(self):
             return sys.stdin.read(1)
 
         @staticmethod
         def init_tty(device):
-            Editor.uart = None
-            if sys.platform == "esp8266" or sys.platform[2:4] == "Py":
-                from machine import UART
-                uart = UART(0, 115200)
-                if hasattr(uart, "any"):
-                    Editor.uart = uart
-            elif sys.platform == "pyboard":
-                from pyb import USB_VCP
-                Editor.uart = USB_VCP()
-#if defined (TEENSY)                
-            elif sys.platform in ("teensy-3.5", "teensy-3.6"):
-                from pyb import USB_VCP
-                USB_VCP().setinterrupt(-1)
-                Editor.uart = USB_VCP()
-#else
             try:
                 from micropython import kbd_intr
                 kbd_intr(-1)
-            except:
+            except ImportError:
                 pass
-#endif
+
         @staticmethod
         def deinit_tty():
-#if defined (TEENSY)                
-            if sys.platform in ("teensy-3.5", "teensy-3.6"):
-                from pyb import USB_VCP
-                USB_VCP().setinterrupt(3)
-#else
             try:
                 from micropython import kbd_intr
                 kbd_intr(3)
-            except:
+            except ImportError:
                 pass
-#endif
 #endif
     def goto(self, row, col):
         self.wr("\x1b[{};{}H".format(row + 1, col + 1))
@@ -873,8 +840,7 @@ class Editor:
         self.redraw(self.message == "")
 
         while True:
-            if not self.rd_any(): ## skip update if a char is waiting
-                self.display_window()  ## Update & display window
+            self.display_window()  ## Update & display window
             key, char = self.get_input()  ## Get Char of Fct-key code
             self.message = '' ## clear message
 

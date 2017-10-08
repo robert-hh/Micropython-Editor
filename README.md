@@ -5,8 +5,8 @@
 A small text editor written in Python running on PYBoard, WiPy 1, the pycom.io
  modules like WipPy 2, Lopy, SiPy, ESP8266 modules and teensy 3.5/3.6, allowing
  to edit files locally. It is based on the editor widget of pfalcon at
- https://github.com/pfalcon/pyedit. I ported it to PyBoard, WiPy 1, ESP8266, Teensy,
- ESP32 and the Pycom.io devices, and added a few functions:
+ https://github.com/pfalcon/pyedit. I ported it to PyBoard, WiPy 1,
+ ESP8266, Teensy, ESP32 and the Pycom.io devices, and added a few functions:
 
 - Use  stdin/stdout or USB_VCP/UART (Pyboard & Teensy) for input and output.
 - Changed the read keyboard function to comply with slow byte-by-byte input on serial lines.
@@ -75,14 +75,14 @@ than the stripped down version.
 vertical moves, bysed on the extended variant.
 - Pyboard Editor.pdf: A short documentation
 - README.md: This one
-- pe.py: Condensed source file for all MicroPython board except Teensy 3.5/3.6.
-In order to use it on an esp8266, you have to put pe.py
-into the directory esp8266/modules, esp32/modules (micropython.org) or
-esp32/frozen (pycom.io) and rebuild micropython.  A cross-compiled version may
-executed from the file system.
-- pemin.py: Condensed source file with a reduced function set for all MicroPython board except Teensy 3.5/3.6
-- wipye.mpy: Pre-compiled version of pye.py for WiPy1 with all functions enabled.
-- peteensy.py: A variant of pe.py for Teensy 3.5/3.6
+- pe.py: Condensed source file for all MicroPython boards.
+In order to use it on an borad with small memory like the esp8266,
+you have to put pe.py into the directory esp8266/modules, esp32/modules (micropython.org) or esp32/frozen (pycom.io) and rebuild micropython.  A cross-compiled version may executed from the file system.
+- pemin.py: Condensed source file with a reduced function set for all MicroPython boards
+- peteensy.py: A small wrapper for teensy 3.5 and 3.6 disabling Ctrl-C
+keyboard interrupt.
+- wipye.mpy: Pre-compiled version of pe.py for WiPy1 with all functions enabled.
+ For some reasons, this version works only in the telnet connection. 
 - strip.sh: sample Shell script which creates the different variants out of pye.py
 using cpp, including all variants of wipye.py with either speed up scrolling or
 support replace or support goto bracket or support indent/un-indent or support mouse.

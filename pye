@@ -69,11 +69,6 @@ class Editor:
     if sys.platform in ("linux", "darwin"):
         def wr(self,s):
             os.write(1, s.encode("utf-8"))
-        def rd_any(self):
-            if sys.implementation.name == "cpython":
-                return select.select([self.sdev], [], [], 0)[0] != []
-            else:
-                return False
         def rd(self):
             while True:
                 try: 
@@ -594,8 +589,7 @@ class Editor:
         self.total_lines = len(self.content)
         self.redraw(self.message == "")
         while True:
-            if not self.rd_any(): 
-                self.display_window() 
+            self.display_window() 
             key, char = self.get_input() 
             self.message = '' 
             if key == 0x11:
