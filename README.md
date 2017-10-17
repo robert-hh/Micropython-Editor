@@ -55,9 +55,9 @@ shows most of the commands. Commands marked with (opt) may not be supported in
 
 More details can be found in the doc file. On reading files, tab characters
 are expanded to spaces with a tab size of 8, and trailing white space on a
-line will be discarded. The original state of tabs will NOT be restored when
-the file is written. Optionally, tabs can be written when saving the file, replacing
-spaces with tabs when possible. The screen size is determined, when the editor is
+line will be discarded. Optionally, tabs can be written when saving the file, replacing
+spaces with tabs when possible. However, the original state of tabs will NOT be restored when
+the file is written. The screen size is determined, when the editor is
 started, when the Redraw-key (Ctrl-E) is hit or on any file window change (Ctrl-W).
 
 The editor works also well in a Linux or MAC terminal environment (and also in some

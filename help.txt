@@ -51,7 +51,7 @@ Ctrl-F              Find text. The last search string is memorized, even across
                     buffers. Search stops at the end. Whether the search is
                     case sensitive or not, can be set by the Ctrl-A command.
 Ctrl-N              Repeat find starting at the column right to the cursor.
-Ctrl-R  Ctrl-H      Find and replace. If the mark is set, it affects the marked
+Ctrl-H  Ctrl-R      Find and replace. If the mark is set, it affects the marked
                     region only.
 Ctrl-G              Go to Line. It prompts for the line number.
 Ctrl-B  Ctrl-End    Go to the last line (*)
@@ -59,14 +59,12 @@ Ctrl-T  Ctrl-Home   Go to the first line (*)
 Ctrl-K              Go to the matching bracket, if any. The cursor has to be on
                     a bracket symbol. Bracket pairs are (), [], {} and <>.
                     Brackets in comments and strings are not discarded.
-Ctrl-A              Settings. Sets the state of search case sensitivity,
-                    auto-indent, tab size and write-tabs. Enter ‘y’ or ‘n’ or a
-                    number in up to three, comma separated fields (e.g.
+Ctrl-A              Settings. Sets the state of auto-indent, search case 
+                    sensitivity, tab size and write-tabs. Enter ‘y’ or ‘n’ or a
+                    number in up to four, comma separated fields (e.g.
                     n,y,4,n). An empty field leaves the respective value
-                    unchanged. The default values are case sensitive: n,
-                    auto-indent: y, tab-size: 4, Write Tabs: n
-                    In the minimal version, Ctrl-A just toggles the
-                    auto-indent flag.
+                    unchanged. The default values are auto-indent: y,
+                    case sensitive: n, tab-size: 4, Write Tabs: n
 Ctrl-L              Mark/Unmark the current line. The mark affects Delete,
                     Backspace, Cut lines, Copy lines, Insert lines, Tab,
                     Backtab, Save and Replace.
@@ -126,8 +124,9 @@ content can also be redirected or pipe'd into the editor.
 When reading files, tab characters (\x09) in the text are replaced by spaces,
 tab size 8, and white space at the end of a line is discarded. When you save
 the file, you have the option to replace sequences of spaces by tabs, tab size
-8. However, the original state will NOT be restored. So be careful when editing
-files with tab characters.
+8. When during reading the files tabs are detected, the tab write option is
+set to y. However, the original state will NOT be restored. So be careful 
+when editing files with tab characters. 
 
 The size of a file that can be edited on a MicroPthon board is limited by its memory.
 You may use REDRAW to determine how much space is left. Besides the file
