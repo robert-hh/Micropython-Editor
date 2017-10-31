@@ -82,7 +82,7 @@ you have to put pe.py into the directory esp8266/modules, esp32/modules (micropy
 - peteensy.py: A small wrapper for teensy 3.5 and 3.6 disabling Ctrl-C
 keyboard interrupt.
 - wipye.mpy: Pre-compiled version of pe.py for WiPy1 with all functions enabled.
- For some reasons, this version works only in the telnet connection. 
+ For some reasons, this version works only in the telnet connection.
 - strip.sh: sample Shell script which creates the different variants out of pye.py
 using cpp, including all variants of wipye.py with either speed up scrolling or
 support replace or support goto bracket or support indent/un-indent or support mouse.
@@ -328,4 +328,4 @@ default one. Update the documentation.
 **2.14** Remove the PyBoard support using an UART as keyboard/display interface.
 Use kbd_intr() too on Pyboard.
 
-**2.15** Make a combined MicroPython version, which runs on all boards except Teensy 3.5 / 3.6. The latter gets an own variant.
+**2.15** Make a combined MicroPython version, which runs on all boards except Teensy 3.5 / 3.6. For teensy, a short wrapper is included.

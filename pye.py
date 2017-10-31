@@ -454,6 +454,11 @@ class Editor:
         except: from re import compile
 #define REGEXP 1
         Editor.find_pattern = pattern ## remember it
+## special case: find End of line
+        if pattern == "$": # special case: find eol
+            self.col = len(self.content[self.cur_line])
+            return 0
+
         if Editor.case != "y":
             pattern = pattern.lower()
         try:
@@ -463,15 +468,19 @@ class Editor:
             return -1
         scol = col
         for line in range(self.cur_line, end):
-            l = self.content[line]
+            l = self.content[line][scol:]
             if Editor.case != "y":
                 l = l.lower()
-## since micropython does not support span, a step-by_step match has to be performed
-            ecol = 1 if pattern[0] == '^' else len(l) + 1
-            for i in range(scol, ecol):
-                match = rex.match(l[i:])
-                if match: ## bingo!
-                    self.col = i
+## Anchored at start of line, but the cursor is not? advance to the next line
+            if pattern[0] == '^' and scol != 0:
+                scol = 0
+                continue
+            match = rex.search(l)
+            if match: # Bingo
+## since micropython does not support span, a second find has to be performed
+                pos = l.find(match.group(0))
+                if pos >= 0: # should always be the case
+                    self.col = pos + scol
                     self.cur_line = line
                     return len(match.group(0))
             scol = 0

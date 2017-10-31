@@ -255,6 +255,9 @@ class Editor:
         try: from ure import compile
         except: from re import compile
         Editor.find_pattern = pattern 
+        if pattern == "$": 
+            self.col = len(self.content[self.cur_line])
+            return 0
         if Editor.case != "y":
             pattern = pattern.lower()
         try:
@@ -264,14 +267,17 @@ class Editor:
             return -1
         scol = col
         for line in range(self.cur_line, end):
-            l = self.content[line]
+            l = self.content[line][scol:]
             if Editor.case != "y":
                 l = l.lower()
-            ecol = 1 if pattern[0] == '^' else len(l) + 1
-            for i in range(scol, ecol):
-                match = rex.match(l[i:])
-                if match: 
-                    self.col = i
+            if pattern[0] == '^' and scol != 0:
+                scol = 0
+                continue
+            match = rex.search(l)
+            if match: 
+                pos = l.find(match.group(0))
+                if pos >= 0: 
+                    self.col = pos + scol
                     self.cur_line = line
                     return len(match.group(0))
             scol = 0
