@@ -269,12 +269,8 @@ class Editor:
                     pos += len(char)
                     push_msg(res[pos:]) 
     def find_in_file(self, pattern, col, end):
-        try: from ure import compile
-        except: from re import compile
+        from re import compile
         Editor.find_pattern = pattern 
-        if pattern == "$": 
-            self.col = len(self.content[self.cur_line])
-            return 0
         if Editor.case != "y":
             pattern = pattern.lower()
         try:
@@ -282,21 +278,19 @@ class Editor:
         except:
             self.message = "Invalid pattern: " + pattern
             return -1
-        scol = col
-        for line in range(self.cur_line, end):
+        start, scol = self.cur_line, col
+        if (scol > len(self.content[start]) or 
+            (pattern[0] == '^' and scol != 0)): 
+            start, scol = start + 1, 0 
+        for line in range(start, end):
             l = self.content[line][scol:]
             if Editor.case != "y":
                 l = l.lower()
-            if pattern[0] == '^' and scol != 0:
-                scol = 0
-                continue
             match = rex.search(l)
             if match: 
-                pos = l.find(match.group(0))
-                if pos >= 0: 
-                    self.col = pos + scol
-                    self.cur_line = line
-                    return len(match.group(0))
+                self.cur_line = line
+                self.col = scol + (l.find(match.group(0)) if pattern != "$" else len(l))
+                return len(match.group(0))
             scol = 0
         else:
             self.message = pattern + " not found"
@@ -540,13 +534,10 @@ class Editor:
                             elif q in ('a','y'):
                                 self.undo_add(self.cur_line, [self.content[self.cur_line]], 0)
                                 self.content[self.cur_line] = self.content[self.cur_line][:self.col] + rpat + self.content[self.cur_line][self.col + ni:]
-                                self.col += len(rpat)
+                                self.col += len(rpat) + (ni == 0) 
                                 count += 1
                             else: 
                                  self.col += 1
-                            if self.col >= len(self.content[self.cur_line]): 
-                                self.cur_line += 1
-                                self.col = 0
                         else: 
                             break
                     self.cur_line = cur_line 

@@ -450,15 +450,9 @@ class Editor:
 
 ## This is the regex version of find.
     def find_in_file(self, pattern, col, end):
-        try: from ure import compile
-        except: from re import compile
-#define REGEXP 1
-        Editor.find_pattern = pattern ## remember it
-## special case: find End of line
-        if pattern == "$": # special case: find eol
-            self.col = len(self.content[self.cur_line])
-            return 0
+        from re import compile
 
+        Editor.find_pattern = pattern ## remember it
         if Editor.case != "y":
             pattern = pattern.lower()
         try:
@@ -466,23 +460,21 @@ class Editor:
         except:
             self.message = "Invalid pattern: " + pattern
             return -1
-        scol = col
-        for line in range(self.cur_line, end):
+        start, scol = self.cur_line, col
+        if (scol > len(self.content[start]) or   # After EOL
+            (pattern[0] == '^' and scol != 0)):  # or not anchored at BOL
+            start, scol = start + 1, 0           # Skip to the next line
+        for line in range(start, end):
             l = self.content[line][scol:]
             if Editor.case != "y":
                 l = l.lower()
-## Anchored at start of line, but the cursor is not? advance to the next line
-            if pattern[0] == '^' and scol != 0:
-                scol = 0
-                continue
             match = rex.search(l)
             if match: # Bingo
-## since micropython does not support span, a second find has to be performed
-                pos = l.find(match.group(0))
-                if pos >= 0: # should always be the case
-                    self.col = pos + scol
-                    self.cur_line = line
-                    return len(match.group(0))
+                self.cur_line = line
+## Instead of match.span, a simple find has to be performed to get the cursor position. 
+## And '$' has to be treated separately, since match.group(0) is "" in that case
+                self.col = scol + (l.find(match.group(0)) if pattern != "$" else len(l))
+                return len(match.group(0))
             scol = 0
         else:
             self.message = pattern + " not found"
@@ -772,15 +764,10 @@ class Editor:
                             elif q in ('a','y'):
                                 self.undo_add(self.cur_line, [self.content[self.cur_line]], KEY_NONE)
                                 self.content[self.cur_line] = self.content[self.cur_line][:self.col] + rpat + self.content[self.cur_line][self.col + ni:]
-                                self.col += len(rpat)
+                                self.col += len(rpat) + (ni == 0) # ugly but short
                                 count += 1
                             else: ## everything else is no
                                  self.col += 1
-#ifdef REGEXP
-                            if self.col >= len(self.content[self.cur_line]): ## catch the case of replacing line ends
-                                self.cur_line += 1
-                                self.col = 0
-#endif
                         else: ## not found, quit
                             break
                     self.cur_line = cur_line ## restore cur_line

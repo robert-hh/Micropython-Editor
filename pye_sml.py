@@ -755,15 +755,10 @@ class Editor:
                             elif q in ('a','y'):
                                 self.undo_add(self.cur_line, [self.content[self.cur_line]], KEY_NONE)
                                 self.content[self.cur_line] = self.content[self.cur_line][:self.col] + rpat + self.content[self.cur_line][self.col + ni:]
-                                self.col += len(rpat)
+                                self.col += len(rpat) + (ni == 0) # ugly but short
                                 count += 1
                             else: ## everything else is no
                                  self.col += 1
-#ifdef REGEXP
-                            if self.col >= len(self.content[self.cur_line]): ## catch the case of replacing line ends
-                                self.cur_line += 1
-                                self.col = 0
-#endif
                         else: ## not found, quit
                             break
                     self.cur_line = cur_line ## restore cur_line
