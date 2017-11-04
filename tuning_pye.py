@@ -1,9 +1,8 @@
 ##
 ## This is the regex version of find.
     def find_in_file(self, pattern, col, end):
-        try: from ure import compile
-        except: from re import compile
-#define REGEXP 1
+        from re import compile
+
         Editor.find_pattern = pattern ## remember it
         if Editor.case != "y":
             pattern = pattern.lower()
@@ -11,24 +10,49 @@
             rex = compile(pattern)
         except:
             self.message = "Invalid pattern: " + pattern
-            return -1
-        scol = col
-        for line in range(self.cur_line, end):
-            l = self.content[line]
+            return None
+        start, scol = self.cur_line, col
+        if (scol > len(self.content[start]) or   # After EOL
+            (pattern[0] == '^' and scol != 0)):  # or not anchored at BOL
+            start, scol = start + 1, 0           # Skip to the next line
+        for line in range(start, end):
+            l = self.content[line][scol:]
             if Editor.case != "y":
                 l = l.lower()
-## since micropython does not support span, a step-by_step match has to be performed
-            ecol = 1 if pattern[0] == '^' else len(l) + 1 
-            for i in range(scol, ecol):
-                match = rex.match(l[i:])
-                if match: ## bingo!
-                    self.col = i
-                    self.cur_line = line
-                    return len(match.group(0))
+            match = rex.search(l)
+            if match: # Bingo
+                self.cur_line = line
+## Instead of match.span, a simple find has to be performed to get the cursor position. 
+## And '$' has to be treated separately, so look for a true EOL match first
+                if pattern[-1:] == "$" and match.group(0)[-1:] != "$": 
+                    self.col = scol + len(l) - len(match.group(0))
+                else:
+                    self.col = scol + l.find(match.group(0))
+                return len(match.group(0))
             scol = 0
         else:
             self.message = pattern + " not found"
-            return -1
+            return None
+
+## this is the simple version of find
+    def find_in_file(self, pattern, pos, end):
+        Editor.find_pattern = pattern # remember it
+        if Editor.case != "y":
+            pattern = pattern.lower()
+        spos = pos
+        for line in range(self.cur_line, end):
+            if Editor.case != "y":
+                match = self.content[line][spos:].lower().find(pattern)
+            else:
+                match = self.content[line][spos:].find(pattern)
+            if match >= 0: ## Bingo!
+                self.col = match + spos
+                self.cur_line = line
+                return len(pattern)
+            spos = 0
+        else:
+            self.message = "No match: " + pattern
+            return None
 
     def line_edit(self, prompt, default):  ## better one: added cursor keys and backsp, delete
         push_msg = lambda msg: self.wr(msg + "\b" * len(msg)) ## Write a message and move cursor back

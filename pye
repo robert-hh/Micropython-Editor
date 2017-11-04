@@ -277,7 +277,7 @@ class Editor:
             rex = compile(pattern)
         except:
             self.message = "Invalid pattern: " + pattern
-            return -1
+            return None
         start, scol = self.cur_line, col
         if (scol > len(self.content[start]) or 
             (pattern[0] == '^' and scol != 0)): 
@@ -289,12 +289,15 @@ class Editor:
             match = rex.search(l)
             if match: 
                 self.cur_line = line
-                self.col = scol + (l.find(match.group(0)) if pattern != "$" else len(l))
+                if pattern[-1:] == "$" and match.group(0)[-1:] != "$":
+                    self.col = scol + len(l) - len(match.group(0))
+                else:
+                    self.col = scol + l.find(match.group(0))
                 return len(match.group(0))
             scol = 0
         else:
             self.message = pattern + " not found"
-            return -1
+            return None
     def undo_add(self, lnum, text, key, span = 1):
         self.changed = '*'
         if self.undo_limit > 0 and (
@@ -524,7 +527,7 @@ class Editor:
                     self.message = "Replace (yes/No/all/quit) ? "
                     while True: 
                         ni = self.find_in_file(pat, self.col, end_line)
-                        if ni >= 0: 
+                        if ni is not None: 
                             if q != 'a':
                                 self.display_window()
                                 key, char = self.get_input() 

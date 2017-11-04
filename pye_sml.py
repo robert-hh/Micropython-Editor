@@ -458,10 +458,8 @@ class Editor:
         for line in range(self.cur_line, end):
             if Editor.case != "y":
                 match = self.content[line][spos:].lower().find(pattern)
-#ifndef BASIC
             else:
                 match = self.content[line][spos:].find(pattern)
-#endif
             if match >= 0: ## Bingo!
                 self.col = match + spos
                 self.cur_line = line
@@ -469,7 +467,7 @@ class Editor:
             spos = 0
         else:
             self.message = "No match: " + pattern
-            return -1
+            return None
 
     def undo_add(self, lnum, text, key, span = 1):
         self.changed = '*'
@@ -745,7 +743,7 @@ class Editor:
                     self.message = "Replace (yes/No/all/quit) ? "
                     while True: ## and go
                         ni = self.find_in_file(pat, self.col, end_line)
-                        if ni >= 0: ## Pattern found
+                        if ni is not None: ## Pattern found
                             if q != 'a':
                                 self.display_window()
                                 key, char = self.get_input()  ## Get Char of Fct.

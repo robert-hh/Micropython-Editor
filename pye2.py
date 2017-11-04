@@ -461,7 +461,7 @@ class Editor:
             rex = compile(pattern)
         except:
             self.message = "Invalid pattern: " + pattern
-            return -1
+            return None
         start, scol = self.cur_line, col
         if (scol > len(self.content[start]) or   # After EOL
             (pattern[0] == '^' and scol != 0)):  # or not anchored at BOL
@@ -474,13 +474,15 @@ class Editor:
             if match: # Bingo
                 self.cur_line = line
 ## Instead of match.span, a simple find has to be performed to get the cursor position. 
-## And '$' has to be treated separately, since match.group(0) is "" in that case
-                self.col = scol + (l.find(match.group(0)) if pattern != "$" else len(l))
-                return len(match.group(0))
+## And '$' has to be treated separately, so look for a true EOL match first
+                if pattern[-1:] == "$" and match.group(0)[-1:] != "$": 
+                    self.col = scol + len(l) - len(match.group(0))
+                else:
+                    self.col = scol + l.find(match.group(0))
             scol = 0
         else:
             self.message = pattern + " not found"
-            return -1
+            return None
 
     def undo_add(self, lnum, text, key, span = 1):
         self.changed = '*'
@@ -771,7 +773,7 @@ class Editor:
                     self.message = "Replace (yes/No/all/quit) ? "
                     while True: ## and go
                         ni = self.find_in_file(pat, self.col, end_line)
-                        if ni >= 0: ## Pattern found
+                        if ni is not None: ## Pattern found
                             if q != 'a':
                                 self.display_window()
                                 key, char = self.get_input()  ## Get Char of Fct.
