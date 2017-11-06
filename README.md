@@ -75,10 +75,11 @@ than the stripped down version.
 vertical moves, bysed on the extended variant.
 - Pyboard Editor.pdf: A short documentation
 - README.md: This one
-- pe.py: Condensed source file for all MicroPython boards.
-In order to use it on an borad with small memory like the esp8266,
-you have to put pe.py into the directory esp8266/modules, esp32/modules (micropython.org) or esp32/frozen (pycom.io) and rebuild micropython.  A cross-compiled version may executed from the file system.
-- pemin.py: Condensed source file with a reduced function set for all MicroPython boards
+- pye_mp.py, pye2_mp: Condensed source files of pye.py and pye2.py for
+all MicroPython boards. In order to use it on an board with small memory
+like the esp8266, you have to put pye_mp.py into the directory esp8266/modules,
+esp32/modules or smt32/modules (micropython.org) or esp32/frozen (pycom.io) and
+rebuild micropython.  A cross-compiled version may executed from the file system.
 - peteensy.py: A small wrapper for teensy 3.5 and 3.6 disabling Ctrl-C
 keyboard interrupt.
 - wipye.mpy: Pre-compiled version of pe.py for WiPy1 with all functions enabled.
@@ -329,3 +330,9 @@ default one. Update the documentation.
 Use kbd_intr() too on Pyboard.
 
 **2.15** Make a combined MicroPython version, which runs on all boards except Teensy 3.5 / 3.6. For teensy, a short wrapper is included.
+
+**2.16** Optimize search with Regular expressions
+
+**2.17** Remove all option variants from the source files, and make pye_sml.py
+a pure micropython boards version with reduced function set. The only options
+remaining are Linux/CPython vs. MicroPython
