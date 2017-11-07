@@ -1,7 +1,10 @@
 ##
 ## This is the regex version of find.
     def find_in_file(self, pattern, col, end):
-        from re import compile
+        if is_micropython:
+            from ure import compile
+        else: 
+            from re import compile
 
         Editor.find_pattern = pattern ## remember it
         if Editor.case != "y":

@@ -540,9 +540,7 @@ class Editor:
 
 ## Read file into content
     def get_file(self, fname):
-        from os import listdir
-        try:    from uos import stat
-        except: from os import stat
+        from os import listdir, stat
         if not fname:
             fname = self.line_edit("Open file: ", "")
         if fname:
@@ -570,8 +568,7 @@ class Editor:
 
 ## expandtabs: hopefully sometimes replaced by the built-in function
 def expandtabs(s):
-    try: from uio import StringIO
-    except: from _io import StringIO
+    from uio import StringIO
 
     if '\t' in s:
         sb = StringIO()

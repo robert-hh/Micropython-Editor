@@ -1,4 +1,16 @@
 import sys, gc
+if sys.platform in ("linux", "darwin"):
+    import os, signal, tty, termios
+    const = lambda x:x
+    is_linux = True
+else:
+    is_linux = False
+if sys.implementation.name == "micropython":
+    is_micropython = True
+    from uio import StringIO
+else:
+    is_micropython = False
+    from _io import StringIO
 KEY_NONE = const(0x00)
 KEY_UP = const(0x0b)
 KEY_DOWN = const(0x0d)
@@ -99,7 +111,7 @@ class Editor:
         self.mark = None
         self.straight = "y"
         self.write_tabs = "n"
-    if sys.implementation.name == "micropython" and not sys.platform in ("linux", "darwin"):
+    if is_micropython and not is_linux:
         def wr(self, s):
             sys.stdout.write(s)
         def rd(self):
@@ -161,9 +173,9 @@ class Editor:
         self.row = min(Editor.height - 1, self.row)
         self.scroll_region(Editor.height)
         self.mouse_reporting(True) 
-        if sys.platform in ("linux", "darwin") and sys.implementation.name == "cpython":
+        if is_linux and not is_micropython:
             signal.signal(signal.SIGWINCH, Editor.signal_handler)
-        if sys.implementation.name == "micropython":
+        if is_micropython:
             gc.collect()
             if flag:
                 self.message = "{} Bytes Memory available".format(gc.mem_free())
@@ -297,7 +309,10 @@ class Editor:
                     pos += len(char)
                     push_msg(res[pos:]) 
     def find_in_file(self, pattern, col, end):
-        from re import compile
+        if is_micropython:
+            from ure import compile
+        else:
+            from re import compile
         Editor.find_pattern = pattern 
         if Editor.case != "y":
             pattern = pattern.lower()
@@ -653,10 +668,6 @@ class Editor:
             else:
                 self.handle_edit_keys(key, char)
     def packtabs(self, s):
-        try:
-            from uio import StringIO
-        except:
-            from _io import StringIO
         sb = StringIO()
         for i in range(0, len(s), 8):
             c = s[i:i + 8]
@@ -676,11 +687,11 @@ class Editor:
             if fname in ('.', '..') or (stat(fname)[0] & 0x4000): 
                 self.content = ["Directory '{}'".format(fname), ""] + sorted(listdir(fname))
             else:
-                if sys.implementation.name == "cpython":
-                    with open(fname, errors="ignore") as f:
+                if is_micropython:
+                    with open(fname) as f:
                         self.content = f.readlines()
                 else:
-                    with open(fname) as f:
+                    with open(fname, errors="ignore") as f:
                         self.content = f.readlines()
                 Editor.tab_seen = 'n'
                 for i, l in enumerate(self.content):
@@ -701,10 +712,6 @@ class Editor:
             pass
         rename(tmpfile, fname)
 def expandtabs(s):
-    try:
-        from uio import StringIO
-    except:
-        from _io import StringIO
     if '\t' in s:
         Editor.tab_seen = 'y'
         sb = StringIO()

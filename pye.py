@@ -19,11 +19,20 @@
 ## - Added multi-file support
 ##
 import sys, gc
-#if defined (LINUX)
 if sys.platform in ("linux", "darwin"):
-    import os, signal, tty, termios, select
+    import os, signal, tty, termios
     const = lambda x:x
-#endif
+    is_linux = True
+else:
+    is_linux = False
+
+if sys.implementation.name == "micropython":
+    is_micropython = True
+    from uio import StringIO
+else:
+    is_micropython = False
+    from _io import StringIO
+
 KEY_NONE      = const(0x00)
 KEY_UP        = const(0x0b)
 KEY_DOWN      = const(0x0d)
@@ -132,7 +141,7 @@ class Editor:
         self.write_tabs = "n"
 
 #ifdef LINUX
-    if sys.platform in ("linux", "darwin"):
+    if is_linux:
 
         def wr(self,s):
             os.write(1, s.encode("utf-8"))
@@ -149,7 +158,7 @@ class Editor:
                 except:
                     if Editor.winch: ## simulate REDRAW key
                         Editor.winch = False
-                        return '\x05'
+                        return chr(KEY_REDRAW)
 
         @staticmethod
         def init_tty(device):
@@ -169,7 +178,7 @@ class Editor:
             return True
 #endif
 #ifdef MICROPYTHON
-    if sys.implementation.name == "micropython" and not sys.platform in ("linux", "darwin"):
+    if is_micropython and not is_linux:
 
         def wr(self, s):
             sys.stdout.write(s)
@@ -246,10 +255,10 @@ class Editor:
         self.scroll_region(Editor.height)
         self.mouse_reporting(True) ## enable mouse reporting
 #ifdef LINUX
-        if sys.platform in ("linux", "darwin") and sys.implementation.name == "cpython":
+        if is_linux and not is_micropython:
             signal.signal(signal.SIGWINCH, Editor.signal_handler)
 #endif
-        if sys.implementation.name == "micropython":
+        if is_micropython:
             gc.collect()
             if flag:
                 self.message = "{} Bytes Memory available".format(gc.mem_free())
@@ -393,7 +402,10 @@ class Editor:
 
 ## This is the regex version of find.
     def find_in_file(self, pattern, col, end):
-        from re import compile
+        if is_micropython:
+            from ure import compile
+        else: 
+            from re import compile
 
         Editor.find_pattern = pattern ## remember it
         if Editor.case != "y":
@@ -746,12 +758,6 @@ class Editor:
 
 ## packtabs: replace sequence of space by tab
     def packtabs(self, s):
-
-        try: 
-            from uio import StringIO
-        except: 
-            from _io import StringIO
-
         sb = StringIO()
         for i in range(0, len(s), 8):
             c = s[i:i + 8]
@@ -773,11 +779,11 @@ class Editor:
             if fname in ('.', '..') or (stat(fname)[0] & 0x4000): ## Dir
                 self.content = ["Directory '{}'".format(fname), ""] + sorted(listdir(fname))
             else:
-                if sys.implementation.name == "cpython":
-                    with open(fname, errors="ignore") as f:
+                if is_micropython:
+                    with open(fname) as f:
                         self.content = f.readlines()
                 else:
-                    with open(fname) as f:
+                    with open(fname, errors="ignore") as f:
                         self.content = f.readlines()
                 Editor.tab_seen = 'n'
                 for i, l in enumerate(self.content):
@@ -802,11 +808,6 @@ class Editor:
 
 ## expandtabs: hopefully sometimes replaced by the built-in function
 def expandtabs(s):
-    try:
-        from uio import StringIO
-    except:
-        from _io import StringIO
-
     if '\t' in s:
         Editor.tab_seen = 'y'
         sb = StringIO()
@@ -865,7 +866,7 @@ def pye(*content, tab_size = 4, undo = 50, device = 0):
 
 #ifdef LINUX
 if __name__ == "__main__":
-    if sys.platform in ("linux", "darwin"):
+    if is_linux:
         import stat
         fd_tty = 0
         if len(sys.argv) > 1:
@@ -873,7 +874,7 @@ if __name__ == "__main__":
             pye(*name, undo = 500, device=fd_tty)
         else:
             name = ""
-            if sys.implementation.name == "cpython":
+            if not is_micropython:
                 mode = os.fstat(0).st_mode
                 if stat.S_ISFIFO(mode) or stat.S_ISREG(mode):
                     name = sys.stdin.readlines()
