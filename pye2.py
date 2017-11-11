@@ -27,7 +27,7 @@
 import sys, gc
 if sys.platform in ("linux", "darwin"):
     import os, signal, tty, termios
-    const = lambda x:x
+    const = lambda x: x
     is_linux = True
 else:
     is_linux = False
@@ -325,7 +325,7 @@ class Editor:
                     self.clear_to_eol()
                     Editor.scrbuf[c] = (False,'')
             else:
-                l = (self.mark != None and (
+                l = (self.mark is not None and (
                     (self.mark <= i <= self.cur_line) or (self.cur_line <= i <= self.mark)),
                      self.content[i][self.margin:self.margin + Editor.width])
                 if l != Editor.scrbuf[c]: ## line changed, print it
@@ -351,7 +351,7 @@ class Editor:
         self.cursor(True)
 
     def spaces(self, line, pos = None): ## count spaces
-        return (len(line) - len(line.lstrip(" ")) if pos == None else ## at line start
+        return (len(line) - len(line.lstrip(" ")) if pos is None else ## at line start
                 len(line[:pos]) - len(line[:pos].rstrip(" ")))
 
     def line_range(self):
@@ -415,15 +415,15 @@ class Editor:
 ## This is the regex version of find.
     def find_in_file(self, pattern, col, end):
         if is_micropython:
-            from ure import compile
+            from ure import compile as re_compile
         else: 
-            from re import compile
+            from re import compile as re_compile
 
         Editor.find_pattern = pattern ## remember it
         if Editor.case != "y":
             pattern = pattern.lower()
         try:
-            rex = compile(pattern)
+            rex = re_compile(pattern)
         except:
             self.message = "Invalid pattern: " + pattern
             return None
@@ -501,7 +501,7 @@ class Editor:
             else:
                 self.col += 1
         elif key == KEY_DELETE:
-            if self.mark != None:
+            if self.mark is not None:
                 self.delete_lines(False)
             elif self.col < len(l):
                 self.undo_add(self.cur_line, [l], KEY_DELETE)
@@ -513,7 +513,7 @@ class Editor:
                 self.content[self.cur_line] = l + self.content.pop(self.cur_line + 1)
                 self.total_lines -= 1
         elif key == KEY_BACKSPACE:
-            if self.mark != None:
+            if self.mark is not None:
                 self.delete_lines(False)
             elif self.col > 0:
                 if jut <= 0: ## if on solid ground
@@ -564,10 +564,8 @@ class Editor:
             self.row = Editor.height - 1 ## will be fixed if required
         elif key == KEY_TOGGLE: ## Toggle Autoindent/Statusline/Search case
             pat = self.line_edit("Autoindent {}, Case Sensitive Search {}, Straight Cursor {}"
-            ", Tab Size {}, Write Tabs {}"
-            ": ".format(self.autoindent, Editor.case, self.straight
-            , self.tab_size, self.write_tabs
-            ), "")
+            ", Tab Size {}, Write Tabs {}: ".format(self.autoindent, Editor.case, 
+            self.straight, self.tab_size, self.write_tabs), "")
             try:
                 res =  [i.strip().lower() for i in pat.split(",")]
                 if res[0]: self.autoindent = 'y' if res[0][0] == 'y' else 'n'
@@ -582,7 +580,7 @@ class Editor:
                 self.col = char[0] + self.margin
                 self.cur_line = char[1] + self.top_line
                 if char[2] in (0x22, 0x30): ## Right/Ctrl button on Mouse
-                    self.mark = self.cur_line if self.mark == None else None
+                    self.mark = self.cur_line if self.mark is None else None
         elif key == KEY_SCRLUP: ##
             if self.top_line > 0:
                 self.top_line = max(self.top_line - 3, 0)
@@ -633,7 +631,7 @@ class Editor:
                             if i > 0: ## prev line, if any, starts at the end
                                 pos = len(self.content[i - 1]) - 1
         elif key == KEY_MARK:
-            self.mark = self.cur_line if self.mark == None else None
+            self.mark = self.cur_line if self.mark is None else None
         elif key == KEY_ENTER:
             self.mark = None
             self.undo_add(self.cur_line, [l], KEY_NONE, 2)
@@ -646,7 +644,7 @@ class Editor:
             self.total_lines += 1
             self.col = ni
         elif key == KEY_TAB:
-            if self.mark == None:
+            if self.mark is None:
                 ni = self.tab_size - self.col % self.tab_size ## determine spaces to add
                 self.undo_add(self.cur_line, [l], KEY_TAB)
                 if jut < 0:
@@ -661,7 +659,7 @@ class Editor:
                     if len(self.content[i]) > 0:
                         self.content[i] = ' ' * (self.tab_size - self.spaces(self.content[i]) % self.tab_size) + self.content[i]
         elif key == KEY_BACKTAB:
-            if self.mark == None:
+            if self.mark is None:
                 ni = (self.col - 1) % self.tab_size + 1
                 if jut <= 0:
                     ni = min(ni, self.spaces(l, self.col)) ## determine spaces to drop
@@ -683,11 +681,11 @@ class Editor:
             pat = self.line_edit("Replace: ", Editor.find_pattern)
             if pat:
                 rpat = self.line_edit("With: ", Editor.replc_pattern)
-                if rpat != None: ## start with setting up loop parameters
+                if rpat is not None: ## start with setting up loop parameters
                     Editor.replc_pattern = rpat
                     q = ''
                     cur_line = self.cur_line ## remember line
-                    if self.mark != None: ## Replace in Marked area
+                    if self.mark is not None: ## Replace in Marked area
                         (self.cur_line, end_line) = self.line_range()
                         self.col = 0
                     else: ## replace from cur_line to end
@@ -714,16 +712,16 @@ class Editor:
                     self.cur_line = cur_line ## restore cur_line
                     self.message = "'{}' replaced {} times".format(pat, count)
         elif key == KEY_YANK:  # delete line or line(s) into buffer
-            if self.mark != None:
+            if self.mark is not None:
                 self.delete_lines(True)
         elif key == KEY_DUP:  # copy line(s) into buffer
-            if self.mark != None:
+            if self.mark is not None:
                 lrange = self.line_range()
                 Editor.yank_buffer = self.content[lrange[0]:lrange[1]]
                 self.mark = None
         elif key == KEY_ZAP: ## insert buffer
             if Editor.yank_buffer:
-                if self.mark != None:
+                if self.mark is not None:
                     self.delete_lines(False)
                 self.undo_add(self.cur_line, None, KEY_NONE, -len(Editor.yank_buffer))
                 self.content[self.cur_line:self.cur_line] = Editor.yank_buffer # insert lines
@@ -849,7 +847,7 @@ def expandtabs(s):
     else:
         return s
 
-def pye(*content, tab_size = 4, undo = 50, device = 0):
+def pye(*content, tab_size=4, undo=50, device=0):
 ## prepare content
     gc.collect() ## all (memory) is mine
     slot = [Editor(tab_size, undo)]
@@ -897,7 +895,7 @@ if __name__ == "__main__":
         fd_tty = 0
         if len(sys.argv) > 1:
             name = sys.argv[1:]
-            pye(*name, undo = 500, device=fd_tty)
+            pye(*name, undo=500, device=fd_tty)
         else:
             name = ""
             if not is_micropython:
@@ -908,7 +906,7 @@ if __name__ == "__main__":
                     fd_tty = os.open("/dev/tty", os.O_RDONLY) ## memorized, if new fd
                     for i, l in enumerate(name):  ## strip and convert
                         name[i] = expandtabs(l.rstrip('\r\n\t '))
-            pye(name, undo = 500, device=fd_tty)
+            pye(name, undo=500, device=fd_tty)
     else:
         print ("\nSorry, this OS is not supported (yet)")
 #endif

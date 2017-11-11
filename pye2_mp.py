@@ -1,7 +1,7 @@
 import sys, gc
 if sys.platform in ("linux", "darwin"):
     import os, signal, tty, termios
-    const = lambda x:x
+    const = lambda x: x
     is_linux = True
 else:
     is_linux = False
@@ -226,7 +226,7 @@ class Editor:
                     self.clear_to_eol()
                     Editor.scrbuf[c] = (False,'')
             else:
-                l = (self.mark != None and (
+                l = (self.mark is not None and (
                     (self.mark <= i <= self.cur_line) or (self.cur_line <= i <= self.mark)),
                      self.content[i][self.margin:self.margin + Editor.width])
                 if l != Editor.scrbuf[c]: 
@@ -250,7 +250,7 @@ class Editor:
         self.goto(self.row, self.col - self.margin)
         self.cursor(True)
     def spaces(self, line, pos = None): 
-        return (len(line) - len(line.lstrip(" ")) if pos == None else 
+        return (len(line) - len(line.lstrip(" ")) if pos is None else 
                 len(line[:pos]) - len(line[:pos].rstrip(" ")))
     def line_range(self):
         return ((self.mark, self.cur_line + 1) if self.mark < self.cur_line else
@@ -310,14 +310,14 @@ class Editor:
                     push_msg(res[pos:]) 
     def find_in_file(self, pattern, col, end):
         if is_micropython:
-            from ure import compile
+            from ure import compile as re_compile
         else:
-            from re import compile
+            from re import compile as re_compile
         Editor.find_pattern = pattern 
         if Editor.case != "y":
             pattern = pattern.lower()
         try:
-            rex = compile(pattern)
+            rex = re_compile(pattern)
         except:
             self.message = "Invalid pattern: " + pattern
             return None
@@ -390,7 +390,7 @@ class Editor:
             else:
                 self.col += 1
         elif key == KEY_DELETE:
-            if self.mark != None:
+            if self.mark is not None:
                 self.delete_lines(False)
             elif self.col < len(l):
                 self.undo_add(self.cur_line, [l], KEY_DELETE)
@@ -402,7 +402,7 @@ class Editor:
                 self.content[self.cur_line] = l + self.content.pop(self.cur_line + 1)
                 self.total_lines -= 1
         elif key == KEY_BACKSPACE:
-            if self.mark != None:
+            if self.mark is not None:
                 self.delete_lines(False)
             elif self.col > 0:
                 if jut <= 0: 
@@ -453,10 +453,8 @@ class Editor:
             self.row = Editor.height - 1 
         elif key == KEY_TOGGLE: 
             pat = self.line_edit("Autoindent {}, Case Sensitive Search {}, Straight Cursor {}"
-            ", Tab Size {}, Write Tabs {}"
-            ": ".format(self.autoindent, Editor.case, self.straight
-            , self.tab_size, self.write_tabs
-            ), "")
+            ", Tab Size {}, Write Tabs {}: ".format(self.autoindent, Editor.case,
+            self.straight, self.tab_size, self.write_tabs), "")
             try:
                 res = [i.strip().lower() for i in pat.split(",")]
                 if res[0]: self.autoindent = 'y' if res[0][0] == 'y' else 'n'
@@ -471,7 +469,7 @@ class Editor:
                 self.col = char[0] + self.margin
                 self.cur_line = char[1] + self.top_line
                 if char[2] in (0x22, 0x30): 
-                    self.mark = self.cur_line if self.mark == None else None
+                    self.mark = self.cur_line if self.mark is None else None
         elif key == KEY_SCRLUP: 
             if self.top_line > 0:
                 self.top_line = max(self.top_line - 3, 0)
@@ -522,7 +520,7 @@ class Editor:
                             if i > 0: 
                                 pos = len(self.content[i - 1]) - 1
         elif key == KEY_MARK:
-            self.mark = self.cur_line if self.mark == None else None
+            self.mark = self.cur_line if self.mark is None else None
         elif key == KEY_ENTER:
             self.mark = None
             self.undo_add(self.cur_line, [l], KEY_NONE, 2)
@@ -535,7 +533,7 @@ class Editor:
             self.total_lines += 1
             self.col = ni
         elif key == KEY_TAB:
-            if self.mark == None:
+            if self.mark is None:
                 ni = self.tab_size - self.col % self.tab_size 
                 self.undo_add(self.cur_line, [l], KEY_TAB)
                 if jut < 0:
@@ -550,7 +548,7 @@ class Editor:
                     if len(self.content[i]) > 0:
                         self.content[i] = ' ' * (self.tab_size - self.spaces(self.content[i]) % self.tab_size) + self.content[i]
         elif key == KEY_BACKTAB:
-            if self.mark == None:
+            if self.mark is None:
                 ni = (self.col - 1) % self.tab_size + 1
                 if jut <= 0:
                     ni = min(ni, self.spaces(l, self.col)) 
@@ -572,11 +570,11 @@ class Editor:
             pat = self.line_edit("Replace: ", Editor.find_pattern)
             if pat:
                 rpat = self.line_edit("With: ", Editor.replc_pattern)
-                if rpat != None: 
+                if rpat is not None: 
                     Editor.replc_pattern = rpat
                     q = ''
                     cur_line = self.cur_line 
-                    if self.mark != None: 
+                    if self.mark is not None: 
                         (self.cur_line, end_line) = self.line_range()
                         self.col = 0
                     else: 
@@ -603,16 +601,16 @@ class Editor:
                     self.cur_line = cur_line 
                     self.message = "'{}' replaced {} times".format(pat, count)
         elif key == KEY_YANK: 
-            if self.mark != None:
+            if self.mark is not None:
                 self.delete_lines(True)
         elif key == KEY_DUP: 
-            if self.mark != None:
+            if self.mark is not None:
                 lrange = self.line_range()
                 Editor.yank_buffer = self.content[lrange[0]:lrange[1]]
                 self.mark = None
         elif key == KEY_ZAP: 
             if Editor.yank_buffer:
-                if self.mark != None:
+                if self.mark is not None:
                     self.delete_lines(False)
                 self.undo_add(self.cur_line, None, KEY_NONE, -len(Editor.yank_buffer))
                 self.content[self.cur_line:self.cur_line] = Editor.yank_buffer 
@@ -726,7 +724,7 @@ def expandtabs(s):
         return sb.getvalue()
     else:
         return s
-def pye(*content, tab_size = 4, undo = 50, device = 0):
+def pye(*content, tab_size=4, undo=50, device=0):
     gc.collect() 
     slot = [Editor(tab_size, undo)]
     index = 0
