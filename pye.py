@@ -137,7 +137,6 @@ class Editor:
         self.undo_zero = 0
         self.autoindent = "y"
         self.mark = None
-        self.move_eol = 0
         self.write_tabs = "n"
 
 #ifdef LINUX
@@ -658,7 +657,7 @@ class Editor:
                 if rpat is not None: ## start with setting up loop parameters
                     Editor.replc_pattern = rpat
                     q = ''
-                    cur_line = self.cur_line ## remember line
+                    cur_line, cur_col = self.cur_line, self.col ## remember pos
                     if self.mark is not None: ## Replace in Marked area
                         (self.cur_line, end_line) = self.line_range()
                         self.col = 0
@@ -677,13 +676,13 @@ class Editor:
                             elif q in ('a','y'):
                                 self.undo_add(self.cur_line, [self.content[self.cur_line]], KEY_NONE)
                                 self.content[self.cur_line] = self.content[self.cur_line][:self.col] + rpat + self.content[self.cur_line][self.col + ni:]
-                                self.col += len(rpat) + self.move_eol
+                                self.col += len(rpat) + (ni == 0) # ugly but short
                                 count += 1
                             else: ## everything else is no
                                  self.col += 1
                         else: ## not found, quit
                             break
-                    self.cur_line = cur_line ## restore cur_line
+                    self.cur_line, self.col = cur_line, cur_col ## restore pos
                     self.message = "'{}' replaced {} times".format(pat, count)
         elif key == KEY_YANK:  # delete line or line(s) into buffer
             if self.mark is not None:

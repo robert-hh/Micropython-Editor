@@ -321,24 +321,25 @@ class Editor:
         except:
             self.message = "Invalid pattern: " + pattern
             return None
-        start, scol = self.cur_line, col
-        if (scol > len(self.content[start]) or 
-            (pattern[0] == '^' and scol != 0)): 
-            start, scol = start + 1, 0 
+        start = self.cur_line
+        if (col > len(self.content[start]) or 
+            (pattern[0] == '^' and col != 0)): 
+            start, col = start + 1, 0 
         for line in range(start, end):
-            l = self.content[line][scol:]
+            l = self.content[line][col:]
             if Editor.case != "y":
                 l = l.lower()
             match = rex.search(l)
             if match: 
                 self.cur_line = line
                 if pattern[-1:] == "$" and match.group(0)[-1:] != "$":
-                    self.col = scol + len(l) - len(match.group(0))
+                    self.col = col + len(l) - len(match.group(0))
                 else:
-                    self.col = scol + l.find(match.group(0))
-            scol = 0
+                    self.col = col + l.find(match.group(0))
+                return len(match.group(0))
+            col = 0
         else:
-            self.message = pattern + " not found"
+            self.message = pattern + " not found (again)"
             return None
     def undo_add(self, lnum, text, key, span = 1):
         self.changed = '*'
@@ -573,7 +574,7 @@ class Editor:
                 if rpat is not None: 
                     Editor.replc_pattern = rpat
                     q = ''
-                    cur_line = self.cur_line 
+                    cur_line, cur_col = self.cur_line, self.col 
                     if self.mark is not None: 
                         (self.cur_line, end_line) = self.line_range()
                         self.col = 0
@@ -598,7 +599,7 @@ class Editor:
                                  self.col += 1
                         else: 
                             break
-                    self.cur_line = cur_line 
+                    self.cur_line, self.col = cur_line, cur_col 
                     self.message = "'{}' replaced {} times".format(pat, count)
         elif key == KEY_YANK: 
             if self.mark is not None:

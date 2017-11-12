@@ -427,12 +427,12 @@ class Editor:
         except:
             self.message = "Invalid pattern: " + pattern
             return None
-        start, scol = self.cur_line, col
-        if (scol > len(self.content[start]) or   # After EOL
-            (pattern[0] == '^' and scol != 0)):  # or not anchored at BOL
-            start, scol = start + 1, 0           # Skip to the next line
+        start = self.cur_line
+        if (col > len(self.content[start]) or   # After EOL
+            (pattern[0] == '^' and col != 0)):  # or anchored and not at BOL
+            start, col = start + 1, 0           # Skip to the next line
         for line in range(start, end):
-            l = self.content[line][scol:]
+            l = self.content[line][col:]
             if Editor.case != "y":
                 l = l.lower()
             match = rex.search(l)
@@ -441,12 +441,13 @@ class Editor:
 ## Instead of match.span, a simple find has to be performed to get the cursor position.
 ## And '$' has to be treated separately, so look for a true EOL match first
                 if pattern[-1:] == "$" and match.group(0)[-1:] != "$":
-                    self.col = scol + len(l) - len(match.group(0))
+                    self.col = col + len(l) - len(match.group(0))
                 else:
-                    self.col = scol + l.find(match.group(0))
-            scol = 0
+                    self.col = col + l.find(match.group(0))
+                return len(match.group(0))
+            col = 0
         else:
-            self.message = pattern + " not found"
+            self.message = pattern + " not found (again)"
             return None
 
     def undo_add(self, lnum, text, key, span = 1):
@@ -684,7 +685,7 @@ class Editor:
                 if rpat is not None: ## start with setting up loop parameters
                     Editor.replc_pattern = rpat
                     q = ''
-                    cur_line = self.cur_line ## remember line
+                    cur_line, cur_col = self.cur_line, self.col ## remember pos
                     if self.mark is not None: ## Replace in Marked area
                         (self.cur_line, end_line) = self.line_range()
                         self.col = 0
@@ -709,7 +710,7 @@ class Editor:
                                  self.col += 1
                         else: ## not found, quit
                             break
-                    self.cur_line = cur_line ## restore cur_line
+                    self.cur_line, self.col = cur_line, cur_col ## restore pos
                     self.message = "'{}' replaced {} times".format(pat, count)
         elif key == KEY_YANK:  # delete line or line(s) into buffer
             if self.mark is not None:
