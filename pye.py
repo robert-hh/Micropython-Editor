@@ -126,6 +126,7 @@ class Editor:
     yank_buffer = []
     find_pattern = ""
     case = "n"
+    autoindent = "y"
     replc_pattern = ""
 
     def __init__(self, tab_size, undo_limit):
@@ -137,7 +138,6 @@ class Editor:
         self.undo = []
         self.undo_limit = max(undo_limit, 0)
         self.undo_zero = 0
-        self.autoindent = "y"
         self.mark = None
         self.write_tabs = "n"
 
@@ -367,7 +367,7 @@ class Editor:
             elif key in (KEY_ENTER, KEY_TAB): ## Finis
                 self.hilite(0)
                 return res
-            elif key == KEY_QUIT: ## Abort
+            elif key in (KEY_QUIT, KEY_DUP): ## Abort
                 self.hilite(0)
                 return None
             elif key == KEY_LEFT:
@@ -543,10 +543,10 @@ class Editor:
         elif key == KEY_TOGGLE: ## Toggle Autoindent/Search case/ Tab Size, TAB write
             pat = self.line_edit("Autoindent {}, Case Sensitive Search {}"
             ", Tab Size {}, Write Tabs {}: ".format(
-            self.autoindent, Editor.case, self.tab_size, self.write_tabs), "")
+            Editor.autoindent, Editor.case, self.tab_size, self.write_tabs), "")
             try:
                 res =  [i.strip().lower() for i in pat.split(",")]
-                if res[0]: self.autoindent = 'y' if res[0][0] == 'y' else 'n'
+                if res[0]: Editor.autoindent = 'y' if res[0][0] == 'y' else 'n'
                 if res[1]: Editor.case     = 'y' if res[1][0] == 'y' else 'n'
                 if res[2]: self.tab_size = int(res[2])
                 if res[3]: self.write_tabs = 'y' if res[3][0] == 'y' else 'n'
@@ -614,7 +614,7 @@ class Editor:
             self.undo_add(self.cur_line, [l], KEY_NONE, 2)
             self.content[self.cur_line] = l[:self.col]
             ni = 0
-            if self.autoindent == "y": ## Autoindent
+            if Editor.autoindent == "y": ## Autoindent
                 ni = min(self.spaces(l), self.col)  ## query indentation
             self.cur_line += 1
             self.content[self.cur_line:self.cur_line] = [' ' * ni + l[self.col:]]

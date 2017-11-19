@@ -95,10 +95,12 @@ class Editor:
     "\x1b[1;5F": KEY_LAST, 
     "\x1b[3;5~": KEY_YANK, 
     "\x0b" : KEY_MATCH,
+    "\x1b[M" : KEY_MOUSE,
     }
     yank_buffer = []
     find_pattern = ""
     case = "n"
+    autoindent = "y"
     replc_pattern = ""
     def __init__(self, tab_size, undo_limit):
         self.top_line = self.cur_line = self.row = self.col = self.margin = 0
@@ -109,7 +111,6 @@ class Editor:
         self.undo = []
         self.undo_limit = max(undo_limit, 0)
         self.undo_zero = 0
-        self.autoindent = "y"
         self.mark = None
         self.straight = "y"
         self.write_tabs = "n"
@@ -277,7 +278,7 @@ class Editor:
             elif key in (KEY_ENTER, KEY_TAB): 
                 self.hilite(0)
                 return res
-            elif key == KEY_QUIT: 
+            elif key in (KEY_QUIT, KEY_DUP): 
                 self.hilite(0)
                 return None
             elif key == KEY_LEFT:
@@ -456,11 +457,11 @@ class Editor:
             self.row = Editor.height - 1 
         elif key == KEY_TOGGLE: 
             pat = self.line_edit("Autoindent {}, Case Sensitive Search {}, Straight Cursor {}"
-            ", Tab Size {}, Write Tabs {}: ".format(self.autoindent, Editor.case,
+            ", Tab Size {}, Write Tabs {}: ".format(Editor.autoindent, Editor.case,
             self.straight, self.tab_size, self.write_tabs), "")
             try:
                 res = [i.strip().lower() for i in pat.split(",")]
-                if res[0]: self.autoindent = 'y' if res[0][0] == 'y' else 'n'
+                if res[0]: Editor.autoindent = 'y' if res[0][0] == 'y' else 'n'
                 if res[1]: Editor.case = 'y' if res[1][0] == 'y' else 'n'
                 if res[2]: self.straight = 'y' if res[2][0] == 'y' else 'n'
                 if res[3]: self.tab_size = int(res[3])
@@ -529,7 +530,7 @@ class Editor:
             self.undo_add(self.cur_line, [l], KEY_NONE, 2)
             self.content[self.cur_line] = l[:self.col]
             ni = 0
-            if self.autoindent == "y": 
+            if Editor.autoindent == "y": 
                 ni = min(self.spaces(l), self.col) 
             self.cur_line += 1
             self.content[self.cur_line:self.cur_line] = [' ' * ni + l[self.col:]]

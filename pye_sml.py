@@ -110,6 +110,7 @@ class Editor:
     yank_buffer = []
     find_pattern = ""
     case = "n"
+    autoindent = "y"
     replc_pattern = ""
 
     def __init__(self, tab_size, undo_limit):
@@ -121,7 +122,6 @@ class Editor:
         self.undo = []
         self.undo_limit = max(undo_limit, 0)
         self.undo_zero = 0
-        self.autoindent = "y"
         self.mark = None
 
     def wr(self, s):
@@ -398,12 +398,11 @@ class Editor:
                 self.row = Editor.height >> 1
         elif key == KEY_TOGGLE: ## Toggle Autoindent/Statusline/Search case
             pat = self.line_edit("Case Sensitive Search {}, Autoindent {}"
-            ": ".format(Editor.case, self.autoindent
-            ), "")
+            ": ".format(Editor.case, Editor.autoindent), "")
             try:
                 res =  [i.strip().lower() for i in pat.split(",")]
                 if res[0]: Editor.case       = 'y' if res[0][0] == 'y' else 'n'
-                if res[1]: self.autoindent = 'y' if res[1][0] == 'y' else 'n'
+                if res[1]: Editor.autoindent = 'y' if res[1][0] == 'y' else 'n'
             except:
                 pass
         elif key == KEY_MARK:
@@ -413,7 +412,7 @@ class Editor:
             self.undo_add(self.cur_line, [l], KEY_NONE, 2)
             self.content[self.cur_line] = l[:self.col]
             ni = 0
-            if self.autoindent == "y": ## Autoindent
+            if Editor.autoindent == "y": ## Autoindent
                 ni = min(self.spaces(l), self.col)  ## query indentation
             self.cur_line += 1
             self.content[self.cur_line:self.cur_line] = [' ' * ni + l[self.col:]]
