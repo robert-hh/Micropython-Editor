@@ -35,9 +35,11 @@ else:
 if sys.implementation.name == "micropython":
     is_micropython = True
     from uio import StringIO
+    from ure import compile as re_compile
 else:
     is_micropython = False
     from _io import StringIO
+    from re import compile as re_compile
 
 KEY_NONE      = const(0x00)
 KEY_UP        = const(0x0b)
@@ -369,7 +371,13 @@ class Editor:
         pos = len(res)
         while True:
             key, char = self.get_input()  ## Get Char of Fct.
-            if key in (KEY_ENTER, KEY_TAB): ## Finis
+            if key == KEY_NONE: ## char to be inserted
+                if len(prompt) + len(res) < self.width - 2:
+                    res = res[:pos] + char + res[pos:]
+                    self.wr(res[pos])
+                    pos += len(char)
+                    push_msg(res[pos:]) ## update tail
+            elif key in (KEY_ENTER, KEY_TAB): ## Finis
                 self.hilite(0)
                 return res
             elif key == KEY_QUIT: ## Abort
@@ -405,12 +413,6 @@ class Editor:
                     res = Editor.yank_buffer[0].strip()[:Editor.width - len(prompt) - 2]
                     self.wr(res)
                     pos = len(res)
-            elif key == KEY_NONE: ## char to be inserted
-                if len(prompt) + len(res) < self.width - 2:
-                    res = res[:pos] + char + res[pos:]
-                    self.wr(res[pos])
-                    pos += len(char)
-                    push_msg(res[pos:]) ## update tail
 
 ## This is the regex version of find.
     def find_in_file(self, pattern, col, end):
@@ -475,7 +477,15 @@ class Editor:
     def handle_edit_keys(self, key, char): ## keys which edit the buffer
         l = self.content[self.cur_line]
         jut = self.col - len(l) ## <0: before text end, = 0 at text end, >0 beyond text end
-        if key == KEY_DOWN:
+        if key == KEY_NONE: ## character to be added
+            self.mark = None
+            self.undo_add(self.cur_line, [l], 0x20 if char == " " else 0x41)
+            if jut < 0:
+                self.content[self.cur_line] = l[:self.col] + char + l[self.col:]
+            else:
+                self.content[self.cur_line] = l + ' ' * jut + char
+            self.col += len(char)
+        elif key == KEY_DOWN:
             if self.cur_line < self.total_lines - 1:
                 self.cur_line += 1
                 if self.cur_line == self.top_line + Editor.height:
@@ -527,14 +537,6 @@ class Editor:
                 self.content[self.cur_line - 1] += self.content.pop(self.cur_line)
                 self.cur_line -= 1
                 self.total_lines -= 1
-        elif key == KEY_NONE: ## character to be added
-            self.mark = None
-            self.undo_add(self.cur_line, [l], 0x20 if char == " " else 0x41)
-            if jut < 0:
-                self.content[self.cur_line] = l[:self.col] + char + l[self.col:]
-            else:
-                self.content[self.cur_line] = l + ' ' * jut + char
-            self.col += len(char)
         elif key == KEY_HOME:
             ni = self.spaces(l)
             self.col = ni if self.col != ni else 0

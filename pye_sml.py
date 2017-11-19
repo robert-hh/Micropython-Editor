@@ -263,7 +263,13 @@ class Editor:
         pos = len(res)
         while True:
             key, char = self.get_input()  ## Get Char of Fct.
-            if key in (KEY_ENTER, KEY_TAB): ## Finis
+            if key == KEY_NONE: ## char to be inserted
+                if len(prompt) + len(res) < self.width - 2:
+                    res = res[:pos] + char + res[pos:]
+                    self.wr(res[pos])
+                    pos += len(char)
+                    push_msg(res[pos:]) ## update tail
+            elif key in (KEY_ENTER, KEY_TAB): ## Finis
                 self.hilite(0)
                 return res
             elif key == KEY_QUIT: ## Abort
@@ -287,12 +293,12 @@ class Editor:
                     self.wr("\b")
                     pos -= 1
                     push_msg(res[pos:] + ' ') ## update tail
-            elif key == KEY_NONE: ## char to be inserted
-                if len(prompt) + len(res) < self.width - 2:
-                    res = res[:pos] + char + res[pos:]
-                    self.wr(res[pos])
-                    pos += len(char)
-                    push_msg(res[pos:]) ## update tail
+            elif key == KEY_ZAP: ## Get from content
+                if Editor.yank_buffer:
+                    self.wr('\b' * pos + ' ' * len(res) + '\b' * len(res))
+                    res = Editor.yank_buffer[0].strip()[:Editor.width - len(prompt) - 2]
+                    self.wr(res)
+                    pos = len(res)
 
     def find_in_file(self, pattern, pos, end):
         Editor.find_pattern = pattern # remember it
@@ -337,7 +343,12 @@ class Editor:
 
     def handle_edit_keys(self, key, char): ## keys which edit the buffer
         l = self.content[self.cur_line]
-        if key == KEY_DOWN:
+        if key == KEY_NONE: ## character to be added
+            self.mark = None
+            self.undo_add(self.cur_line, [l], 0x20 if char == " " else 0x41)
+            self.content[self.cur_line] = l[:self.col] + char + l[self.col:]
+            self.col += len(char)
+        elif key == KEY_DOWN:
             self.cur_line += 1
         elif key == KEY_UP:
             self.cur_line -= 1
@@ -362,11 +373,6 @@ class Editor:
                 self.undo_add(self.cur_line, [l], KEY_BACKSPACE)
                 self.content[self.cur_line] = l[:self.col - 1] + l[self.col:]
                 self.col -= 1
-        elif key == KEY_NONE: ## character to be added
-            self.mark = None
-            self.undo_add(self.cur_line, [l], 0x20 if char == " " else 0x41)
-            self.content[self.cur_line] = l[:self.col] + char + l[self.col:]
-            self.col += len(char)
         elif key == KEY_HOME:
             ni = self.spaces(l)
             self.col = ni if self.col != ni else 0

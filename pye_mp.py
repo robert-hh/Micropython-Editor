@@ -8,9 +8,11 @@ else:
 if sys.implementation.name == "micropython":
     is_micropython = True
     from uio import StringIO
+    from ure import compile as re_compile
 else:
     is_micropython = False
     from _io import StringIO
+    from re import compile as re_compile
 KEY_NONE = const(0x00)
 KEY_UP = const(0x0b)
 KEY_DOWN = const(0x0d)
@@ -261,7 +263,13 @@ class Editor:
         pos = len(res)
         while True:
             key, char = self.get_input() 
-            if key in (KEY_ENTER, KEY_TAB): 
+            if key == KEY_NONE: 
+                if len(prompt) + len(res) < self.width - 2:
+                    res = res[:pos] + char + res[pos:]
+                    self.wr(res[pos])
+                    pos += len(char)
+                    push_msg(res[pos:]) 
+            elif key in (KEY_ENTER, KEY_TAB): 
                 self.hilite(0)
                 return res
             elif key == KEY_QUIT: 
@@ -297,17 +305,7 @@ class Editor:
                     res = Editor.yank_buffer[0].strip()[:Editor.width - len(prompt) - 2]
                     self.wr(res)
                     pos = len(res)
-            elif key == KEY_NONE: 
-                if len(prompt) + len(res) < self.width - 2:
-                    res = res[:pos] + char + res[pos:]
-                    self.wr(res[pos])
-                    pos += len(char)
-                    push_msg(res[pos:]) 
     def find_in_file(self, pattern, col, end):
-        if is_micropython:
-            from ure import compile as re_compile
-        else:
-            from re import compile as re_compile
         Editor.find_pattern = pattern 
         if Editor.case != "y":
             pattern = pattern.lower()
@@ -358,7 +356,12 @@ class Editor:
         self.mark = None 
     def handle_edit_keys(self, key, char): 
         l = self.content[self.cur_line]
-        if key == KEY_DOWN:
+        if key == KEY_NONE: 
+            self.mark = None
+            self.undo_add(self.cur_line, [l], 0x20 if char == " " else 0x41)
+            self.content[self.cur_line] = l[:self.col] + char + l[self.col:]
+            self.col += len(char)
+        elif key == KEY_DOWN:
             if self.cur_line < self.total_lines - 1:
                 self.cur_line += 1
                 if self.cur_line == self.top_line + Editor.height:
@@ -407,11 +410,6 @@ class Editor:
                 self.content[self.cur_line - 1] += self.content.pop(self.cur_line)
                 self.cur_line -= 1
                 self.total_lines -= 1
-        elif key == KEY_NONE: 
-            self.mark = None
-            self.undo_add(self.cur_line, [l], 0x20 if char == " " else 0x41)
-            self.content[self.cur_line] = l[:self.col] + char + l[self.col:]
-            self.col += len(char)
         elif key == KEY_HOME:
             ni = self.spaces(l)
             self.col = ni if self.col != ni else 0

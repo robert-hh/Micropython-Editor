@@ -68,7 +68,13 @@
         pos = len(res)
         while True:
             key, char = self.get_input()  ## Get Char of Fct.
-            if key in (KEY_ENTER, KEY_TAB): ## Finis
+            if key == KEY_NONE: ## char to be inserted
+                if len(prompt) + len(res) < self.width - 2:
+                    res = res[:pos] + char + res[pos:]
+                    self.wr(res[pos])
+                    pos += len(char)
+                    push_msg(res[pos:]) ## update tail
+            elif key in (KEY_ENTER, KEY_TAB): ## Finis
                 self.hilite(0)
                 return res
             elif key == KEY_QUIT: ## Abort
@@ -104,12 +110,6 @@
                     res = Editor.yank_buffer[0].strip()[:Editor.width - len(prompt) - 2]
                     self.wr(res)
                     pos = len(res)
-            elif key == KEY_NONE: ## char to be inserted
-                if len(prompt) + len(res) < self.width - 2:
-                    res = res[:pos] + char + res[pos:]
-                    self.wr(res[pos])
-                    pos += len(char)
-                    push_msg(res[pos:]) ## update tail
 
     def line_edit(self, prompt, default):  ## simple one: only 4+1 fcts
         self.goto(Editor.height, 0)
@@ -120,7 +120,11 @@
         res = default
         while True:
             key, char = self.get_input()  ## Get Char of Fct.
-            if key in (KEY_ENTER, KEY_TAB): ## Finis
+            if key == KEY_NONE: ## character to be added
+                if len(prompt) + len(res) < Editor.width - 2:
+                    res += char
+                    self.wr(char)
+            elif key in (KEY_ENTER, KEY_TAB): ## Finis
                 self.hilite(0)
                 return res
             elif key == KEY_QUIT: ## Abort
@@ -133,17 +137,6 @@
             elif key == KEY_DELETE: ## Delete prev. Entry
                 self.wr('\b \b' * len(res))
                 res = ''
-#ifndef BASIC
-            elif key == KEY_ZAP: ## Get from paste buffer
-                if Editor.yank_buffer:
-                    self.wr('\b \b' * len(res))
-                    res = Editor.yank_buffer[0].strip()[:Editor.width - len(prompt) - 2]
-                    self.wr(res)
-#endif
-            elif key == KEY_NONE: ## character to be added
-                if len(prompt) + len(res) < Editor.width - 2:
-                    res += char
-                    self.wr(char)
 
     def expandtabs(self, s, tabsize = 8):
         import _io
