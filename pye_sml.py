@@ -364,7 +364,9 @@ class Editor:
                 self.content[self.cur_line] = l[:self.col] + l[self.col + 1:]
             elif (self.cur_line + 1) < self.total_lines: ## test for last line
                 self.undo_add(self.cur_line, [l, self.content[self.cur_line + 1]], KEY_NONE)
-                self.content[self.cur_line] = l + self.content.pop(self.cur_line + 1)
+                self.content[self.cur_line] = l + (
+                    self.content.pop(self.cur_line + 1).lstrip() if Editor.autoindent == "y" else
+                    self.content.pop(self.cur_line + 1))
                 self.total_lines -= 1
         elif key == KEY_BACKSPACE:
             if self.mark != None:

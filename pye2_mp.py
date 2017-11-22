@@ -411,7 +411,9 @@ class Editor:
                 self.undo_add(self.cur_line, [l, self.content[self.cur_line + 1]], KEY_NONE)
                 if jut > 0: 
                     l += ' ' * jut
-                self.content[self.cur_line] = l + self.content.pop(self.cur_line + 1)
+                self.content[self.cur_line] = l + (
+                    self.content.pop(self.cur_line + 1).lstrip() if Editor.autoindent == "y" else
+                    self.content.pop(self.cur_line + 1))
                 self.total_lines -= 1
         elif key == KEY_BACKSPACE:
             if self.mark is not None:
