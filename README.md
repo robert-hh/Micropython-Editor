@@ -31,7 +31,7 @@ shows most of the commands. Commands marked with (opt) may not be supported in
 |Home End|Goto the start or end of a line|
 |Enter|Enter a line break at the cursor position. Auto-indent is supported|
 |Backspace|Delete char left to the  cursor (The key must be set to ASCII-Del)|
-|Del|Delete the char under the cursor. If lines are marked, delete the marked area|
+|Del|Delete the char under the cursor. At the end of the line join the next line. If autoindent is enabled, delete also the leading spaces of the joined line. If lines are marked, delete the marked area|
 |Tab & Backtab|Insert or remove spaces up to the next tab position. If lines are marked, indent or unindent (opt)|
 |Ctrl-O|Open a new file. If the file name is left empty, an empty buffer is opened|
 |Ctrl-W|Toggle to the next file buffer|
@@ -50,7 +50,8 @@ shows most of the commands. Commands marked with (opt) may not be supported in
 |Ctrl-C or Ctrl-D|Copy the marked lines
 |Ctrl-V|Insert the copied/cut lines|
 |Ctrl-Z|Undo the last change(s)|
-|Ctrl-A|Change settings for tab size, search case sensitivity, auto-indent and writing tabs (opt)|
+|Ctrl-P|Comment/Uncomment a line or marked area|
+|Ctrl-A|Change settings for tab size, search case sensitivity, auto-indent, comment string and writing tabs (opt)|
 |Ctrl-E|Redraw the screen. On WiPy and PyBord it shows the amount of free memory|  
 
 More details can be found in the doc file. On reading files, tab characters
@@ -336,3 +337,8 @@ Use kbd_intr() too on Pyboard.
 **2.17** Remove all option variants from the source files, and make pye_sml.py
 a pure micropython boards version with reduced function set. The only options
 remaining are Linux/CPython vs. MicroPython
+
+**2.18** On deleting the end of a line, remove space characters from the joined line, if autoindent is active. This behavior mirrors autoindent.
+
+**2.19** Add a toggle key for commenting/uncommenting a line or marked area. The
+ default comment character is '#', but can be changed through the settings command.

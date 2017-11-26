@@ -75,6 +75,7 @@ KEY_TOGGLE    = const(0x01)
 KEY_GET       = const(0x0f)
 KEY_MARK      = const(0x0c)
 KEY_NEXT      = const(0x17)
+KEY_COMMENT   = const(0xfffc)
 KEY_MATCH     = const(0xfffd)
 KEY_INDENT    = const(0xfffe)
 KEY_UNDENT    = const(0xffff)
@@ -121,6 +122,7 @@ class Editor:
     "\x01"   : KEY_TOGGLE, ## Ctrl-A
     "\x17"   : KEY_NEXT, ## Ctrl-W
     "\x0f"   : KEY_GET, ## Ctrl-O
+    "\x10"   : KEY_COMMENT, ## Ctrl-P
 ## other keys
     "\x1b[1;5H": KEY_FIRST, ## Ctrl-Home
     "\x1b[1;5F": KEY_LAST, ## Ctrl-End
@@ -134,6 +136,7 @@ class Editor:
     case = "n"
     autoindent = "y"
     replc_pattern = ""
+    comment_char = "\x23"
 
     def __init__(self, tab_size, undo_limit):
         self.top_line = self.cur_line = self.row = self.col = self.margin = 0
@@ -562,16 +565,17 @@ class Editor:
             self.cur_line = self.total_lines - 1
             self.row = Editor.height - 1 ## will be fixed if required
         elif key == KEY_TOGGLE: ## Toggle Autoindent/Statusline/Search case
-            pat = self.line_edit("Autoindent {}, Case Sensitive Search {}, Straight Cursor {}"
-            ", Tab Size {}, Write Tabs {}: ".format(Editor.autoindent, Editor.case, 
-            self.straight, self.tab_size, self.write_tabs), "")
+            pat = self.line_edit("Autoindent {}, Search Case {}, Straight Cursor {}"
+            ", Tabsize {}, Comment {}, Tabwrite {}: ".format(Editor.autoindent, Editor.case, 
+            self.straight, self.tab_size, Editor.comment_char, self.write_tabs), "")
             try:
-                res =  [i.strip().lower() for i in pat.split(",")]
+                res =  [i.lstrip().lower() for i in pat.split(",")]
                 if res[0]: Editor.autoindent = 'y' if res[0][0] == 'y' else 'n'
                 if res[1]: Editor.case     = 'y' if res[1][0] == 'y' else 'n'
                 if res[2]: self.straight   = 'y' if res[2][0] == 'y' else 'n'
                 if res[3]: self.tab_size   = int(res[3])
-                if res[4]: self.write_tabs = 'y' if res[4][0] == 'y' else 'n'
+                if res[4]: Editor.comment_char = res[4]
+                if res[5]: self.write_tabs = 'y' if res[5][0] == 'y' else 'n'
             except:
                 pass
         elif key == KEY_MOUSE: ## Set Cursor
@@ -749,6 +753,18 @@ class Editor:
                 if len(self.undo) == self.undo_zero:
                     self.changed = ''
                 self.mark = None
+        elif key == KEY_COMMENT:
+            if self.mark is None:
+                lrange = (self.cur_line, self.cur_line + 1)
+            else:
+                lrange = self.line_range()
+            self.undo_add(lrange[0], self.content[lrange[0]:lrange[1]], KEY_COMMENT, lrange[1] - lrange[0]) ## undo replaces
+            ni = len(Editor.comment_char)
+            for i in range(lrange[0],lrange[1]):
+                if self.content[i][:ni] == Editor.comment_char:
+                    self.content[i] = self.content[i][ni:]
+                else:
+                    self.content[i] = Editor.comment_char + self.content[i]
         elif key == KEY_REDRAW:
             self.redraw(True)
 
