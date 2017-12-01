@@ -8,7 +8,7 @@ A small text editor written in Python running on PYBoard, WiPy 1, the pycom.io
  https://github.com/pfalcon/pyedit. I ported it to PyBoard, WiPy 1,
  ESP8266, Teensy, ESP32 and the Pycom.io devices, and added a few functions:
 
-- Use  stdin/stdout or USB_VCP/UART (Pyboard & Teensy) for input and output.
+- Use sys.stdin.read() and sys.stdout.write() for input and output of the Micropython version.
 - Changed the read keyboard function to comply with slow byte-by-byte input on serial lines.
 - Added support for Tab, BackTab, Save, Del and Backspace joining lines, Find,
 Replace, Goto Line, Undo, Get file, Auto-Indent, Set Flags, Copy/Delete & Paste, Indent, Un-Indent
