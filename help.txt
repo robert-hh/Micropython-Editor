@@ -27,6 +27,8 @@ Backspc.            Delete the char left hand to the cursor.  If the mark
                     previous line. (*)
 Del                 Delete char under cursor. At the end of the line join the
                     next line. If the mark is set, delete the marked line range.
+                    If Autoindent is enabled, Del at the line's end also removes
+                    leading spaces from the then joined line.
 Tab     Ctrl-I      Tab. Insert spaces at the cursor position up to the next
                     tab location, moving the cursor. If the mark is set, indent
                     the lines between the mark and cursor. 
@@ -86,6 +88,9 @@ Ctrl-O              Open a new file buffer. The file name will be prompted for.
                     will be empty. If the name entered belongs to a directory,
                     the sorted list of file names in that directory will be
                     returned.
+Ctrl-P              Comment/Uncomment a line or marked area. The default for 
+                    the comment Character is #, but can be changed with the
+                    Ctrl-A settings
 Ctrl-Z              Undo the last change(s). Every char add sequence/deleted
                     char sequence/replaced item/deleted line/inserted
                     line(s)/indent sequence/Un-indent sequence counts as a
