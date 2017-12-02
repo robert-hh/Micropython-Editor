@@ -373,10 +373,7 @@ class Editor:
         if key == KEY_NONE: 
             self.mark = None
             self.undo_add(self.cur_line, [l], 0x20 if char == " " else 0x41)
-            if jut < 0:
-                self.content[self.cur_line] = l[:self.col] + char + l[self.col:]
-            else:
-                self.content[self.cur_line] = l + ' ' * jut + char
+            self.content[self.cur_line] = l[:self.col] + ' ' * jut + char + l[self.col:]
             self.col += len(char)
         elif key == KEY_DOWN:
             if self.cur_line < self.total_lines - 1:
@@ -412,10 +409,9 @@ class Editor:
                 self.content[self.cur_line] = l[:self.col] + l[self.col + 1:]
             elif (self.cur_line + 1) < self.total_lines: 
                 self.undo_add(self.cur_line, [l, self.content[self.cur_line + 1]], KEY_NONE)
-                if jut > 0: 
-                    l += ' ' * jut
-                self.content[self.cur_line] = l + (
-                    self.content.pop(self.cur_line + 1).lstrip() if Editor.autoindent == "y" else
+                self.content[self.cur_line] = l + ' ' * jut + (
+                    self.content.pop(self.cur_line + 1).lstrip()
+                    if Editor.autoindent == "y" and self.col > 0 else
                     self.content.pop(self.cur_line + 1))
                 self.total_lines -= 1
         elif key == KEY_BACKSPACE:
@@ -548,8 +544,6 @@ class Editor:
                 self.undo_add(self.cur_line, [l], KEY_TAB)
                 if jut < 0:
                     self.content[self.cur_line] = l[:self.col] + ' ' * ni + l[self.col:]
-                else:
-                    self.content[self.cur_line] = l + ' ' * (jut + ni)
                 self.col += ni
             else:
                 lrange = self.line_range()

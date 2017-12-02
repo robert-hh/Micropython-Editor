@@ -14,11 +14,11 @@ PgDn                Move the cursor down by one screen height.
 Home                Go to start-of-line, if the Cursor is at start-of-text.
                     Otherwise go to start-of-text.
 End                 Move to the end-of-line.
-Mouse Button 1      Set the cursor. 
-Mouse Button 2      Set/Clear the line mark. 
+Mouse Button 1      Set the cursor.
+Mouse Button 2      Set/Clear the line mark.
 Mouse Scroll Wheel  Scroll Up/Down the screen content by 3 lines per tick.
                     The cursor stays visible and will be moved in the content
-                    if required. 
+                    if required.
 Enter   \n          Insert a line break at the cursor position.
                     Auto-indent is supported.
 Backspc.            Delete the char left hand to the cursor.  If the mark
@@ -31,7 +31,7 @@ Del                 Delete char under cursor. At the end of the line join the
                     leading spaces from the then joined line.
 Tab     Ctrl-I      Tab. Insert spaces at the cursor position up to the next
                     tab location, moving the cursor. If the mark is set, indent
-                    the lines between the mark and cursor. 
+                    the lines between the mark and cursor.
 BackTab Ctrl-U      Back Tab. Remove spaces left to the cursor position up to
                     the next tab location or the next non-space char, and moves
                     the cursor.  If the mark is set, un-indent the lines
@@ -61,7 +61,7 @@ Ctrl-T  Ctrl-Home   Go to the first line (*)
 Ctrl-K              Go to the matching bracket, if any. The cursor has to be on
                     a bracket symbol. Bracket pairs are (), [], {} and <>.
                     Brackets in comments and strings are not discarded.
-Ctrl-A              Settings. Sets the state of auto-indent, search case 
+Ctrl-A              Settings. Sets the state of auto-indent, search case
                     sensitivity, tab size and write-tabs. Enter ‘y’ or ‘n’ or a
                     number in up to four, comma separated fields (e.g.
                     n,y,4,n). An empty field leaves the respective value
@@ -88,7 +88,7 @@ Ctrl-O              Open a new file buffer. The file name will be prompted for.
                     will be empty. If the name entered belongs to a directory,
                     the sorted list of file names in that directory will be
                     returned.
-Ctrl-P              Comment/Uncomment a line or marked area. The default for 
+Ctrl-P              Comment/Uncomment a line or marked area. The default for
                     the comment Character is #, but can be changed with the
                     Ctrl-A settings
 Ctrl-Z              Undo the last change(s). Every char add sequence/deleted
@@ -130,8 +130,8 @@ When reading files, tab characters (\x09) in the text are replaced by spaces,
 tab size 8, and white space at the end of a line is discarded. When you save
 the file, you have the option to replace sequences of spaces by tabs, tab size
 8. When during reading the files tabs are detected, the tab write option is
-set to y. However, the original state will NOT be restored. So be careful 
-when editing files with tab characters. 
+set to y. However, the original state will NOT be restored. So be careful
+when editing files with tab characters.
 
 The size of a file that can be edited on a MicroPthon board is limited by its memory.
 You may use REDRAW to determine how much space is left. Besides the file
