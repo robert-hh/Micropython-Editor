@@ -73,7 +73,7 @@ micropython/python3. Runs on PyBoard as well, but the file size is much larger
 than the stripped down version.
 - pye_sml.py: Source file without RE search and reduced line edit.
 - pye2.py: a variant of pye.py which does not change the cursor column during
-vertical moves, bysed on the extended variant.
+vertical moves, based on the extended variant.
 - Pyboard Editor.pdf: A short documentation
 - README.md: This one
 - pye_mp.py, pye2_mp: Condensed source files of pye.py and pye2.py for
@@ -341,4 +341,4 @@ remaining are Linux/CPython vs. MicroPython
 **2.18** On deleting the end of a line, remove space characters from the joined line, if autoindent is active. This behavior mirrors autoindent.
 
 **2.19** Add a toggle key for commenting/uncommenting a line or marked area. The
- default comment character is '#', but can be changed through the settings command.
+ default comment string is '#', but can be changed through the settings command.
