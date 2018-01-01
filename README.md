@@ -28,7 +28,7 @@ shows most of the commands. Commands marked with (opt) may not be supported in
 |:---|:---|
 |Up Down Left Right| Cursor movement by one line or char|
 |PgUp & PgDd|Page up/down|
-|Home End|Goto the start or end of a line|
+|Home End|Goto the start or end of a line. Both keys toggle between the first/last non-blank and the start/end including blanks|
 |Enter|Enter a line break at the cursor position. Auto-indent is supported|
 |Backspace|Delete char left to the  cursor (The key must be set to ASCII-Del)|
 |Del|Delete the char under the cursor. At the end of the line join the next line. If autoindent is enabled, delete also the leading spaces of the joined line. If lines are marked, delete the marked area|
