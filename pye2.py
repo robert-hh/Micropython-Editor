@@ -537,7 +537,8 @@ class Editor:
             ni = self.spaces(l)
             self.col = ni if self.col != ni else 0
         elif key == KEY_END:
-            self.col = len(l)
+            ni = len(l.rstrip(" "))
+            self.col = ni if self.col != ni else len(l)
         elif key == KEY_PGUP:
             self.cur_line -= Editor.height
         elif key == KEY_PGDN:
