@@ -115,6 +115,7 @@ class Editor:
     "\x10"   : KEY_COMMENT, ## Ctrl-P
 ## Cut and Paste
     "\x0c"   : KEY_MARK, ## Ctrl-L
+    "\x00"   : KEY_MARK, ## Ctrl-Space
     "\x19"   : KEY_YANK, ## Ctrl-Y alias to Ctrl-X
     "\x18"   : KEY_YANK, ## Ctrl-X
     "\x1b[3;5~": KEY_YANK, ## Ctrl-Del
@@ -128,6 +129,7 @@ class Editor:
     "\x12"   : KEY_REPLC, ## Ctrl-R
 ## Buffer ops
     "\x11"   : KEY_QUIT, ## Ctrl-Q
+    "\x1c"   : KEY_QUIT, ## Ctrl-Q
     "\x13"   : KEY_WRITE,  ## Ctrl-S
     "\x17"   : KEY_NEXT, ## Ctrl-W
     "\x0f"   : KEY_GET, ## Ctrl-O

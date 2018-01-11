@@ -35,7 +35,7 @@ shows most of the commands. Commands marked with (opt) may not be supported in
 |Tab & Backtab|Insert or remove spaces up to the next tab position. If lines are marked, indent or unindent (opt)|
 |Ctrl-O|Open a new file. If the file name is left empty, an empty buffer is opened|
 |Ctrl-W|Toggle to the next file buffer|
-|Ctrl-Q|Close a file buffer or end line-edit|
+|Ctrl-Q or Ctrl-\|Close a file buffer or end line-edit|
 |Ctrl-S|Save to file with the option to change the file name|
 |Ctrl-W|Switch to the next file buffer|
 |Ctrl-F|Find|
@@ -342,3 +342,7 @@ remaining are Linux/CPython vs. MicroPython
 
 **2.19** Add a toggle key for commenting/uncommenting a line or marked area. The
  default comment string is '#', but can be changed through the settings command.
+
+ **2.20** Change the End-Key to toggle between EOL and last non-space char.
+
+**2.21** Add Ctrl-\ as alternative key to close a file

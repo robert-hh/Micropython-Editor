@@ -83,6 +83,7 @@ class Editor:
     "\x08"   : KEY_REPLC, ## Ctrl-H
     "\x12"   : KEY_REPLC, ## Ctrl-R
     "\x11"   : KEY_QUIT, ## Ctrl-Q
+    "\x1c"   : KEY_QUIT, ## Ctrl-Q
     "\n"     : KEY_ENTER,
     "\x13"   : KEY_WRITE,  ## Ctrl-S
     "\x06"   : KEY_FIND, ## Ctrl-F
@@ -96,6 +97,7 @@ class Editor:
     "\x16"   : KEY_ZAP, ## Ctrl-V
     "\x04"   : KEY_DUP, ## Ctrl-D
     "\x0c"   : KEY_MARK, ## Ctrl-L
+    "\x00"   : KEY_MARK, ## Ctrl-Space
     "\x14"   : KEY_FIRST, ## Ctrl-T
     "\x02"   : KEY_LAST,  ## Ctrl-B
     "\x01"   : KEY_TOGGLE, ## Ctrl-A
