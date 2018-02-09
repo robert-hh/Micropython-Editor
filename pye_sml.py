@@ -224,7 +224,7 @@ class Editor:
                     Editor.scrbuf[c] = (False,'')
             else:
                 l = (self.mark != None and (
-                    (self.mark <= i <= self.cur_line) or (self.cur_line <= i <= self.mark)),
+                    (min(self.mark, self.cur_line) <= i <= max(self.cur_line, self.mark))),
                      self.content[i][self.margin:self.margin + Editor.width])
                 if l != Editor.scrbuf[c]: ## line changed, print it
                     self.goto(c, 0)

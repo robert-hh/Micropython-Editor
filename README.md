@@ -18,7 +18,7 @@ Goto, Get file and Flag settings.
 - Optional support of the basic mouse functions scrolling up/down, setting the cursor and marking lines.
 
 **Warning: Due to a glitch in the pycom.io ports of micropython before V1.9.0
- Ctrl-C must not be used for copying in these ports. Use Ctrl-D instead. Unfortunately, Ctrl-C will terminate the editor (Bug catching KeyboardInterrupts Exceptions).**  
+ Ctrl-C must not be used for copying in these ports. Use Ctrl-D instead. Unfortunately, Ctrl-C will terminate the editor (Bug catching KeyboardInterrupts Exceptions).**
 
 The editor assumes a VT100 terminal. It works in Insert mode. The following list
 shows most of the commands. Commands marked with (opt) may not be supported in
@@ -45,14 +45,14 @@ shows most of the commands. Commands marked with (opt) may not be supported in
 |Ctrl-T|Go to the first line (opt)|
 |Ctrl-B|Go to the last line (opt)|
 |Ctrl-K|Goto the bracket matching the one under the cursor (opt)|
-|Ctrl-L|Mark/Unmark the current line. The mark can then be extended by moving the cursor|
+|Ctrl-L or Ctrl-Space|Mark/Unmark the current line. The mark can then be extended by moving the cursor|
 |Ctrl-X or Ctrl-Y|Cut the marked lines
 |Ctrl-C or Ctrl-D|Copy the marked lines
 |Ctrl-V|Insert the copied/cut lines|
 |Ctrl-Z|Undo the last change(s)|
 |Ctrl-P|Comment/Uncomment a line or marked area|
 |Ctrl-A|Change settings for tab size, search case sensitivity, auto-indent, comment string and writing tabs (opt)|
-|Ctrl-E|Redraw the screen. On WiPy and PyBord it shows the amount of free memory|  
+|Ctrl-E|Redraw the screen. On WiPy and PyBord it shows the amount of free memory|
 
 More details can be found in the doc file. On reading files, tab characters
 are expanded to spaces with a tab size of 8, and trailing white space on a

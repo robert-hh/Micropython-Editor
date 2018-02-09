@@ -138,7 +138,7 @@ class Editor:
     case = "n"
     autoindent = "y"
     replc_pattern = ""
-    comment_char = "\x23"
+    comment_char = "\x23 "
 
     def __init__(self, tab_size, undo_limit):
         self.top_line = self.cur_line = self.row = self.col = self.margin = 0
@@ -327,7 +327,7 @@ class Editor:
                     Editor.scrbuf[c] = (False,'')
             else:
                 l = (self.mark is not None and (
-                    (self.mark <= i <= self.cur_line) or (self.cur_line <= i <= self.mark)),
+                    (min(self.mark, self.cur_line) <= i <= max(self.cur_line, self.mark))),
                      self.content[i][self.margin:self.margin + Editor.width])
                 if l != Editor.scrbuf[c]: ## line changed, print it
                     self.goto(c, 0)
@@ -759,10 +759,11 @@ class Editor:
             self.undo_add(lrange[0], self.content[lrange[0]:lrange[1]], KEY_COMMENT, lrange[1] - lrange[0]) ## undo replaces
             ni = len(Editor.comment_char)
             for i in range(lrange[0],lrange[1]):
-                if self.content[i][:ni] == Editor.comment_char:
-                    self.content[i] = self.content[i][ni:]
+                ns = self.spaces(self.content[i])
+                if self.content[i][ns:ns + ni] == Editor.comment_char:
+                    self.content[i] = ns * " " + self.content[i][ns + ni:]
                 else:
-                    self.content[i] = Editor.comment_char + self.content[i]
+                    self.content[i] = ns * " " + Editor.comment_char + self.content[i][ns:]
         elif key == KEY_REDRAW:
             self.redraw(True)
 

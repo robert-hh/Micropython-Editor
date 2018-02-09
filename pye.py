@@ -132,7 +132,7 @@ class Editor:
     case = "n"
     autoindent = "y"
     replc_pattern = ""
-    comment_char = "\x23" ## for #
+    comment_char = "\x23 " ## for #
 
     def __init__(self, tab_size, undo_limit):
         self.top_line = self.cur_line = self.row = self.col = self.margin = 0
@@ -738,10 +738,11 @@ class Editor:
             self.undo_add(lrange[0], self.content[lrange[0]:lrange[1]], KEY_COMMENT, lrange[1] - lrange[0]) ## undo replaces
             ni = len(Editor.comment_char)
             for i in range(lrange[0],lrange[1]):
-                if self.content[i][:ni] == Editor.comment_char:
-                    self.content[i] = self.content[i][ni:]
+                ns = self.spaces(self.content[i])
+                if self.content[i][ns:ns + ni] == Editor.comment_char:
+                    self.content[i] = ns * " " + self.content[i][ns + ni:]
                 else:
-                    self.content[i] = Editor.comment_char + self.content[i]
+                    self.content[i] = ns * " " + Editor.comment_char + self.content[i][ns:]
         elif key == KEY_REDRAW:
             self.redraw(True)
 
