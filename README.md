@@ -28,7 +28,8 @@ shows most of the commands. Commands marked with (opt) may not be supported in
 |:---|:---|
 |Up Down Left Right| Cursor movement by one line or char|
 |PgUp & PgDd|Page up/down|
-|Home End|Goto the start or end of a line. Both keys toggle between the first/last non-blank and the start/end including blanks|
+|Home|Toggle the position between the start-of-code and the start of line|
+|End|Toggle the position between the end-of-the-code and end-of-line|
 |Enter|Enter a line break at the cursor position. Auto-indent is supported|
 |Backspace|Delete char left to the  cursor (The key must be set to ASCII-Del)|
 |Del|Delete the char under the cursor. At the end of the line join the next line. If autoindent is enabled, delete also the leading spaces of the joined line. If lines are marked, delete the marked area|
@@ -343,6 +344,10 @@ remaining are Linux/CPython vs. MicroPython
 **2.19** Add a toggle key for commenting/uncommenting a line or marked area. The
  default comment string is '#', but can be changed through the settings command.
 
- **2.20** Change the End-Key to toggle between EOL and last non-space char.
+**2.20** Change the End-Key to toggle between EOL and last non-space char.
 
 **2.21** Add Ctrl-\ as alternative key to close a file
+
+**2.22** Add Ctrl-Space asl alternative to mark line (Ctrl-L), and Block comment adds the comment string after leading spaces.
+
+**2.23** Change the End key to toggle between end-of-line and end-of-code
