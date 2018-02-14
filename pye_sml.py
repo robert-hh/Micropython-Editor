@@ -560,7 +560,7 @@ class Editor:
                 with open(fname) as f:
                     self.content = f.readlines()
                 for i, l in enumerate(self.content):
-                    self.content[i] = expandtabs(l.rstrip('\r\n\t '))
+                    self.content[i], tf = expandtabs(l.rstrip('\r\n\t '))
 
 ## write file
     def put_file(self, fname):
@@ -577,8 +577,6 @@ class Editor:
 
 ## expandtabs: hopefully sometimes replaced by the built-in function
 def expandtabs(s):
-    from uio import StringIO
-
     if '\t' in s:
         sb = StringIO()
         pos = 0
@@ -589,9 +587,9 @@ def expandtabs(s):
             else:
                 sb.write(c)
                 pos += 1
-        return sb.getvalue()
+        return sb.getvalue(), True
     else:
-        return s
+        return s, False
 
 def pye(*content, tab_size = 4, undo = 50, device = 0, baud = 115200):
 ## prepare content

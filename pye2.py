@@ -809,8 +809,7 @@ class Editor:
 
 ## Read file into content
     def get_file(self, fname):
-        from os import listdir
-        from os import stat
+        from os import listdir, stat
         if not fname:
             fname = self.line_edit("Open file: ", "")
         if fname:
@@ -824,10 +823,11 @@ class Editor:
                 else:
                     with open(fname, errors="ignore") as f:
                         self.content = f.readlines()
-                Editor.tab_seen = 'n'
+                tabs = False
                 for i, l in enumerate(self.content):
-                    self.content[i] = expandtabs(l.rstrip('\r\n\t '))
-                self.write_tabs = Editor.tab_seen
+                    self.content[i], tf = expandtabs(l.rstrip('\r\n\t '))
+                    tabs |= tf
+                self.write_tabs = "y" if tabs else "n"
 
 ## write file
     def put_file(self, fname):
@@ -848,7 +848,6 @@ class Editor:
 ## expandtabs: hopefully sometimes replaced by the built-in function
 def expandtabs(s):
     if '\t' in s:
-        Editor.tab_seen = 'y'
         sb = StringIO()
         pos = 0
         for c in s:
@@ -858,9 +857,9 @@ def expandtabs(s):
             else:
                 sb.write(c)
                 pos += 1
-        return sb.getvalue()
+        return sb.getvalue(), True
     else:
-        return s
+        return s, False
 
 def pye(*content, tab_size=4, undo=50, device=0):
 ## prepare content
@@ -920,7 +919,7 @@ if __name__ == "__main__":
                     os.close(0) ## close and repopen /dev/tty
                     fd_tty = os.open("/dev/tty", os.O_RDONLY) ## memorized, if new fd
                     for i, l in enumerate(name):  ## strip and convert
-                        name[i] = expandtabs(l.rstrip('\r\n\t '))
+                        name[i], tc = expandtabs(l.rstrip('\r\n\t '))
             pye(name, undo=500, device=fd_tty)
     else:
         print ("\nSorry, this OS is not supported (yet)")
