@@ -539,7 +539,7 @@ class Editor:
             ni = self.spaces(l)
             self.col = ni if self.col != ni else 0
         elif key == KEY_END:
-            ni = len(l.partition(Editor.comment_char.strip())[0].rstrip())
+            ni = len(l.split(Editor.comment_char.strip())[0].rstrip())
             ns = self.spaces(l)
             self.col = ni if self.col != ni and ni > ns else len(l)
         elif key == KEY_PGUP:
