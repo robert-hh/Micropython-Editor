@@ -254,7 +254,7 @@ class Editor:
         return ((self.mark, self.cur_line + 1) if self.mark < self.cur_line else
                 (self.cur_line, self.mark + 1))
 
-    def line_edit(self, prompt, default):  ## better one: added cursor keys and backsp, delete
+    def line_edit(self, prompt, default, zap=None):  ## better one: added cursor keys and backsp, delete
         push_msg = lambda msg: self.wr(msg + "\b" * len(msg)) ## Write a message and move cursor back
         self.goto(Editor.height, 0)
         self.hilite(1)
@@ -274,7 +274,7 @@ class Editor:
             elif key in (KEY_ENTER, KEY_TAB): ## Finis
                 self.hilite(0)
                 return res
-            elif key == KEY_QUIT: ## Abort
+            elif key in (KEY_QUIT, KEY_DUP): ## Abort
                 self.hilite(0)
                 return None
             elif key == KEY_LEFT:
@@ -295,12 +295,6 @@ class Editor:
                     self.wr("\b")
                     pos -= 1
                     push_msg(res[pos:] + ' ') ## update tail
-            elif key == KEY_ZAP: ## Get from content
-                if Editor.yank_buffer:
-                    self.wr('\b' * pos + ' ' * len(res) + '\b' * len(res))
-                    res = Editor.yank_buffer[0].strip()[:Editor.width - len(prompt) - 2]
-                    self.wr(res)
-                    pos = len(res)
 
     def find_in_file(self, pattern, pos, end):
         Editor.find_pattern = pattern # remember it
@@ -550,8 +544,6 @@ class Editor:
 ## Read file into content
     def get_file(self, fname):
         from os import listdir, stat
-        if not fname:
-            fname = self.line_edit("Open file: ", "")
         if fname:
             self.fname = fname
             if fname in ('.', '..') or (stat(fname)[0] & 0x4000): ## Dir
@@ -618,6 +610,7 @@ def pye(*content, tab_size = 4, undo = 50, device = 0, baud = 115200):
                     break
                 del slot[index]
             elif key == KEY_GET:
+                fname = slot[index].line_edit("Open file: ", "")
                 slot.append(Editor(tab_size, undo))
                 index = len(slot) - 1
                 slot[index].get_file(None)

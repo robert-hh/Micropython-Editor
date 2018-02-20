@@ -49,7 +49,7 @@ shows most of the commands. Commands marked with (opt) may not be supported in
 |Ctrl-L or Ctrl-Space|Mark/Unmark the current line. The mark can then be extended by moving the cursor|
 |Ctrl-X or Ctrl-Y|Cut the marked lines
 |Ctrl-C or Ctrl-D|Copy the marked lines
-|Ctrl-V|Insert the copied/cut lines|
+|Ctrl-V|Insert the copied/cut lines. In the line edit mode paste the item under the cursor of the active window|
 |Ctrl-Z|Undo the last change(s)|
 |Ctrl-P|Comment/Uncomment a line or marked area|
 |Ctrl-A|Change settings for tab size, search case sensitivity, auto-indent, comment string and writing tabs (opt)|

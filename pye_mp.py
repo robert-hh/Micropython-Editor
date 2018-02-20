@@ -257,7 +257,7 @@ class Editor:
     def line_range(self):
         return ((self.mark, self.cur_line + 1) if self.mark < self.cur_line else
                 (self.cur_line, self.mark + 1))
-    def line_edit(self, prompt, default): 
+    def line_edit(self, prompt, default, zap=None): 
         push_msg = lambda msg: self.wr(msg + "\b" * len(msg)) 
         self.goto(Editor.height, 0)
         self.hilite(1)
@@ -305,11 +305,23 @@ class Editor:
                     pos -= 1
                     push_msg(res[pos:] + ' ') 
             elif key == KEY_ZAP: 
-                if Editor.yank_buffer:
+                char = self.getsymbol(self.content[self.cur_line], self.col, zap)
+                if char is not None:
                     self.wr('\b' * pos + ' ' * len(res) + '\b' * len(res))
-                    res = Editor.yank_buffer[0].strip()[:Editor.width - len(prompt) - 2]
+                    res = char
                     self.wr(res)
                     pos = len(res)
+    def getsymbol(self, s, pos, zap):
+        if pos < len(s) and zap is not None:
+            issymbol = lambda c: c.isalpha() or c.isdigit() or c in zap
+            start = stop = pos
+            while start >= 0 and issymbol(s[start]):
+                start -= 1
+            while stop < len(s) and issymbol(s[stop]):
+                stop += 1
+            return s[start+1:stop]
+        else:
+            return None
     def find_in_file(self, pattern, col, end):
         Editor.find_pattern = pattern 
         if Editor.case != "y":
@@ -430,7 +442,7 @@ class Editor:
         elif key == KEY_PGDN:
             self.cur_line += Editor.height
         elif key == KEY_FIND:
-            pat = self.line_edit("Find: ", Editor.find_pattern)
+            pat = self.line_edit("Find: ", Editor.find_pattern, "_")
             if pat:
                 self.find_in_file(pat, self.col, self.total_lines)
                 self.row = Editor.height >> 1
@@ -557,9 +569,9 @@ class Editor:
                         self.content[i] = self.content[i][(ns - 1) % self.tab_size + 1:]
         elif key == KEY_REPLC:
             count = 0
-            pat = self.line_edit("Replace: ", Editor.find_pattern)
+            pat = self.line_edit("Replace: ", Editor.find_pattern, "_")
             if pat:
-                rpat = self.line_edit("With: ", Editor.replc_pattern)
+                rpat = self.line_edit("With: ", Editor.replc_pattern, "_")
                 if rpat is not None: 
                     Editor.replc_pattern = rpat
                     q = ''
@@ -680,8 +692,6 @@ class Editor:
         return sb.getvalue()
     def get_file(self, fname):
         from os import listdir, stat
-        if not fname:
-            fname = self.line_edit("Open file: ", "")
         if fname:
             self.fname = fname
             if fname in ('.', '..') or (stat(fname)[0] & 0x4000): 
@@ -752,9 +762,10 @@ def pye(*content, tab_size=4, undo=50, device=0):
                     break
                 del slot[index]
             elif key == KEY_GET:
+                f = slot[index].line_edit("Open file: ", "", "_.-")
                 slot.append(Editor(tab_size, undo))
                 index = len(slot) - 1
-                slot[index].get_file(None)
+                slot[index].get_file(f)
             elif key == KEY_NEXT:
                 index += 1
         except Exception as err:
