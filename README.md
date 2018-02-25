@@ -55,6 +55,35 @@ shows most of the commands. Commands marked with (opt) may not be supported in
 |Ctrl-A|Change settings for tab size, search case sensitivity, auto-indent, comment string and writing tabs (opt)|
 |Ctrl-E|Redraw the screen. On WiPy and PyBord it shows the amount of free memory|
 
+The editor is contained in the file pye.py. Start pye from the REPL prompt
+e.g. with  
+
+from pye import pye  
+res = pye(object_1, object_2, ..[, tabsize=n][, undo=n])  
+
+If object_n is a string, it's considered as the name of a file to be edited
+or a directory to be opened. If it’s a file, the content will be loaded,
+and the name of the file will be returned when pye is closed. If the
+file does not exist, an error is displayed, but the edit window is given that
+name. If it’s a directory, the list of file names will be loaded to the edit
+window. If object_n is a list of strings, these will be edited, and the edited
+list will be returned. If no object is named, pye() will give you an empty
+screen, creating a list of strings, unless you save to a file. In that case,
+the file name will be returned. If object_n is neither a string nor a list of
+strings, an empty buffer is opened. It is always the last buffer closed, which
+determines the return value of pye().  
+Optional named parameters:
+
+tabsize=n	Tab step (integer). The default is 4  
+undo=n	Size of the undo stack (integer). A value of 0 or False disables undo.  
+
+The Linux/Darwin version can be called from the command line with:
+
+python3 pye.py [filename(s)]
+
+Obviously, you may use micropython too. Using python3 (not micropython),
+content can also be redirected or pipe'd into the editor.
+
 More details can be found in the doc file. On reading files, tab characters
 are expanded to spaces with a tab size of 8, and trailing white space on a
 line will be discarded. Optionally, tabs can be written when saving the file, replacing
@@ -351,3 +380,5 @@ remaining are Linux/CPython vs. MicroPython
 **2.22** Add Ctrl-Space asl alternative to mark line (Ctrl-L), and Block comment adds the comment string after leading spaces.
 
 **2.23** Change the End key to toggle between end-of-line and end-of-code
+
+**2.24** Changed the Paste key in line edit mode, in that it pastes the word under the cursor of the active window.
