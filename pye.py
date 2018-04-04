@@ -98,7 +98,7 @@ class Editor:
     "\x08"   : KEY_REPLC, ## Ctrl-H
     "\x12"   : KEY_REPLC, ## Ctrl-R
     "\x11"   : KEY_QUIT, ## Ctrl-Q
-    "\x1c"   : KEY_QUIT, ## Ctrl-Q
+    "\x1c"   : KEY_QUIT, ## Ctrl-\
     "\n"     : KEY_ENTER,
     "\x13"   : KEY_WRITE,  ## Ctrl-S
     "\x06"   : KEY_FIND, ## Ctrl-F
@@ -573,7 +573,7 @@ class Editor:
                 if res[1]: Editor.case     = 'y' if res[1][0] == 'y' else 'n'
                 if res[2]: self.tab_size = int(res[2])
                 if res[3]: Editor.comment_char = res[3]
-                if res[4]: self.write_tabs = 'y' if res[3][0] == 'y' else 'n'
+                if res[4]: self.write_tabs = 'y' if res[4][0] == 'y' else 'n'
             except:
                 pass
         elif key == KEY_MOUSE: ## Set Cursor
