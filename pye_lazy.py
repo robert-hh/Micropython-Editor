@@ -41,6 +41,7 @@ else:
     from _io import StringIO
     from re import compile as re_compile
 
+PYE_VERSION   = " V2.25 "
 KEY_NONE      = const(0x00)
 KEY_BACKSPACE = const(0x08)
 KEY_BACKTAB   = const(0x15)
@@ -271,14 +272,13 @@ class Editor:
         self.row = min(Editor.height - 1, self.row)
         self.scroll_region(Editor.height)
         self.mouse_reporting(True) ## enable mouse reporting
-#ifdef LINUX
+        self.message = PYE_VERSION
         if is_linux and not is_micropython:
             signal.signal(signal.SIGWINCH, Editor.signal_handler)
-#endif
         if is_micropython:
             gc.collect()
             if flag:
-                self.message = "{} Bytes Memory available".format(gc.mem_free())
+                self.message #= "{} Bytes Memory available".format(gc.mem_free())
 
     def get_input(self):  ## read from interface/keyboard one byte each and match against function keys
         while True:

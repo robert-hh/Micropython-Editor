@@ -382,3 +382,6 @@ remaining are Linux/CPython vs. MicroPython
 **2.23** Change the End key to toggle between end-of-line and end-of-code
 
 **2.24** Changed the Paste key in line edit mode, in that it pastes the word under the cursor of the active window.
+
+**2.25** Version number is shown with redraw command, and thus at startup and
+window change

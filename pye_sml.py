@@ -183,7 +183,7 @@ class Editor:
         Editor.scrbuf = [(False,"\x00")] * Editor.height ## force delete
         self.row = min(Editor.height - 1, self.row)
         gc.collect()
-        if flag: self.message = "{} Bytes Memory available".format(gc.mem_free())
+        if flag: self.message = "V2.25 {} Bytes Memory available".format(gc.mem_free())
 
     def get_input(self):  ## read from interface/keyboard one byte each and match against function keys
         while True:
