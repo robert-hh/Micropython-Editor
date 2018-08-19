@@ -106,15 +106,13 @@ than the stripped down version.
 vertical moves, based on the extended variant.
 - Pyboard Editor.pdf: A short documentation
 - README.md: This one
-- pye_mp.py, pye2_mp: Condensed source files of pye.py and pye2.py for
+- pye_mp.py, pye2_mp, pye_mp.mpy: Condensed source files of pye.py and pye2.py for
 all MicroPython boards. In order to use it on an board with small memory
 like the esp8266, you have to put pye_mp.py into the directory esp8266/modules,
 esp32/modules or smt32/modules (micropython.org) or esp32/frozen (pycom.io) and
 rebuild micropython.  A cross-compiled version may executed from the file system.
 - peteensy.py: A small wrapper for teensy 3.5 and 3.6 disabling Ctrl-C
 keyboard interrupt.
-- wipye.mpy: Pre-compiled version of pe.py for WiPy1 with all functions enabled.
- For some reasons, this version works only in the telnet connection.
 - strip.sh: sample Shell script which creates the different variants out of pye.py
 using cpp, including all variants of wipye.py with either speed up scrolling or
 support replace or support goto bracket or support indent/un-indent or support mouse.
