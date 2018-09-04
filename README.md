@@ -36,12 +36,12 @@ shows most of the commands. Commands marked with (opt) may not be supported in
 |Tab & Backtab|Insert or remove spaces up to the next tab position. If lines are marked, indent or unindent (opt)|
 |Ctrl-O|Open a new file. If the file name is left empty, an empty buffer is opened|
 |Ctrl-W|Toggle to the next file buffer|
-|Ctrl-Q or Ctrl-\|Close a file buffer or end line-edit|
+|Ctrl-Q or Ctrl-\\ |Close a file buffer or end line-edit|
 |Ctrl-S|Save to file with the option to change the file name|
 |Ctrl-W|Switch to the next file buffer|
 |Ctrl-F|Find|
 |Ctrl-N|Repeat last find|
-|Ctrl-H|Find and Replace (opt)|
+|Ctrl-H or Ctrl-R|Find and Replace (opt)|
 |Ctrl-G|Go to a line|
 |Ctrl-T|Go to the first line (opt)|
 |Ctrl-B|Go to the last line (opt)|
