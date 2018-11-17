@@ -13,7 +13,7 @@ else:
     const = lambda x:x
     from _io import StringIO
     from re import compile as re_compile
-PYE_VERSION = " V2.26"
+PYE_VERSION = " V2.27 "
 KEY_NONE = const(0x00)
 KEY_UP = const(0x0b)
 KEY_DOWN = const(0x0d)
@@ -436,11 +436,11 @@ class Editor:
                 self.total_lines -= 1
         elif key == KEY_HOME:
             ni = self.spaces(l)
-            self.col = ni if self.col != ni else 0
+            self.col = ni if self.col == 0 else 0
         elif key == KEY_END:
             ni = len(l.split(Editor.comment_char.strip())[0].rstrip())
             ns = self.spaces(l)
-            self.col = ni if self.col != ni and ni > ns else len(l)
+            self.col = ni if self.col >= len(l) and ni > ns else len(l)
         elif key == KEY_PGUP:
             self.cur_line -= Editor.height
         elif key == KEY_PGDN:
@@ -756,6 +756,9 @@ def pye(*content, tab_size=4, undo=50, device=0):
             elif type(f) == list and len(f) > 0 and type(f[0]) == str:
                 slot[index].content = f 
             index += 1
+    else:
+        slot[0].get_file(".")
+        index = 1
     Editor.init_tty(device)
     while True:
         try:

@@ -13,7 +13,7 @@ else:
     const = lambda x: x
     from _io import StringIO
     from re import compile as re_compile
-PYE_VERSION = " V2.26"
+PYE_VERSION = " V2.27 "
 KEY_NONE = const(0x00)
 KEY_UP = const(0x0b)
 KEY_DOWN = const(0x0d)
@@ -389,7 +389,10 @@ class Editor:
         if key == KEY_NONE: 
             self.mark = None
             self.undo_add(self.cur_line, [l], 0x20 if char == " " else 0x41)
-            self.content[self.cur_line] = l[:self.col] + ' ' * jut + char + l[self.col:]
+            if jut > 0:
+                self.content[self.cur_line] = l[:self.col] + ' ' * jut + char
+            else:
+                self.content[self.cur_line] = l[:self.col] + char + l[self.col:]
             self.col += len(char)
         elif key == KEY_DOWN:
             if self.cur_line < self.total_lines - 1:
@@ -772,6 +775,9 @@ def pye(*content, tab_size=4, undo=50, device=0):
             elif type(f) == list and len(f) > 0 and type(f[0]) == str:
                 slot[index].content = f 
             index += 1
+    else:
+        slot[0].get_file(".")
+        index = 1
     Editor.init_tty(device)
     while True:
         try:

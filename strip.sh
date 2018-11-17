@@ -9,6 +9,3 @@ cat shebang <(cpp -D LINUX       pye.py | sed "s/#.*$//" | sed "/^$/d") >pye
 chmod +x pye
 mpy-cross -o pye_mp.mpy pye_mp.py
 #
-cpp -D MICROPYTHON pye_lazy.py | sed "s/#.*$//" | sed "/^$/d" >pye_mpl.py
-
-

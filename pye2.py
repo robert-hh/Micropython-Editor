@@ -41,7 +41,7 @@ else:
     from _io import StringIO
     from re import compile as re_compile
 
-PYE_VERSION   = " V2.26"
+PYE_VERSION   = " V2.27 "
 KEY_NONE      = const(0x00)
 KEY_UP        = const(0x0b)
 KEY_DOWN      = const(0x0d)
@@ -432,7 +432,7 @@ class Editor:
     def find_in_file(self, pattern, col, end):
         if is_micropython:
             from ure import compile as re_compile
-        else: 
+        else:
             from re import compile as re_compile
 
         Editor.find_pattern = pattern ## remember it
@@ -495,7 +495,10 @@ class Editor:
             self.mark = None
             self.undo_add(self.cur_line, [l], 0x20 if char == " " else 0x41)
 ## ' ' * jut is an empty string for jut <= 0
-            self.content[self.cur_line] = l[:self.col] + ' ' * jut + char + l[self.col:]
+            if jut > 0:
+                self.content[self.cur_line] = l[:self.col] + ' ' * jut + char
+            else:
+                self.content[self.cur_line] = l[:self.col] + char + l[self.col:]
             self.col += len(char)
         elif key == KEY_DOWN:
             if self.cur_line < self.total_lines - 1:
@@ -532,8 +535,8 @@ class Editor:
             elif (self.cur_line + 1) < self.total_lines: ## test for last line
                 self.undo_add(self.cur_line, [l, self.content[self.cur_line + 1]], KEY_NONE)
                 self.content[self.cur_line] = l + ' ' * jut + (
-                    self.content.pop(self.cur_line + 1).lstrip() 
-                    if Editor.autoindent == "y" and self.col > 0 else 
+                    self.content.pop(self.cur_line + 1).lstrip()
+                    if Editor.autoindent == "y" and self.col > 0 else
                     self.content.pop(self.cur_line + 1))
                 self.total_lines -= 1
         elif key == KEY_BACKSPACE:
@@ -582,7 +585,7 @@ class Editor:
             self.row = Editor.height - 1 ## will be fixed if required
         elif key == KEY_TOGGLE: ## Toggle Autoindent/Statusline/Search case
             pat = self.line_edit("Autoindent {}, Search Case {}, Straight Cursor {}"
-            ", Tabsize {}, Comment {}, Tabwrite {}: ".format(Editor.autoindent, Editor.case, 
+            ", Tabsize {}, Comment {}, Tabwrite {}: ".format(Editor.autoindent, Editor.case,
             self.straight, self.tab_size, Editor.comment_char, self.write_tabs), "")
             try:
                 res =  [i.lstrip().lower() for i in pat.split(",")]
@@ -891,6 +894,9 @@ def pye(*content, tab_size=4, undo=50, device=0):
             elif type(f) == list and len(f) > 0 and type(f[0]) == str:
                 slot[index].content = f ## non-empty list of strings -> edit
             index += 1
+    else:
+        slot[0].get_file(".")
+        index = 1
 ## edit
     Editor.init_tty(device)
     while True:
