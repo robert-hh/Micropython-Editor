@@ -27,6 +27,7 @@ shows most of the commands. Commands marked with (opt) may not be supported in
 |Key(s)|Function|
 |:---|:---|
 |Up Down Left Right| Cursor movement by one line or char|
+|Ctrl-Left Ctrl-Right| Move cursor by one word left & right|
 |PgUp & PgDd|Page up/down|
 |Home|Toggle the position between the start-of-code and the start of line|
 |End|Toggle the position between the end-of-the-code and end-of-line|
@@ -383,3 +384,10 @@ remaining are Linux/CPython vs. MicroPython
 
 **2.25** Version number is shown with redraw command, and thus at startup and
 window change
+
+**2.26** Better separation of port-specific and OS-specific flags
+
+**2.27** Change Homw/End key behavior. Py w/o filename will open a window with
+the list of files in the current dir
+
+**2.28** Add word left & right with ctrl-left and ctrl-right

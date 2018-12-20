@@ -13,7 +13,7 @@ else:
     const = lambda x: x
     from _io import StringIO
     from re import compile as re_compile
-PYE_VERSION = " V2.27 "
+PYE_VERSION = " V2.28 "
 KEY_NONE = const(0x00)
 KEY_UP = const(0x0b)
 KEY_DOWN = const(0x0d)
@@ -23,6 +23,8 @@ KEY_HOME = const(0x10)
 KEY_END = const(0x03)
 KEY_PGUP = const(0xfff1)
 KEY_PGDN = const(0xfff2)
+KEY_WORD_LEFT = const(0xfff3)
+KEY_WORD_RIGHT= const(0xfff4)
 KEY_QUIT = const(0x11)
 KEY_ENTER = const(0x0a)
 KEY_BACKSPACE = const(0x08)
@@ -55,7 +57,9 @@ KEY_UNDENT = const(0xffff)
 class Editor:
     KEYMAP = { 
     "\x1b[A" : KEY_UP,
+    "\x1b[1;5A": KEY_UP,
     "\x1b[B" : KEY_DOWN,
+    "\x1b[1;5B": KEY_DOWN,
     "\x1b[D" : KEY_LEFT,
     "\x1b[C" : KEY_RIGHT,
     "\x1b[H" : KEY_HOME, 
@@ -66,6 +70,8 @@ class Editor:
     "\x1b[4~": KEY_END, 
     "\x1b[5~": KEY_PGUP,
     "\x1b[6~": KEY_PGDN,
+    "\x1b[1;5D": KEY_WORD_LEFT,
+    "\x1b[1;5C": KEY_WORD_RIGHT,
     "\x03" : KEY_DUP, 
     "\r" : KEY_ENTER,
     "\x7f" : KEY_BACKSPACE, 
@@ -321,15 +327,35 @@ class Editor:
                     pos = len(res)
     def getsymbol(self, s, pos, zap):
         if pos < len(s) and zap is not None:
-            issymbol = lambda c: c.isalpha() or c.isdigit() or c in zap
-            start = stop = pos
-            while start >= 0 and issymbol(s[start]):
-                start -= 1
-            while stop < len(s) and issymbol(s[stop]):
-                stop += 1
+            start = self.skip_while(s, pos, zap, -1)
+            stop = self.skip_while(s, pos, zap, 1)
             return s[start+1:stop]
-        else:
-            return None
+    def issymbol(self, c, zap):
+        return c.isalpha() or c.isdigit() or c in zap
+    def skip_until(self, s, pos, zap, way):
+        stop = -1 if way < 0 else len(s)
+        while pos != stop and not self.issymbol(s[pos], zap):
+            pos += way
+        return pos
+    def skip_while(self, s, pos, zap, way):
+        stop = -1 if way < 0 else len(s)
+        while pos != stop and self.issymbol(s[pos], zap):
+            pos += way
+        return pos
+    def skip_up(self):
+        if self.col == 0 and self.cur_line > 0:
+            self.cur_line -= 1
+            self.col = len(self.content[self.cur_line])
+            if self.cur_line < self.top_line:
+                self.scroll_up(1)
+            return True
+    def skip_down(self, l):
+        if self.col >= len(l) and self.cur_line < self.total_lines - 1:
+            self.col = 0
+            self.cur_line += 1
+            if self.cur_line == self.top_line + Editor.height:
+                self.scroll_down(1)
+            return True
     def find_in_file(self, pattern, col, end):
         if is_micropython:
             from ure import compile as re_compile
@@ -405,12 +431,7 @@ class Editor:
                 if self.cur_line < self.top_line:
                     self.scroll_up(1)
         elif key == KEY_LEFT:
-            if self.col == 0 and self.cur_line > 0:
-                self.cur_line -= 1
-                self.col = len(self.content[self.cur_line])
-                if self.cur_line < self.top_line:
-                    self.scroll_up(1)
-            else:
+            if self.skip_up() is None:
                 self.col -= 1
         elif key == KEY_RIGHT:
             if self.straight != "y" and self.col >= len(l) and self.cur_line < self.total_lines - 1:
@@ -420,6 +441,20 @@ class Editor:
                     self.scroll_down(1)
             else:
                 self.col += 1
+        elif key == KEY_WORD_LEFT:
+            self.skip_up()
+            l = self.content[self.cur_line]
+            pos = self.skip_until(l, min(self.col, len(l)) - 1, "_", -1)
+            if pos >= 0:
+                pos = self.skip_while(l, pos, "_", -1)
+            self.col = pos + 1
+        elif key == KEY_WORD_RIGHT:
+            self.skip_down(l)
+            l = self.content[self.cur_line]
+            pos = self.skip_while(l, self.col, "_", 1)
+            if pos >= 0:
+                pos = self.skip_until(l, pos, "_", 1)
+                self.col = pos
         elif key == KEY_DELETE:
             if self.mark is not None:
                 self.delete_lines(False)
