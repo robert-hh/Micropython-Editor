@@ -425,15 +425,17 @@ class Editor:
             if self.skip_down(l) is None:
                 self.col += 1
         elif key == KEY_WORD_LEFT:
-            self.skip_up()
-            l = self.content[self.cur_line]
+            if self.skip_up():
+                l = self.content[self.cur_line]
             pos = self.skip_until(l, self.col - 1, "_", -1)
             if pos >= 0:
                 pos = self.skip_while(l, pos, "_", -1)
             self.col = pos + 1
         elif key == KEY_WORD_RIGHT:
-            self.skip_down(l)
-            l = self.content[self.cur_line]
+            if self.skip_down(l):
+                l = self.content[self.cur_line]
+                if self.issymbol(l[0], "_"):
+                    return
             pos = self.skip_while(l, self.col, "_", 1)
             if pos >= 0:
                 pos = self.skip_until(l, pos, "_", 1)

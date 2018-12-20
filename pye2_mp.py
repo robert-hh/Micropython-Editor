@@ -434,23 +434,20 @@ class Editor:
             if self.skip_up() is None:
                 self.col -= 1
         elif key == KEY_RIGHT:
-            if self.straight != "y" and self.col >= len(l) and self.cur_line < self.total_lines - 1:
-                self.col = 0
-                self.cur_line += 1
-                if self.cur_line == self.top_line + Editor.height:
-                    self.scroll_down(1)
-            else:
+            if self.straight == "y" or self.skip_down(l) is None:
                 self.col += 1
         elif key == KEY_WORD_LEFT:
-            self.skip_up()
-            l = self.content[self.cur_line]
-            pos = self.skip_until(l, min(self.col, len(l)) - 1, "_", -1)
+            if self.skip_up():
+                l = self.content[self.cur_line]
+            pos = self.skip_until(l, self.col - 1, "_", -1)
             if pos >= 0:
                 pos = self.skip_while(l, pos, "_", -1)
             self.col = pos + 1
         elif key == KEY_WORD_RIGHT:
-            self.skip_down(l)
-            l = self.content[self.cur_line]
+            if self.skip_down(l):
+                l = self.content[self.cur_line]
+                if self.issymbol(l[0], "_"):
+                    return
             pos = self.skip_while(l, self.col, "_", 1)
             if pos >= 0:
                 pos = self.skip_until(l, pos, "_", 1)
