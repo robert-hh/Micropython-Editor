@@ -349,6 +349,8 @@ class Editor:
             if self.cur_line < self.top_line:
                 self.scroll_up(1)
             return True
+        else:
+            return False
     def skip_down(self, l):
         if self.col >= len(l) and self.cur_line < self.total_lines - 1:
             self.col = 0
@@ -356,6 +358,8 @@ class Editor:
             if self.cur_line == self.top_line + Editor.height:
                 self.scroll_down(1)
             return True
+        else:
+            return False
     def find_in_file(self, pattern, col, end):
         if is_micropython:
             from ure import compile as re_compile
@@ -431,10 +435,10 @@ class Editor:
                 if self.cur_line < self.top_line:
                     self.scroll_up(1)
         elif key == KEY_LEFT:
-            if self.skip_up() is None:
+            if not self.skip_up():
                 self.col -= 1
         elif key == KEY_RIGHT:
-            if self.straight == "y" or self.skip_down(l) is None:
+            if self.straight == "y" or (not self.skip_down(l)):
                 self.col += 1
         elif key == KEY_WORD_LEFT:
             if self.skip_up():
