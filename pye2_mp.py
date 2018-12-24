@@ -489,7 +489,7 @@ class Editor:
         elif key == KEY_END:
             ni = len(l.split(Editor.comment_char.strip())[0].rstrip())
             ns = self.spaces(l)
-            self.col = ni if self.col >= len(l) and ni > ns else len(l)
+            self.col = ni if self.col == len(l) and ni > ns else len(l)
         elif key == KEY_PGUP:
             self.cur_line -= Editor.height
         elif key == KEY_PGDN:
