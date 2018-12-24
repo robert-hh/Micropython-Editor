@@ -555,7 +555,7 @@ class Editor:
         elif key == KEY_WORD_LEFT:
             if self.skip_up():
                 l = self.content[self.cur_line]
-            pos = self.skip_until(l, self.col - 1, "_", -1)
+            pos = self.skip_until(l, min(self.col, len(l)) - 1, "_", -1)
             if pos >= 0:
                 pos = self.skip_while(l, pos, "_", -1)
             self.col = pos + 1
