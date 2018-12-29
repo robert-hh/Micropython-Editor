@@ -444,14 +444,12 @@ class Editor:
             if self.skip_up():
                 l = self.content[self.cur_line]
             pos = self.skip_until(l, min(self.col, len(l)) - 1, "_", -1)
-            self.col = self.skip_while(l, pos, "_", -1)
+            self.col = self.skip_while(l, pos, "_", -1) + 1
         elif key == KEY_WORD_RIGHT:
             if self.skip_down(l):
                 l = self.content[self.cur_line]
-                if len(l) > 0 and self.issymbol(l[0], "_"):
-                    return
-            pos = self.skip_while(l, self.col, "_", 1)
-            self.col = self.skip_until(l, pos, "_", 1)
+            pos = self.skip_until(l, self.col, "_", 1)
+            self.col = self.skip_while(l, pos, "_", 1)
         elif key == KEY_DELETE:
             if self.mark is not None:
                 self.delete_lines(False)
