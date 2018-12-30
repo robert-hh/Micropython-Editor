@@ -537,7 +537,7 @@ class Editor:
             while True:
                 pos = self.skip_until(l, self.col - 1, "_", -1)
                 self.col = self.skip_while(l, pos, "_", -1) + 1
-                if (self.col - 1) != pos and self.issymbol(l[self.col], "_"):
+                if (self.col - 1) != pos:
                     break
                 else:
                     if self.skip_up():
