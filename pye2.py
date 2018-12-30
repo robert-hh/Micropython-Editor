@@ -147,6 +147,7 @@ class Editor:
     autoindent = "y"
     replc_pattern = ""
     comment_char = "\x23 "
+    word_char = "_\\" ## additional character in a word
 
     def __init__(self, tab_size, undo_limit):
         self.top_line = self.cur_line = self.row = self.col = self.margin = 0
@@ -555,13 +556,13 @@ class Editor:
         elif key == KEY_WORD_LEFT:
             if self.skip_up():
                 l = self.content[self.cur_line]
-            pos = self.skip_until(l, min(self.col, len(l)) - 1, "_", -1)
-            self.col = self.skip_while(l, pos, "_", -1) + 1
+            pos = self.skip_until(l, min(self.col, len(l)) - 1, self.word_char, -1)
+            self.col = self.skip_while(l, pos, self.word_char, -1) + 1
         elif key == KEY_WORD_RIGHT:
             if self.skip_down(l):
                 l = self.content[self.cur_line]
-            pos = self.skip_until(l, self.col, "_", 1)
-            self.col = self.skip_while(l, pos, "_", 1)
+            pos = self.skip_until(l, self.col, self.word_char, 1)
+            self.col = self.skip_while(l, pos, self.word_char, 1)
         elif key == KEY_DELETE:
             if self.mark is not None:
                 self.delete_lines(False)
