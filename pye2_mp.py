@@ -13,7 +13,7 @@ else:
     const = lambda x: x
     from _io import StringIO
     from re import compile as re_compile
-PYE_VERSION = " V2.28 "
+PYE_VERSION = " V2.29 "
 KEY_NONE = const(0x00)
 KEY_UP = const(0x0b)
 KEY_DOWN = const(0x0d)
@@ -25,6 +25,8 @@ KEY_PGUP = const(0xfff1)
 KEY_PGDN = const(0xfff2)
 KEY_WORD_LEFT = const(0xfff3)
 KEY_WORD_RIGHT= const(0xfff4)
+KEY_SHIFT_UP = const(0xfff5)
+KEY_SHIFT_DOWN= const(0xfff6)
 KEY_QUIT = const(0x11)
 KEY_ENTER = const(0x0a)
 KEY_BACKSPACE = const(0x08)
@@ -58,8 +60,10 @@ class Editor:
     KEYMAP = { 
     "\x1b[A" : KEY_UP,
     "\x1b[1;5A": KEY_UP,
+    "\x1b[1;2A": KEY_SHIFT_UP,
     "\x1b[B" : KEY_DOWN,
     "\x1b[1;5B": KEY_DOWN,
+    "\x1b[1;2B": KEY_SHIFT_DOWN,
     "\x1b[D" : KEY_LEFT,
     "\x1b[C" : KEY_RIGHT,
     "\x1b[H" : KEY_HOME, 
@@ -425,16 +429,22 @@ class Editor:
             else:
                 self.content[self.cur_line] = l[:self.col] + char + l[self.col:]
             self.col += len(char)
-        elif key == KEY_DOWN:
-            if self.cur_line < self.total_lines - 1:
-                self.cur_line += 1
-                if self.cur_line == self.top_line + Editor.height:
-                    self.scroll_down(1)
-        elif key == KEY_UP:
-            if self.cur_line > 0:
-                self.cur_line -= 1
-                if self.cur_line < self.top_line:
-                    self.scroll_up(1)
+        elif key in (KEY_DOWN, KEY_SHIFT_DOWN):
+            if key == KEY_SHIFT_DOWN and self.mark is None:
+                self.mark = self.cur_line
+            else:
+                if self.cur_line < self.total_lines - 1:
+                    self.cur_line += 1
+                    if self.cur_line == self.top_line + Editor.height:
+                        self.scroll_down(1)
+        elif key in (KEY_UP, KEY_SHIFT_UP):
+            if key == KEY_SHIFT_UP and self.mark is None:
+                self.mark = self.cur_line
+            else:
+                if self.cur_line > 0:
+                    self.cur_line -= 1
+                    if self.cur_line < self.top_line:
+                        self.scroll_up(1)
         elif key == KEY_LEFT:
             if not self.skip_up():
                 self.col -= 1

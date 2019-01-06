@@ -28,6 +28,7 @@ shows most of the commands. Commands marked with (opt) may not be supported in
 |:---|:---|
 |Up Down Left Right| Cursor movement by one line or char|
 |Ctrl-Left Ctrl-Right| Move cursor by one word left & right|
+|Shift-Up Shift-Down| Mark current line or extend mark
 |PgUp & PgDd|Page up/down|
 |Home|Toggle the position between the start-of-code and the start of line|
 |End|Toggle the position between the end-of-the-code and end-of-line|
@@ -391,3 +392,5 @@ window change
 the list of files in the current dir
 
 **2.28** Add word left & right with ctrl-left and ctrl-right
+
+**2.29** Add shift-up and shift-down for setting/extending the marke area
