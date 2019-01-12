@@ -110,7 +110,7 @@ class Editor:
     "\x08"   : KEY_REPLC, ## Ctrl-H
     "\x12"   : KEY_REPLC, ## Ctrl-R
     "\x11"   : KEY_QUIT, ## Ctrl-Q
-    "\x1c"   : KEY_QUIT, ## Ctrl-\
+    "\x1bq"  : KEY_QUIT, ## Alt-Q
     "\n"     : KEY_ENTER,
     "\x13"   : KEY_WRITE,  ## Ctrl-S
     "\x06"   : KEY_FIND, ## Ctrl-F

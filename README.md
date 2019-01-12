@@ -1,4 +1,4 @@
-# Micropython-Editor
+﻿# Micropython-Editor
 
 ## Description
 
@@ -24,8 +24,8 @@ shows most of the commands. Commands marked with (opt) may not be supported in
 |Key(s)|Function|
 |:---|:---|
 |Up Down Left Right| Cursor movement by one line or char|
-|Ctrl-Left Ctrl-Right| Move cursor by one word left & right|
-|Shift-Up Shift-Down| Mark current line or extend mark
+|Ctrl-Left Ctrl-Right| Move the cursor by one word left or right|
+|Shift-Up Shift-Down| Mark the current line or extend the mark
 |PgUp & PgDd|Page up/down|
 |Home|Toggle the position between the start-of-code and the start of line|
 |End|Toggle the position between the end-of-the-code and end-of-line|
@@ -35,7 +35,7 @@ shows most of the commands. Commands marked with (opt) may not be supported in
 |Tab & Backtab|Insert or remove spaces up to the next tab position. If lines are marked, indent or unindent (opt)|
 |Ctrl-O|Open a new file. If the file name is left empty, an empty buffer is opened|
 |Ctrl-W|Toggle to the next file buffer|
-|Ctrl-Q or Ctrl-\\ |Close a file buffer or end line-edit|
+|Ctrl-Q or Alt-Q |Close a file buffer or end line-edit|
 |Ctrl-S|Save to file with the option to change the file name|
 |Ctrl-W|Switch to the next file buffer|
 |Ctrl-F|Find|
@@ -73,8 +73,8 @@ strings, an empty buffer is opened. It is always the last buffer closed, which
 determines the return value of pye().  
 Optional named parameters:
 
-tabsize=n	Tab step (integer). The default is 4  
-undo=n	Size of the undo stack (integer). A value of 0 or False disables undo.  
+tabsize=n    Tab step (integer). The default is 4  
+undo=n  Size of the undo stack (integer). A value of 0 or False disables undo.  
 
 The Linux/Darwin version can be called from the command line with:
 

@@ -85,7 +85,7 @@ class Editor:
     "\x08" : KEY_REPLC, 
     "\x12" : KEY_REPLC, 
     "\x11" : KEY_QUIT, 
-    "\x1c" : KEY_QUIT, 
+    "\x1bq" : KEY_QUIT, 
     "\n" : KEY_ENTER,
     "\x13" : KEY_WRITE, 
     "\x06" : KEY_FIND, 
