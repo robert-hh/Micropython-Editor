@@ -356,21 +356,27 @@ class Editor:
         while pos != stop and self.issymbol(s[pos], zap):
             pos += way
         return pos
-    def skip_up(self):
-        if self.col == 0 and self.cur_line > 0:
+    def move_up(self):
+        if self.cur_line > 0:
             self.cur_line -= 1
-            self.col = len(self.content[self.cur_line])
             if self.cur_line < self.top_line:
                 self.scroll_up(1)
+    def skip_up(self):
+        if self.col == 0 and self.cur_line > 0:
+            self.col = len(self.content[self.cur_line - 1])
+            self.move_up()
             return True
         else:
             return False
-    def skip_down(self, l):
-        if self.col >= len(l) and self.cur_line < self.total_lines - 1:
-            self.col = 0
+    def move_down(self):
+        if self.cur_line < self.total_lines - 1:
             self.cur_line += 1
             if self.cur_line == self.top_line + Editor.height:
                 self.scroll_down(1)
+    def skip_down(self, l):
+        if self.col >= len(l) and self.cur_line < self.total_lines - 1:
+            self.col = 0
+            self.move_down()
             return True
         else:
             return False
@@ -430,22 +436,10 @@ class Editor:
             self.undo_add(self.cur_line, [l], 0x20 if char == " " else 0x41)
             self.content[self.cur_line] = l[:self.col] + char + l[self.col:]
             self.col += len(char)
-        elif key in (KEY_DOWN, KEY_SHIFT_DOWN):
-            if key == KEY_SHIFT_DOWN and self.mark is None:
-                self.mark = self.cur_line
-            else:
-                if self.cur_line < self.total_lines - 1:
-                    self.cur_line += 1
-                    if self.cur_line == self.top_line + Editor.height:
-                        self.scroll_down(1)
-        elif key in (KEY_UP, KEY_SHIFT_UP):
-            if key == KEY_SHIFT_UP and self.mark is None:
-                self.mark = self.cur_line
-            else:
-                if self.cur_line > 0:
-                    self.cur_line -= 1
-                    if self.cur_line < self.top_line:
-                        self.scroll_up(1)
+        elif key == KEY_DOWN:
+            self.move_down()
+        elif key == KEY_UP:
+            self.move_up()
         elif key == KEY_LEFT:
             if not self.skip_up():
                 self.col -= 1
@@ -588,6 +582,14 @@ class Editor:
                                 pos = len(self.content[i - 1]) - 1
         elif key == KEY_MARK:
             self.mark = self.cur_line if self.mark is None else None
+        elif key == KEY_SHIFT_DOWN:
+            if self.mark is None:
+                self.mark = self.cur_line
+            self.move_down()
+        elif key == KEY_SHIFT_UP:
+            if self.mark is None:
+                self.mark = self.cur_line
+            self.move_up()
         elif key == KEY_ENTER:
             self.mark = None
             self.undo_add(self.cur_line, [l], KEY_NONE, 2)
@@ -601,8 +603,8 @@ class Editor:
             self.col = ni
         elif key == KEY_TAB:
             if self.mark is None:
-                ni = self.tab_size - self.col % self.tab_size 
                 self.undo_add(self.cur_line, [l], KEY_TAB)
+                ni = self.tab_size - self.col % self.tab_size 
                 self.content[self.cur_line] = l[:self.col] + ' ' * ni + l[self.col:]
                 self.col += ni
             else:
