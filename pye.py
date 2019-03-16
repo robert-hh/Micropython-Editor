@@ -679,11 +679,13 @@ class Editor:
         elif key == KEY_SHIFT_DOWN:
             if self.mark is None:
                 self.mark = self.cur_line
-            self.move_down()
+            else:
+                self.move_down()
         elif key == KEY_SHIFT_UP:
             if self.mark is None:
                 self.mark = self.cur_line
-            self.move_up()
+            else:
+                self.move_up()
         elif key == KEY_ENTER:
             self.mark = None
             self.undo_add(self.cur_line, [l], KEY_NONE, 2)
