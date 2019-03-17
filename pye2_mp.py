@@ -226,20 +226,23 @@ class Editor:
             elif ord(in_buffer[0]) >= 32:
                 return KEY_NONE, in_buffer
     def display_window(self): 
+        
         self.cur_line = min(self.total_lines - 1, max(self.cur_line, 0))
-        if self.straight != "y":
-            self.col = min(self.col, len(self.content[self.cur_line]))
-        if self.col < 0:
-            self.col = 0
+        self.col = max(0, min(self.col, len(self.content[self.cur_line])))
+        
         if self.col >= Editor.width + self.margin:
             self.margin = self.col - Editor.width + (Editor.width >> 2)
         elif self.col < self.margin:
             self.margin = max(self.col - (Editor.width >> 2), 0)
+        
         if not (self.top_line <= self.cur_line < self.top_line + Editor.height): 
             self.top_line = max(self.cur_line - self.row, 0)
+        
         self.row = self.cur_line - self.top_line
+        
         self.cursor(False)
         i = self.top_line
+        low_mark, high_mark = (-2, -1) if self.mark is None else self.line_range()
         for c in range(Editor.height):
             if i == self.total_lines: 
                 if Editor.scrbuf[c] != (False,''):
@@ -247,8 +250,7 @@ class Editor:
                     self.clear_to_eol()
                     Editor.scrbuf[c] = (False,'')
             else:
-                l = (self.mark is not None and (
-                    (min(self.mark, self.cur_line) <= i <= max(self.cur_line, self.mark))),
+                l = (low_mark <= i < high_mark,
                      self.content[i][self.margin:self.margin + Editor.width])
                 if l != Editor.scrbuf[c]: 
                     self.goto(c, 0)
@@ -261,6 +263,7 @@ class Editor:
                         self.hilite(0)
                     Editor.scrbuf[c] = l
                 i += 1
+        
         self.goto(Editor.height, 0)
         self.hilite(1)
         self.wr("{}{} Row: {}/{} Col: {}  {}".format(

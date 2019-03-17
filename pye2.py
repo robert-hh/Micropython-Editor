@@ -314,25 +314,23 @@ class Editor:
                 return KEY_NONE, in_buffer
 
     def display_window(self): ## Update window and status line
-## Force cur_line and col to be in the reasonable bounds
+        ## Force cur_line and col to be in the reasonable bounds
         self.cur_line = min(self.total_lines - 1, max(self.cur_line, 0))
-## Check if Column is out of view, and align margin if needed
-        if self.straight != "y":
-            self.col = min(self.col, len(self.content[self.cur_line]))
-        if self.col <  0:
-            self.col = 0
+        self.col = max(0, min(self.col, len(self.content[self.cur_line])))
+        ## Check if Column is out of view, and align margin if needed
         if self.col >= Editor.width + self.margin:
             self.margin = self.col - Editor.width + (Editor.width >> 2)
         elif self.col < self.margin:
             self.margin = max(self.col - (Editor.width >> 2), 0)
-## if cur_line is out of view, align top_line to the given row
+        ## if cur_line is out of view, align top_line to the given row
         if not (self.top_line <= self.cur_line < self.top_line + Editor.height): # Visible?
             self.top_line = max(self.cur_line - self.row, 0)
-## in any case, align row to top_line and cur_line
+        ## in any case, align row to top_line and cur_line
         self.row = self.cur_line - self.top_line
-## update_screen
+        ## update_screen
         self.cursor(False)
         i = self.top_line
+        low_mark, high_mark = (-2, -1) if self.mark is None else self.line_range()
         for c in range(Editor.height):
             if i == self.total_lines: ## at empty bottom screen part
                 if Editor.scrbuf[c] != (False,''):
@@ -340,8 +338,7 @@ class Editor:
                     self.clear_to_eol()
                     Editor.scrbuf[c] = (False,'')
             else:
-                l = (self.mark is not None and (
-                    (min(self.mark, self.cur_line) <= i <= max(self.cur_line, self.mark))),
+                l = (low_mark <= i < high_mark,
                      self.content[i][self.margin:self.margin + Editor.width])
                 if l != Editor.scrbuf[c]: ## line changed, print it
                     self.goto(c, 0)
@@ -354,7 +351,7 @@ class Editor:
                         self.hilite(0)
                     Editor.scrbuf[c] = l
                 i += 1
-## display Status-Line
+        ## display Status-Line
         self.goto(Editor.height, 0)
         self.hilite(1)
         self.wr("{}{} Row: {}/{} Col: {}  {}".format(
