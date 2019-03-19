@@ -116,6 +116,15 @@ keyboard interrupt.
 using cpp, including all variants of wipye.py with either speed up scrolling or
 support replace or support goto bracket or support indent/un-indent or support mouse.
 
+## Branches
+
+|Branch|Features|
+|:---|:---|
+|master|Actual main line with slowly changing features|
+|dup_del_line|A version which allows to duplicate and delete a single line without marking it before|
+|new_mark|Changed method of marking blocks, allowing to move away the cursor one a block is marked|
+|vcol|Alternative behavior when moving a curso up and down. The cursor returns back to a previous column if it is sufficientzly long|
+
 ## Short Version History
 
 **1.0** Initial release with all the basic functions
