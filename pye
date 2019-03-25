@@ -224,15 +224,15 @@ class Editor:
             if in_buffer in self.KEYMAP:
                 c = self.KEYMAP[in_buffer]
                 if c != KEY_MOUSE:
-                    return c, ""
+                    return c, None
                 else: 
                     mouse_fct = ord((self.rd())) 
                     mouse_x = ord(self.rd()) - 33
                     mouse_y = ord(self.rd()) - 33
                     if mouse_fct == 0x61:
-                        return KEY_SCRLDN, ""
+                        return KEY_SCRLDN, None
                     elif mouse_fct == 0x60:
-                        return KEY_SCRLUP, ""
+                        return KEY_SCRLUP, None
                     else:
                         return KEY_MOUSE, [mouse_x, mouse_y, mouse_fct] 
             elif ord(in_buffer[0]) >= 32:
