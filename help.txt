@@ -11,8 +11,8 @@ Right               Move the cursor right by one char;
                     skipping over to the next line at the EOL. (*)
 Ctrl-Left           Move the cursor to the begin of a word.
 Ctrl-Right          Move the cursor right behind the end of a word.
-Shift-Up            Mark the current line or extend the mark up,if set
-Shift-Down          Mark the current line or extend the mark down,if set
+Shift-Up            Mark the current line or extend the mark up, if set
+Shift-Down          Mark the current line or extend the mark down, if set
 PgUp                Move the cursor up by one screen height.
 PgDn                Move the cursor down by one screen height.
 Home                Go to start-of-line, if the Cursor is at start-of-text.
@@ -33,6 +33,7 @@ Del                 Delete char under cursor. At the end of the line join the
                     next line. If the mark is set, delete the marked line range.
                     If Autoindent is enabled, Del at the line's end also removes
                     leading spaces from the then joined line.
+Ctr-Del             Delete to End-of-Line
 Tab     Ctrl-I      Tab. Insert spaces at the cursor position up to the next
                     tab location, moving the cursor. If the mark is set, indent
                     the lines between the mark and cursor.

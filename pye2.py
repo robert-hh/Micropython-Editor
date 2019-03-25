@@ -60,6 +60,7 @@ KEY_QUIT      = const(0x11)
 KEY_ENTER     = const(0x0a)
 KEY_BACKSPACE = const(0x08)
 KEY_DELETE    = const(0x7f)
+KEY_DEL_EOL   = const(0xfff7)
 KEY_WRITE     = const(0x13)
 KEY_TAB       = const(0x09)
 KEY_BACKTAB   = const(0x15)
@@ -140,7 +141,7 @@ class Editor:
 ## other keys
     "\x1b[1;5H": KEY_FIRST, ## Ctrl-Home
     "\x1b[1;5F": KEY_LAST, ## Ctrl-End
-    "\x1b[3;5~": KEY_YANK, ## Ctrl-Del
+    "\x1b[3;5~": KEY_DEL_EOL, ## Ctrl-Del
     "\x0b"   : KEY_MATCH,## Ctrl-K
     "\x1b[M" : KEY_MOUSE,
     }
@@ -595,6 +596,10 @@ class Editor:
                 self.content[self.cur_line - 1] += self.content.pop(self.cur_line)
                 self.cur_line -= 1
                 self.total_lines -= 1
+        elif key == KEY_DEL_EOL:
+            if self.col < len(l):
+                self.undo_add(self.cur_line, [l], KEY_DEL_EOL)
+                self.content[self.cur_line] = l[:self.col]
         elif key == KEY_HOME:
             ni = self.spaces(l)
             self.col = ni if self.col == 0 else 0

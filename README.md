@@ -32,7 +32,7 @@ shows most of the commands. Commands marked with (opt) may not be supported in
 |Enter|Enter a line break at the cursor position. Auto-indent is supported|
 |Backspace|Delete char left to the  cursor (The key must be set to ASCII-Del)|
 |Del|Delete the char under the cursor. At the end of the line join the next line. If autoindent is enabled, delete also the leading spaces of the joined line. If lines are marked, delete the marked area|
-|Tab & Backtab|Insert or remove spaces up to the next tab position. If lines are marked, indent or unindent (opt)|
+|Ctrl-Del|Delete to End-of-Line|
 |Ctrl-O|Open a new file. If the file name is left empty, an empty buffer is opened|
 |Ctrl-W|Toggle to the next file buffer|
 |Ctrl-Q or Alt-Q |Close a file buffer or end line-edit|
