@@ -953,7 +953,7 @@ def pye(*content, tab_size=4, undo=50, device=0):
             index += 1
     else:
         slot[0].get_file(".")
-        index = 1
+        index = 0
 ## edit
     Editor.init_tty(device)
     while True:
@@ -988,7 +988,7 @@ if __name__ == "__main__":
             name = sys.argv[1:]
             pye(*name, undo=500, device=fd_tty)
         else:
-            name = ""
+            name = "."
             if not is_micropython:
                 mode = os.fstat(0).st_mode
                 if stat.S_ISFIFO(mode) or stat.S_ISREG(mode):
