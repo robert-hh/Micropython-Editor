@@ -2,10 +2,10 @@
 
 ## Description
 
-A small text editor written in Python running on PYBoard, WiPy 1, the pycom.io
- modules like WipPy 2, Lopy, SiPy, ESP8266 modules and teensy 3.5/3.6, allowing
- to edit files locally. It is based on the editor widget of pfalcon at
- <https://github.com/pfalcon/pyedit.> I ported it to PyBoard, WiPy 1,
+A small text editor written in Python running on PYBoard, WiPy1, the pycom.io
+ modules like WipPy 2, Lopy, SiPy, FiPy, ESP8266 modules, teensy 3.5/3.6 and the MaixPy,
+ allowing to edit files locally. It is based on the editor widget of pfalcon at
+ <https://github.com/pfalcon/pyedit.> I ported it to PyBoard, WiPy1,
  ESP8266, Teensy, ESP32 and the Pycom.io devices, and added a few functions:
 
 - Use sys.stdin.read() and sys.stdout.write() for input and output of the Micropython version.
@@ -52,7 +52,7 @@ shows most of the commands. Commands marked with (opt) may not be supported in
 |Ctrl-Z|Undo the last change(s)|
 |Ctrl-P|Comment/Uncomment a line or marked area|
 |Ctrl-A|Change settings for tab size, search case sensitivity, auto-indent, comment string and writing tabs (opt)|
-|Ctrl-E|Redraw the screen. On WiPy and PyBord it shows the amount of free memory|
+|Ctrl-E|Redraw the screen. On the Micro devices it shows the amount of free memory|
 
 The editor is contained in the file pye.py. Start pye from the REPL prompt
 e.g. with  
@@ -97,12 +97,12 @@ CPython also accepts data from a pipe or redirection.
 
 ## Files
 
-- pye.py: Source file with comments and code for PyBoard, WiPy and Linux
-micropython/python3. Runs on PyBoard as well, but the file size is much larger
+- pye.py: Source file with comments and code for all versions. 
+Runs on the Micros as well, but the file size is much larger
 than the stripped down version.
 - pye_sml.py: Source file without RE search and reduced line edit.
 - pye2.py: a variant of pye.py which does not change the cursor column during
-vertical moves, based on the extended variant.
+vertical moves.
 - Pyboard Editor.pdf: A short documentation
 - README.md: This one
 - pye_mp.py, pye2_mp, pye_mp.mpy: Condensed source files of pye.py and pye2.py for
@@ -113,8 +113,7 @@ rebuild micropython.  A cross-compiled version may executed from the file system
 - peteensy.py: A small wrapper for teensy 3.5 and 3.6 disabling Ctrl-C
 keyboard interrupt.
 - strip.sh: sample Shell script which creates the different variants out of pye.py
-using cpp, including all variants of wipye.py with either speed up scrolling or
-support replace or support goto bracket or support indent/un-indent or support mouse.
+using cpp.
 
 ## Branches
 
@@ -122,8 +121,9 @@ support replace or support goto bracket or support indent/un-indent or support m
 |:---|:---|
 |master|Actual main line with slowly changing features|
 |dup_del_line|A version which allows to duplicate and delete a single line without marking it before|
-|new_mark|Changed method of marking blocks, allowing to move away the cursor one a block is marked|
-|vcol|Alternative behavior when moving a curso up and down. The cursor returns back to a previous column if it is sufficientzly long|
+|new_mark|Changed method of marking blocks, allowing to move away the cursor once a block is marked|
+|vcol|Alternative behavior when moving a cursor up and down. The cursor returns back to a
+ previous column if it is sufficiently long|
 
 ## Short Version History
 
