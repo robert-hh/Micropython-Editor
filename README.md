@@ -103,6 +103,8 @@ than the stripped down version.
 - pye_sml.py: Source file without RE search and reduced line edit.
 - pye2.py: a variant of pye.py which does not change the cursor column during
 vertical moves.
+- pye_win.py: an experimental version for the cmd window of Windows 10. It requires
+enabling the VT100 support, as detailed e.g. here: https://stackoverflow.com/questions/51680709/colored-text-output-in-powershell-console-using-ansi-vt100-codes
 - Pyboard Editor.pdf: A short documentation
 - README.md: This one
 - pye_mp.py, pye2_mp, pye_mp.mpy: Condensed source files of pye.py and pye2.py for

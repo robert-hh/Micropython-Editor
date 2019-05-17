@@ -1,12 +1,12 @@
-##
-## This is the regex version of find.
+#
+# This is the regex version of find.
     def find_in_file(self, pattern, col, end):
         if is_micropython:
             from ure import compile
-        else: 
+        else:
             from re import compile
 
-        Editor.find_pattern = pattern ## remember it
+        Editor.find_pattern = pattern  # remember it
         if Editor.case != "y":
             pattern = pattern.lower()
         try:
@@ -16,17 +16,17 @@
             return None
         start = self.cur_line
         if (col > len(self.content[start]) or   # After EOL
-            (pattern[0] == '^' and col != 0)):  # or anchored and not at BOL
+           (pattern[0] == '^' and col != 0)):  # or anchored and not at BOL
             start, col = start + 1, 0           # Skip to the next line
         for line in range(start, end):
             l = self.content[line][col:]
             if Editor.case != "y":
                 l = l.lower()
             match = rex.search(l)
-            if match: # Bingo
+            if match:  # Bingo
                 self.cur_line = line
-## Instead of match.span, a simple find has to be performed to get the cursor position. 
-## And '$' has to be treated separately, so look for a true EOL match first
+# Instead of match.span, a simple find has to be performed to get the cursor position. 
+# And '$' has to be treated separately, so look for a true EOL match first
                 if pattern[-1:] == "$" and match.group(0)[-1:] != "$": 
                     self.col = col + len(l) - len(match.group(0))
                 else:
@@ -37,9 +37,9 @@
             self.message = pattern + " not found (again)"
             return None
 
-## this is the simple version of find
+# this is the simple version of find
     def find_in_file(self, pattern, pos, end):
-        Editor.find_pattern = pattern # remember it
+        Editor.find_pattern = pattern  # remember it
         if Editor.case != "y":
             pattern = pattern.lower()
         spos = pos
@@ -48,7 +48,7 @@
                 match = self.content[line][spos:].lower().find(pattern)
             else:
                 match = self.content[line][spos:].find(pattern)
-            if match >= 0: ## Bingo!
+            if match >= 0: # Bingo!
                 self.col = match + spos
                 self.cur_line = line
                 return len(pattern)
@@ -57,8 +57,8 @@
             self.message = "No match: " + pattern
             return None
 
-    def line_edit(self, prompt, default):  ## better one: added cursor keys and backsp, delete
-        push_msg = lambda msg: self.wr(msg + "\b" * len(msg)) ## Write a message and move cursor back
+    def line_edit(self, prompt, default):  # better one: added cursor keys and backsp, delete
+        push_msg = lambda msg: self.wr(msg + "\b" * len(msg))  # Write a message and move cursor back
         self.goto(Editor.height, 0)
         self.hilite(1)
         self.wr(prompt)
@@ -67,17 +67,17 @@
         res = default
         pos = len(res)
         while True:
-            key, char = self.get_input()  ## Get Char of Fct.
-            if key == KEY_NONE: ## char to be inserted
+            key, char = self.get_input()  # Get Char of Fct.
+            if key == KEY_NONE:  ## char to be inserted
                 if len(prompt) + len(res) < self.width - 2:
                     res = res[:pos] + char + res[pos:]
                     self.wr(res[pos])
                     pos += len(char)
-                    push_msg(res[pos:]) ## update tail
-            elif key in (KEY_ENTER, KEY_TAB): ## Finis
+                    push_msg(res[pos:])  # update tail
+            elif key in (KEY_ENTER, KEY_TAB):  # Finis
                 self.hilite(0)
                 return res
-            elif key == KEY_QUIT: ## Abort
+            elif key == KEY_QUIT:  # Abort
                 self.hilite(0)
                 return None
             elif key == KEY_LEFT:
@@ -94,24 +94,24 @@
             elif key == KEY_END:
                 self.wr(res[pos:])
                 pos = len(res)
-            elif key == KEY_DELETE: ## Delete
+            elif key == KEY_DELETE:  # Delete
                 if pos < len(res):
                     res = res[:pos] + res[pos+1:]
-                    push_msg(res[pos:] + ' ') ## update tail
-            elif key == KEY_BACKSPACE: ## Backspace
+                    push_msg(res[pos:] + ' ')  # update tail
+            elif key == KEY_BACKSPACE:  # Backspace
                 if pos > 0:
                     res = res[:pos-1] + res[pos:]
                     self.wr("\b")
                     pos -= 1
-                    push_msg(res[pos:] + ' ') ## update tail
-            elif key == KEY_ZAP: ## Get from content
+                    push_msg(res[pos:] + ' ')  # update tail
+            elif key == KEY_ZAP:  ## Get from content
                 if Editor.yank_buffer:
                     self.wr('\b' * pos + ' ' * len(res) + '\b' * len(res))
                     res = Editor.yank_buffer[0].strip()[:Editor.width - len(prompt) - 2]
                     self.wr(res)
                     pos = len(res)
 
-    def line_edit(self, prompt, default):  ## simple one: only 4+1 fcts
+    def line_edit(self, prompt, default):  # simple one: only 4+1 fcts
         self.goto(Editor.height, 0)
         self.hilite(1)
         self.wr(prompt)
@@ -119,33 +119,33 @@
         self.clear_to_eol()
         res = default
         while True:
-            key, char = self.get_input()  ## Get Char of Fct.
-            if key == KEY_NONE: ## character to be added
+            key, char = self.get_input()  # Get Char of Fct.
+            if key == KEY_NONE:  ## character to be added
                 if len(prompt) + len(res) < Editor.width - 2:
                     res += char
                     self.wr(char)
-            elif key in (KEY_ENTER, KEY_TAB): ## Finis
+            elif key in (KEY_ENTER, KEY_TAB):  # Finis
                 self.hilite(0)
                 return res
-            elif key == KEY_QUIT: ## Abort
+            elif key == KEY_QUIT:  # Abort
                 self.hilite(0)
                 return None
-            elif key == KEY_BACKSPACE: ## Backspace
+            elif key == KEY_BACKSPACE:  # Backspace
                 if (len(res) > 0):
                     res = res[:len(res)-1]
                     self.wr('\b \b')
-            elif key == KEY_DELETE: ## Delete prev. Entry
+            elif key == KEY_DELETE:  # Delete prev. Entry
                 self.wr('\b \b' * len(res))
                 res = ''
 
-    def expandtabs(self, s, tabsize = 8):
+    def expandtabs(self, s, tabsize=8):
         import _io
         if '\t' in s and tabsize > 0:
             sb = _io.StringIO()
             pos = 0
             for c in s:
-                if c == '\t': ## tab is seen
-                    sb.write(" " * (tabsize - pos % tabsize)) ## replace by space
+                if c == '\t':  # tab is seen
+                    sb.write(" " * (tabsize - pos % tabsize))  # replace by space
                     pos += tabsize - pos % tabsize
                 else:
                     sb.write(c)
@@ -154,14 +154,14 @@
         else:
             return s
 
-    def packtabs(self, s, tabsize = 8):
+    def packtabs(self, s, tabsize=8):
         if tabsize > 0:
             sb = _io.StringIO()
             for i in range(0, len(s), tabsize):
                 c = s[i:i + tabsize]
                 cr = c.rstrip(" ")
-                if c != cr: ## Spaces at the end of a section
-                    sb.write(cr + "\t") ## replace by tab
+                if c != cr:  # Spaces at the end of a section
+                    sb.write(cr + "\t")  # replace by tab
                 else:
                     sb.write(c)
             return sb.getvalue()
@@ -170,7 +170,3 @@
 
     def cls(self):
         self.wr(b"\x1b[2J")
-
-
-
-
