@@ -40,7 +40,7 @@ else:
     from _io import StringIO
     from re import compile as re_compile
 
-PYE_VERSION   = " V2.29 "
+PYE_VERSION   = " V2.29W "
 
 KEY_NONE      = const(0x00)
 KEY_UP        = const(0x0b)
@@ -169,7 +169,7 @@ class Editor:
 ## other keys
         "\x1b[w": KEY_FIRST, ## Ctrl-Home
         "\x1b[u": KEY_LAST, ## Ctrl-End
-        "\x1b[\x92": KEY_DEL_EOL, ## Ctrl-Del
+        "\x1b[\x93": KEY_DEL_EOL, ## Ctrl-Del
        })
 #endif
 ## symbols that are shared between instances of Editor
@@ -192,7 +192,7 @@ class Editor:
         self.undo_zero = 0
         self.mark = None
         self.write_tabs = "n"
-        
+
 
 #ifdef LINUX
     if is_linux:
@@ -246,11 +246,11 @@ class Editor:
                 return '\x1b['
             else:
                 return c
-            
+
         @staticmethod
         def init_tty(device):
             pass
- 
+
         @staticmethod
         def deinit_tty():
             pass
@@ -312,8 +312,11 @@ class Editor:
     def scroll_down(self, scrolling):
         Editor.scrbuf[:-scrolling] = Editor.scrbuf[scrolling:]
         Editor.scrbuf[-scrolling:] = [''] * scrolling
-        self.goto(Editor.height - 1, 0)
-        self.wr("\x1bD " * scrolling)
+        if is_windows:
+            self.redraw(False)
+        else:
+            self.goto(Editor.height - 1, 0)
+            self.wr("\x1bD " * scrolling)
 
     def get_screen_size(self):
         self.wr('\x1b[999;999H\x1b[6n')
@@ -486,7 +489,7 @@ class Editor:
 
     def issymbol(self, c, zap):
         return c.isalpha() or c.isdigit() or c in zap
-    
+
     def skip_until(self, s, pos, zap, way):
         stop = -1 if way < 0 else len(s)
         while pos != stop and not self.issymbol(s[pos], zap):
