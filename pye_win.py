@@ -312,11 +312,8 @@ class Editor:
     def scroll_down(self, scrolling):
         Editor.scrbuf[:-scrolling] = Editor.scrbuf[scrolling:]
         Editor.scrbuf[-scrolling:] = [''] * scrolling
-        if is_windows:
-            self.redraw(False)
-        else:
-            self.goto(Editor.height - 1, 0)
-            self.wr("\x1bD " * scrolling)
+        self.goto(Editor.height - 1, 0)
+        self.wr("\n" * scrolling)
 
     def get_screen_size(self):
         self.wr('\x1b[999;999H\x1b[6n')
