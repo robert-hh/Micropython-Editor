@@ -124,8 +124,7 @@ using cpp.
 |master|Actual main line with slowly changing features|
 |dup_del_line|A version which allows to duplicate and delete a single line without marking it before|
 |new_mark|Changed method of marking blocks, allowing to move away the cursor once a block is marked|
-|vcol|Alternative behavior when moving a cursor up and down. The cursor returns back to a
- previous column if it is sufficiently long|
+|vcol|Alternative behavior when moving a cursor up and down. The cursor returns back to a previous column if the line is sufficiently long|
 
 ## Short Version History
 
