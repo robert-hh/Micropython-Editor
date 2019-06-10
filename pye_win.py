@@ -148,7 +148,7 @@ class Editor:
         "\x1b[3;5~": KEY_DEL_EOL, ## Ctrl-Del
         "\x1b[M" : KEY_MOUSE,
         })
-#endfi
+#endif
 #ifdef WINDOWS
     if is_windows:
         KEYMAP.update({
