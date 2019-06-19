@@ -953,7 +953,6 @@ def pye(*content, tab_size=4, undo=50, device=0):
             index += 1
     else:
         slot[0].get_file(".")
-        index = 0
 ## edit
     Editor.init_tty(device)
     while True:
