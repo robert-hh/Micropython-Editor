@@ -912,12 +912,11 @@ def expandtabs(s):
 def pye(*content, tab_size=4, undo=50, device=0):
 ## prepare content
     gc.collect() ## all (memory) is mine
-    slot = [Editor(tab_size, undo)]
     index = 0
     if content:
+        slot = []
         for f in content:
-            if index:
-                slot.append(Editor(tab_size, undo))
+            slot.append(Editor(tab_size, undo))
             if type(f) == str and f: ## String = non-empty Filename
                 try:
                     slot[index].get_file(f)
@@ -927,6 +926,7 @@ def pye(*content, tab_size=4, undo=50, device=0):
                 slot[index].content = f ## non-empty list of strings -> edit
             index += 1
     else:
+        slot = [Editor(tab_size, undo)]
         slot[0].get_file(".")
 ## edit
     Editor.init_tty(device)

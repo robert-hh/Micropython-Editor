@@ -6,7 +6,7 @@ A small text editor written in Python running on PYBoard, WiPy1, the pycom.io
  modules like WipPy 2, Lopy, SiPy, FiPy, ESP8266 modules, teensy 3.5/3.6 and the MaixPy,
  allowing to edit files locally. It is based on the editor widget of pfalcon at
  <https://github.com/pfalcon/pyedit.> I ported it to PyBoard, WiPy1,
- ESP8266, Teensy, ESP32 and the Pycom.io devices, and added a few functions:
+ ESP8266, Teensy, ESP32, the Pycom.io and MaixPy devices, and added a few functions:
 
 - Use sys.stdin.read() and sys.stdout.write() for input and output of the Micropython version.
 - Changed the read keyboard function to comply with slow byte-by-byte input on serial lines.
@@ -24,7 +24,8 @@ shows most of the commands. Commands marked with (opt) may not be supported in
 |Key(s)|Function|
 |:---|:---|
 |Up Down Left Right| Cursor movement by one line or char|
-|Ctrl-Left Ctrl-Right| Move the cursor by one word left or right|
+|Ctrl-Left| Move the cursor left to the start of the (next) word|
+|Ctrl-Right| Move the cursor right behind the end of the (next) word|
 |Shift-Up Shift-Down| Mark the current line or extend the mark
 |PgUp & PgDd|Page up/down|
 |Home|Toggle the position between the start-of-code and the start of line|
