@@ -491,13 +491,11 @@ class Editor:
                 self.total_lines -= 1
         elif key == KEY_DEL_WORD:
             if self.col < len(l):
-                start = self.skip_while(l, self.col - 1, self.word_char, -1) + 1
                 pos = self.skip_while(l, self.col, self.word_char, 1)
-                while pos < len(l) and l[pos] == ' ':
-                    pos += 1
-                if start < pos:
+                pos += self.spaces(l[pos:])
+                if self.col < pos:
                     self.undo_add(self.cur_line, [l], KEY_DEL_WORD)
-                    self.content[self.cur_line] = l[:start] + l[pos:]
+                    self.content[self.cur_line] = l[:self.col] + l[pos:]
         elif key == KEY_HOME:
             ni = self.spaces(l)
             self.col = ni if self.col == 0 else 0
