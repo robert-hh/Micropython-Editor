@@ -469,7 +469,7 @@ class Editor:
         else:
             return False
 
-## This is the regex version of find.
+ ## This is the regex version of find.
     def find_in_file(self, pattern, col, end):
         Editor.find_pattern = pattern ## remember it
         if Editor.case != "y":
@@ -585,8 +585,7 @@ class Editor:
                     self.undo_add(self.cur_line, [l], KEY_DEL_WORD)
                     self.content[self.cur_line] = l[:self.col] + l[pos:]
         elif key == KEY_HOME:
-            ni = self.spaces(l)
-            self.col = ni if self.col == 0 else 0
+            self.col = self.spaces(l) if self.col == 0 else 0
         elif key == KEY_END:
             ni = len(l.split(Editor.comment_char.strip())[0].rstrip())
             ns = self.spaces(l)
