@@ -557,17 +557,19 @@ class Editor:
                 self.scroll_down(3)
         elif key == KEY_MATCH:
             if self.col < len(l): 
-                opening = "([{<"
-                closing = ")]}>"
-                level = 0
-                pos = self.col
-                srch = l[pos]
-                i = opening.find(srch)
+                brackets = "<{[()]}>"
+                srch = l[self.col]
+                i = brackets.find(srch)
                 if i >= 0: 
-                    pos += 1
-                    match = closing[i]
-                    for i in range(self.cur_line, self.total_lines):
-                        for c in range(pos, len(self.content[i])):
+                    match = brackets[7 - i] 
+                    level = 0
+                    way = 1 if i < 4 else -1 
+                    i = self.cur_line 
+                    c = self.col + way 
+                    lstop = self.total_lines if way > 0 else -1
+                    while i != lstop:
+                        cstop = len(self.content[i]) if way > 0 else -1
+                        while c != cstop:
                             if self.content[i][c] == match:
                                 if level == 0: 
                                     self.cur_line, self.col = i, c
@@ -576,24 +578,12 @@ class Editor:
                                     level -= 1
                             elif self.content[i][c] == srch:
                                 level += 1
-                        pos = 0 
-                else:
-                    i = closing.find(srch)
-                    if i >= 0: 
-                        pos -= 1
-                        match = opening[i]
-                        for i in range(self.cur_line, -1, -1):
-                            for c in range(pos, -1, -1):
-                                if self.content[i][c] == match:
-                                    if level == 0: 
-                                        self.cur_line, self.col = i, c
-                                        return True 
-                                    else:
-                                        level -= 1
-                                elif self.content[i][c] == srch:
-                                    level += 1
-                            if i > 0: 
-                                pos = len(self.content[i - 1]) - 1
+                            c += way
+                        i += way
+                        
+                        
+                        c = 0 if way > 0 else len(self.content[i]) - 1
+                    self.message = "No match"
         elif key == KEY_MARK:
             self.mark = self.cur_line if self.mark is None else None
         elif key == KEY_SHIFT_DOWN:

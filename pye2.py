@@ -664,43 +664,33 @@ class Editor:
                 self.scroll_down(3)
         elif key == KEY_MATCH:
             if self.col < len(l): ## ony within text
-                opening = "([{<"
-                closing = ")]}>"
-                level = 0
-                pos = self.col
-                srch = l[pos]
-                i = opening.find(srch)
-                if i >= 0: ## at opening bracket, look forward
-                    pos += 1
-                    match = closing[i]
-                    for i in range(self.cur_line, self.total_lines):
-                        for c in range(pos, len(self.content[i])):
+                brackets = "<{[()]}>"
+                srch = l[self.col]
+                i = brackets.find(srch)
+                if i >= 0:  ## found a bracket
+                    match = brackets[7 - i]  ## matching bracket
+                    level = 0
+                    way = 1 if i < 4 else -1  ## set direction up/down
+                    i = self.cur_line  ## set starting point
+                    c = self.col + way  ## one off the current position
+                    lstop = self.total_lines if way > 0 else -1
+                    while i != lstop:
+                        cstop = len(self.content[i]) if way > 0 else -1
+                        while c != cstop:
                             if self.content[i][c] == match:
-                                if level == 0: ## match found
+                                if level == 0:  ## match found
                                     self.cur_line, self.col  = i, c
                                     return True  ## return here instead of ml-breaking
                                 else:
                                     level -= 1
                             elif self.content[i][c] == srch:
                                 level += 1
-                        pos = 0 ## next line starts at 0
-                else:
-                    i = closing.find(srch)
-                    if i >= 0: ## at closing bracket, look back
-                        pos -= 1
-                        match = opening[i]
-                        for i in range(self.cur_line, -1, -1):
-                            for c in range(pos, -1, -1):
-                                if self.content[i][c] == match:
-                                    if level == 0: ## match found
-                                        self.cur_line, self.col  = i, c
-                                        return True ## return here instead of ml-breaking
-                                    else:
-                                        level -= 1
-                                elif self.content[i][c] == srch:
-                                    level += 1
-                            if i > 0: ## prev line, if any, starts at the end
-                                pos = len(self.content[i - 1]) - 1
+                            c += way
+                        i += way
+                        ## set starting point for the next line. 
+                        ## treatment for the first an last line is implicit.
+                        c = 0 if way > 0 else len(self.content[i]) - 1
+                    self.message = "No match"
         elif key == KEY_MARK:
             self.mark = self.cur_line if self.mark is None else None
         elif key == KEY_SHIFT_DOWN:
