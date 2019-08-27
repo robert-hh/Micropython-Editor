@@ -40,7 +40,7 @@ else:
     from _io import StringIO
     from re import compile as re_compile
 
-PYE_VERSION   = " V2.29W "
+PYE_VERSION   = " V2.31W "
 
 KEY_NONE      = const(0x00)
 KEY_UP        = const(0x0b)
@@ -59,7 +59,7 @@ KEY_QUIT      = const(0x11)
 KEY_ENTER     = const(0x0a)
 KEY_BACKSPACE = const(0x08)
 KEY_DELETE    = const(0x7f)
-KEY_DEL_EOL   = const(0xfff7)
+KEY_DEL_WORD  = const(0xfff7)
 KEY_WRITE     = const(0x13)
 KEY_TAB       = const(0x09)
 KEY_BACKTAB   = const(0x15)
@@ -145,7 +145,7 @@ class Editor:
     ## other keys
         "\x1b[1;5H": KEY_FIRST, ## Ctrl-Home
         "\x1b[1;5F": KEY_LAST, ## Ctrl-End
-        "\x1b[3;5~": KEY_DEL_EOL, ## Ctrl-Del
+        "\x1b[3;5~": KEY_DEL_WORD, ## Ctrl-Del
         "\x1b[M" : KEY_MOUSE,
         })
 #endif
@@ -169,7 +169,7 @@ class Editor:
 ## other keys
         "\x1b[w": KEY_FIRST, ## Ctrl-Home
         "\x1b[u": KEY_LAST, ## Ctrl-End
-        "\x1b[\x93": KEY_DEL_EOL, ## Ctrl-Del
+        "\x1b[\x93": KEY_DEL_WORD, ## Ctrl-Del
        })
 #endif
 ## symbols that are shared between instances of Editor
@@ -635,10 +635,13 @@ class Editor:
                 self.content[self.cur_line - 1] += self.content.pop(self.cur_line)
                 self.cur_line -= 1
                 self.total_lines -= 1
-        elif key == KEY_DEL_EOL:
+        elif key == KEY_DEL_WORD:
             if self.col < len(l):
-                self.undo_add(self.cur_line, [l], KEY_DEL_EOL)
-                self.content[self.cur_line] = l[:self.col]
+                pos = self.skip_while(l, self.col, self.word_char, 1)
+                pos += self.spaces(l[pos:])
+                if self.col < pos:
+                    self.undo_add(self.cur_line, [l], KEY_DEL_WORD)
+                    self.content[self.cur_line] = l[:self.col] + l[pos:]
         elif key == KEY_HOME:
             ni = self.spaces(l)
             self.col = ni if self.col == 0 else 0
@@ -700,43 +703,33 @@ class Editor:
                 self.scroll_down(3)
         elif key == KEY_MATCH:
             if self.col < len(l): ## ony within text
-                opening = "([{<"
-                closing = ")]}>"
-                level = 0
-                pos = self.col
-                srch = l[pos]
-                i = opening.find(srch)
-                if i >= 0: ## at opening bracket, look forward
-                    pos += 1
-                    match = closing[i]
-                    for i in range(self.cur_line, self.total_lines):
-                        for c in range(pos, len(self.content[i])):
+                brackets = "<{[()]}>"
+                srch = l[self.col]
+                i = brackets.find(srch)
+                if i >= 0:  ## found a bracket
+                    match = brackets[7 - i]  ## matching bracket
+                    level = 0
+                    way = 1 if i < 4 else -1  ## set direction up/down
+                    i = self.cur_line  ## set starting point
+                    c = self.col + way  ## one off the current position
+                    lstop = self.total_lines if way > 0 else -1
+                    while i != lstop:
+                        cstop = len(self.content[i]) if way > 0 else -1
+                        while c != cstop:
                             if self.content[i][c] == match:
-                                if level == 0: ## match found
+                                if level == 0:  ## match found
                                     self.cur_line, self.col  = i, c
                                     return True  ## return here instead of ml-breaking
                                 else:
                                     level -= 1
                             elif self.content[i][c] == srch:
                                 level += 1
-                        pos = 0 ## next line starts at 0
-                else:
-                    i = closing.find(srch)
-                    if i >= 0: ## at closing bracket, look back
-                        pos -= 1
-                        match = opening[i]
-                        for i in range(self.cur_line, -1, -1):
-                            for c in range(pos, -1, -1):
-                                if self.content[i][c] == match:
-                                    if level == 0: ## match found
-                                        self.cur_line, self.col  = i, c
-                                        return True ## return here instead of ml-breaking
-                                    else:
-                                        level -= 1
-                                elif self.content[i][c] == srch:
-                                    level += 1
-                            if i > 0: ## prev line, if any, starts at the end
-                                pos = len(self.content[i - 1]) - 1
+                            c += way
+                        i += way
+                        ## set starting point for the next line. 
+                        ## treatment for the first an last line is implicit.
+                        c = 0 if way > 0 else len(self.content[i]) - 1
+                    self.message = "No match"
         elif key == KEY_MARK:
             self.mark = self.cur_line if self.mark is None else None
         elif key == KEY_SHIFT_DOWN:
