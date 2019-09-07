@@ -26,7 +26,8 @@ shows most of the commands. Commands marked with (opt) may not be supported in
 |Up Down Left Right| Cursor movement by one line or char|
 |Ctrl-Left| Move the cursor left to the start of the (next) word|
 |Ctrl-Right| Move the cursor right behind the end of the (next) word|
-|Shift-Up Shift-Down| Mark the current line or extend the mark
+|Shift-Up Shift-Down| Mark the current line or extend the mark|
+|Ctrl-Up Ctr-Down|Scroll the windows down/up|
 |PgUp & PgDd|Page up/down|
 |Home|Toggle the position between the start-of-code and the start of line|
 |End|Toggle the position between the end-of-the-code and end-of-line|

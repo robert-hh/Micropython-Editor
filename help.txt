@@ -13,6 +13,8 @@ Ctrl-Left           Move the cursor to the begin of a word.
 Ctrl-Right          Move the cursor right behind the end of a word.
 Shift-Up            Mark the current line or extend the mark up, if set
 Shift-Down          Mark the current line or extend the mark down, if set
+Ctrl-Up             Scroll the window down
+Ctrl-Down           Scroll the window up
 PgUp                Move the cursor up by one screen height.
 PgDn                Move the cursor down by one screen height.
 Home                Go to start-of-line, if the Cursor is at start-of-text.

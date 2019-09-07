@@ -133,6 +133,8 @@ class Editor:
     "\x0f"   : KEY_GET, ## Ctrl-O
     "\x10"   : KEY_COMMENT, ## Ctrl-P
 ## other keys
+    "\x1b[1;5A": KEY_SCRLUP, ## Ctrl-Up
+    "\x1b[1;5B": KEY_SCRLDN, ## Ctrl-Down
     "\x1b[1;5H": KEY_FIRST, ## Ctrl-Home
     "\x1b[1;5F": KEY_LAST, ## Ctrl-End
     "\x1b[3;5~": KEY_DEL_WORD, ## Ctrl-Del

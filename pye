@@ -109,6 +109,8 @@ class Editor:
     "\x17" : KEY_NEXT, 
     "\x0f" : KEY_GET, 
     "\x10" : KEY_COMMENT, 
+    "\x1b[1;5A": KEY_SCRLUP, 
+    "\x1b[1;5B": KEY_SCRLDN, 
     "\x1b[1;5H": KEY_FIRST, 
     "\x1b[1;5F": KEY_LAST, 
     "\x1b[3;5~": KEY_DEL_WORD, 
