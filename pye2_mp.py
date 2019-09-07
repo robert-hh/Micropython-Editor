@@ -194,9 +194,10 @@ class Editor:
         self.row = min(Editor.height - 1, self.row)
         self.scroll_region(Editor.height)
         self.mouse_reporting(True) 
+        if flag:
+            self.message = PYE_VERSION
         if is_linux and not is_micropython:
             signal.signal(signal.SIGWINCH, Editor.signal_handler)
-        self.message = PYE_VERSION
         if is_micropython:
             gc.collect()
             if flag:
