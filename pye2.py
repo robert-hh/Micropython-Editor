@@ -91,10 +91,8 @@ class Editor:
 
     KEYMAP = { ## Gets lengthy
     "\x1b[A" : KEY_UP,
-    "\x1b[1;5A": KEY_UP,
     "\x1b[1;2A": KEY_SHIFT_UP,
     "\x1b[B" : KEY_DOWN,
-    "\x1b[1;5B": KEY_DOWN,
     "\x1b[1;2B": KEY_SHIFT_DOWN,
     "\x1b[D" : KEY_LEFT,
     "\x1b[C" : KEY_RIGHT,
