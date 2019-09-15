@@ -35,7 +35,7 @@ else:
     from _io import StringIO
     from re import compile as re_compile
 
-PYE_VERSION   = " V2.31 "
+PYE_VERSION   = " V2.32 "
 
 KEY_NONE      = const(0x00)
 KEY_UP        = const(0x0b)
@@ -180,6 +180,9 @@ class Editor:
                         Editor.winch = False
                         return chr(KEY_REDRAW)
 
+        def rd_raw(self):
+            return os.read(self.sdev,1)
+
         @staticmethod
         def init_tty(device):
             Editor.org_termios = termios.tcgetattr(device)
@@ -206,6 +209,9 @@ class Editor:
         def rd(self):
             return sys.stdin.read(1)
 
+        def rd_raw(self):
+            return Editor.rd_raw_fct(1)
+
         @staticmethod
         def init_tty(device):
             try:
@@ -213,6 +219,10 @@ class Editor:
                 kbd_intr(-1)
             except ImportError:
                 pass
+            if hasattr(sys.stdin, "buffer"):
+                Editor.rd_raw_fct = sys.stdin.buffer.read
+            else:
+                Editor.rd_raw_fct = sys.stdin.read
 
         @staticmethod
         def deinit_tty():
@@ -297,9 +307,9 @@ class Editor:
                 if c != KEY_MOUSE:
                     return c, None
                 else: ## special for mice
-                    mouse_fct = ord((self.rd())) ## read 3 more chars
-                    mouse_x = ord(self.rd()) - 33
-                    mouse_y = ord(self.rd()) - 33
+                    mouse_fct = ord(self.rd_raw()) ## read 3 more chars
+                    mouse_x = ord(self.rd_raw()) - 33
+                    mouse_y = ord(self.rd_raw()) - 33
                     if mouse_fct == 0x61:
                         return KEY_SCRLDN, None
                     elif mouse_fct == 0x60:
