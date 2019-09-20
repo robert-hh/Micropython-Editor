@@ -727,11 +727,12 @@ class Editor:
             self.undo_add(lrange[0], self.content[lrange[0]:lrange[1]], KEY_COMMENT, lrange[1] - lrange[0]) 
             ni = len(Editor.comment_char)
             for i in range(lrange[0],lrange[1]):
-                ns = self.spaces(self.content[i])
-                if self.content[i][ns:ns + ni] == Editor.comment_char:
-                    self.content[i] = ns * " " + self.content[i][ns + ni:]
-                else:
-                    self.content[i] = ns * " " + Editor.comment_char + self.content[i][ns:]
+                if self.content[i].strip() != "": 
+                    ns = self.spaces(self.content[i])
+                    if self.content[i][ns:ns + ni] == Editor.comment_char:
+                        self.content[i] = ns * " " + self.content[i][ns + ni:]
+                    else:
+                        self.content[i] = ns * " " + Editor.comment_char + self.content[i][ns:]
         elif key == KEY_REDRAW:
             self.redraw(True)
     def edit_loop(self): 
