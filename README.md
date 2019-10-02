@@ -439,3 +439,5 @@ the list of files in the current dir
 **2.31** Re-Map Ctrl-Up and Ctrl-Down for scrolling
 
 **2.32** Comment toggle ignores emty lines
+
+**2.33** Scroll step is 1 for keyboard and 3 for mouse
