@@ -13,7 +13,7 @@ else:
     const = lambda x:x
     from _io import StringIO
     from re import compile as re_compile
-PYE_VERSION = " V2.32 "
+PYE_VERSION = " V2.33 "
 KEY_NONE = const(0x00)
 KEY_UP = const(0x0b)
 KEY_DOWN = const(0x0d)
@@ -225,9 +225,9 @@ class Editor:
                     mouse_x = ord(self.rd_raw()) - 33
                     mouse_y = ord(self.rd_raw()) - 33
                     if mouse_fct == 0x61:
-                        return KEY_SCRLDN, None
+                        return KEY_SCRLDN, 3
                     elif mouse_fct == 0x60:
-                        return KEY_SCRLUP, None
+                        return KEY_SCRLUP, 3
                     else:
                         return KEY_MOUSE, [mouse_x, mouse_y, mouse_fct] 
             elif ord(in_buffer[0]) >= 32:
@@ -540,15 +540,17 @@ class Editor:
                 if char[2] in (0x22, 0x30): 
                     self.mark = self.cur_line if self.mark is None else None
         elif key == KEY_SCRLUP: 
+            ni = 1 if char is None else 3
             if self.top_line > 0:
-                self.top_line = max(self.top_line - 3, 0)
+                self.top_line = max(self.top_line - ni, 0)
                 self.cur_line = min(self.cur_line, self.top_line + Editor.height - 1)
-                self.scroll_up(3)
+                self.scroll_up(ni)
         elif key == KEY_SCRLDN: 
+            ni = 1 if char is None else 3
             if self.top_line + Editor.height < self.total_lines:
-                self.top_line = min(self.top_line + 3, self.total_lines - 1)
+                self.top_line = min(self.top_line + ni, self.total_lines - 1)
                 self.cur_line = max(self.cur_line, self.top_line)
-                self.scroll_down(3)
+                self.scroll_down(ni)
         elif key == KEY_MATCH:
             if self.col < len(l): 
                 brackets = "<{[()]}>"
