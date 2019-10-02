@@ -39,9 +39,8 @@ shows most of the commands. Commands marked with (opt) may not be supported in
 |Ctrl-W|Toggle to the next file buffer|
 |Ctrl-Q or Alt-Q |Close a file buffer or end line-edit|
 |Ctrl-S|Save to file with the option to change the file name|
-|Ctrl-W|Switch to the next file buffer|
 |Ctrl-F|Find|
-|Ctrl-N|Repeat last find|
+|Ctrl-N|Repeat the last find|
 |Ctrl-H or Ctrl-R|Find and Replace (opt)|
 |Ctrl-G|Go to a line|
 |Ctrl-T|Go to the first line (opt)|
@@ -434,3 +433,9 @@ the list of files in the current dir
 **2.28** Add word left & right with ctrl-left and ctrl-right
 
 **2.29** Add shift-up and shift-down for setting/extending the marke area
+
+**2.30** Add Delete Word with Ctr-Del
+
+**2.31** Re-Map Ctrl-Up and Ctrl-Down for scrolling
+
+**2.32** Comment toggle ignores emty lines
