@@ -10,7 +10,7 @@
 ## - changed read keyboard function to comply with char-by-char input
 ## - added support for TAB, BACKTAB, SAVE, DEL and Backspace joining lines,
 ##   Find, Replace, Goto Line, UNDO, GET file, Auto-Indent, Set Flags,
-##   Copy/Delete & Paste, Indent, Un-Indent
+##   Copy/Delete & Paste, Indent, Dedent
 ## - Added mouse support for pointing and scrolling (not WiPy)
 ## - handling tab (0x09) on reading & writing files,
 ## - Added a status line and single line prompts for
@@ -35,7 +35,7 @@ else:
     from _io import StringIO
     from re import compile as re_compile
 
-PYE_VERSION   = " V2.34 "
+PYE_VERSION   = " V2.35 "
 
 KEY_NONE      = const(0x00)
 KEY_UP        = const(0x0b)
@@ -81,7 +81,7 @@ KEY_NEXT      = const(0x17)
 KEY_COMMENT   = const(0xfffc)
 KEY_MATCH     = const(0xfffd)
 KEY_INDENT    = const(0xfffe)
-KEY_UNDENT    = const(0xffff)
+KEY_DEDENT    = const(0xffff)
 
 class Editor:
 
@@ -154,7 +154,7 @@ class Editor:
     word_char = "_\\" ## additional character in a word
 
     def __init__(self, tab_size, undo_limit):
-        self.top_line = self.cur_line = self.row = self.col = self.margin = 0
+        self.top_line = self.cur_line = self.row = self.vcol = self.col = self.margin = 0
         self.tab_size = tab_size
         self.changed = ""
         self.message = self.fname = ""
@@ -327,12 +327,12 @@ class Editor:
     def display_window(self): ## Update window and status line
         ## Force cur_line and col to be in the reasonable bounds
         self.cur_line = min(self.total_lines - 1, max(self.cur_line, 0))
-        self.col = max(0, min(self.col, len(self.content[self.cur_line])))
+        self.vcol = max(0, min(self.col, len(self.content[self.cur_line])))
         ## Check if Column is out of view, and align margin if needed
-        if self.col >= Editor.width + self.margin:
-            self.margin = self.col - Editor.width + (Editor.width >> 2)
-        elif self.col < self.margin:
-            self.margin = max(self.col - (Editor.width >> 2), 0)
+        if self.vcol >= Editor.width + self.margin:
+            self.margin = self.vcol - Editor.width + (Editor.width >> 2)
+        elif self.vcol < self.margin:
+            self.margin = max(self.vcol - (Editor.width >> 2), 0)
         ## if cur_line is out of view, align top_line to the given row
         if not (self.top_line <= self.cur_line < self.top_line + Editor.height): # Visible?
             self.top_line = max(self.cur_line - self.row, 0)
@@ -393,10 +393,10 @@ class Editor:
         self.hilite(1)
         self.wr("{}{} Row: {}/{} Col: {}  {}".format(
             self.changed, self.fname, self.cur_line + 1, self.total_lines,
-            self.col + 1, self.message)[:self.width - 1])
+            self.vcol + 1, self.message)[:self.width - 1])
         self.clear_to_eol() ## once moved up for mate/xfce4-terminal issue with scroll region
         self.hilite(0)
-        self.goto(self.row, self.col - self.margin)
+        self.goto(self.row, self.vcol - self.margin)
         self.cursor(True)
 
     def spaces(self, line, pos = None): ## count spaces
@@ -515,6 +515,7 @@ class Editor:
             return False
 
     def move_left(self):
+        self.col = self.vcol
         if not self.skip_up():
             self.col -= 1
 
@@ -614,6 +615,7 @@ class Editor:
     def handle_edit_keys(self, key, char): ## keys which change content
         l = self.content[self.cur_line]
         if key == KEY_NONE: ## character to be added
+            self.col = self.vcol
             self.mark = None
             self.undo_add(self.cur_line, [l], 0x20 if char == " " else 0x41)
             self.content[self.cur_line] = l[:self.col] + char + l[self.col:]
@@ -627,6 +629,7 @@ class Editor:
         elif key == KEY_RIGHT:
             self.move_right(l)
         elif key == KEY_WORD_LEFT:
+            self.col = self.vcol
             if self.skip_up():
                 l = self.content[self.cur_line]
             pos = self.skip_until(l, self.col - 1, self.word_char, -1)
@@ -637,6 +640,7 @@ class Editor:
             pos = self.skip_until(l, self.col, self.word_char, 1)
             self.col = self.skip_while(l, pos, self.word_char, 1)
         elif key == KEY_DELETE:
+            self.col = self.vcol
             if self.mark is not None:
                 self.delete_mark(False)
             elif self.col < len(l):
@@ -650,6 +654,7 @@ class Editor:
                     else self.content.pop(self.cur_line + 1))
                 self.total_lines -= 1
         elif key == KEY_BACKSPACE:
+            self.col = self.vcol
             if self.mark is not None:
                 self.delete_mark(False)
             elif self.col > 0:
@@ -781,6 +786,7 @@ class Editor:
                 self.mark = (self.cur_line, self.col)
             self.move_right(l)
         elif key == KEY_ENTER:
+            self.col = self.vcol
             self.mark = None
             self.undo_add(self.cur_line, [l], KEY_NONE, 2)
             self.content[self.cur_line] = l[:self.col]
@@ -793,6 +799,7 @@ class Editor:
             self.col = ni
         elif key == KEY_TAB:
             if self.mark is None:
+                self.col = self.vcol
                 self.undo_add(self.cur_line, [l], KEY_TAB)
                 ni = self.tab_size - self.col % self.tab_size ## determine spaces to add
                 self.content[self.cur_line] = l[:self.col] + ' ' * ni + l[self.col:]
@@ -805,6 +812,7 @@ class Editor:
                         self.content[i] = ' ' * (self.tab_size - self.spaces(self.content[i]) % self.tab_size) + self.content[i]
         elif key == KEY_BACKTAB:
             if self.mark is None:
+                self.col = self.vcol
                 ni = min((self.col - 1) % self.tab_size + 1, self.spaces(l, self.col)) ## determine spaces to drop
                 if ni > 0:
                     self.undo_add(self.cur_line, [l], KEY_BACKTAB)
@@ -812,7 +820,7 @@ class Editor:
                     self.col -= ni
             else:
                 lrange = self.line_range()
-                self.undo_add(lrange[0], self.content[lrange[0]:lrange[1]], KEY_UNDENT, lrange[1] - lrange[0]) ## undo replaces
+                self.undo_add(lrange[0], self.content[lrange[0]:lrange[1]], KEY_DEDENT, lrange[1] - lrange[0]) ## undo replaces
                 for i in range(lrange[0],lrange[1]):
                     ns = self.spaces(self.content[i])
                     if ns > 0:
@@ -862,6 +870,7 @@ class Editor:
                 self.mark = None
         elif key == KEY_PASTE: ## insert buffer
             if Editor.yank_buffer:
+                self.col = self.vcol
                 if self.mark is not None:
                     self.delete_mark(False)
                 if self.yank_mode == 1: # instert full lines
@@ -889,9 +898,9 @@ class Editor:
             chain = True
             while len(self.undo) > 0 and chain:
                 action = self.undo.pop(-1) ## get action from stack
-                if not action[3] in (KEY_INDENT, KEY_UNDENT, KEY_COMMENT):
+                if not action[3] in (KEY_INDENT, KEY_DEDENT, KEY_COMMENT):
                     self.cur_line = action[0] ## wrong for Bkspc of BOL
-                ## self.col = action[4]
+                self.col = action[4]
                 if action[1] >= 0: ## insert or replace line
                     if action[0] < self.total_lines:
                         self.content[action[0]:action[0] + action[1]] = action[2] # insert lines

@@ -443,3 +443,5 @@ the list of files in the current dir
 **2.33** Scroll step is 1 for keyboard and 3 for mouse
 
 **2.34** Added a branch with character mode mark/cut/paste/delete. Intended to be the new master
+
+**2.35** Change behaviour of the column position durign vertical moves, in that it tries to keep the position
