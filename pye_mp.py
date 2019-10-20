@@ -418,14 +418,14 @@ class Editor:
         else:
             self.message = pattern + " not found (again)"
             return None
-    def undo_add(self, lnum, text, key, span = 1):
+    def undo_add(self, lnum, text, key, span = 1, chain=False):
         self.changed = '*'
         if self.undo_limit > 0 and (
            len(self.undo) == 0 or key == KEY_NONE or self.undo[-1][3] != key or self.undo[-1][0] != lnum):
             if len(self.undo) >= self.undo_limit: 
                 del self.undo[0]
                 self.undo_zero -= 1
-            self.undo.append([lnum, span, text, key, self.col])
+            self.undo.append([lnum, span, text, key, self.col, chain])
     def delete_lines(self, yank): 
         lrange = self.line_range()
         if yank:
@@ -662,6 +662,7 @@ class Editor:
                     else: 
                         end_line = self.total_lines
                     self.message = "Replace (yes/No/all/quit) ? "
+                    chain = False
                     while True: 
                         ni = self.find_in_file(pat, self.col, end_line)
                         if ni is not None: 
@@ -672,10 +673,11 @@ class Editor:
                             if q == 'q' or key == KEY_QUIT:
                                 break
                             elif q in ('a','y'):
-                                self.undo_add(self.cur_line, [self.content[self.cur_line]], KEY_NONE)
+                                self.undo_add(self.cur_line, [self.content[self.cur_line]], KEY_NONE, 1, chain)
                                 self.content[self.cur_line] = self.content[self.cur_line][:self.col] + rpat + self.content[self.cur_line][self.col + ni:]
                                 self.col += len(rpat) + (ni == 0) 
                                 count += 1
+                                chain = True
                             else: 
                                  self.col += 1
                         else: 
@@ -705,7 +707,8 @@ class Editor:
                 self.undo_zero = len(self.undo) 
                 self.fname = fname 
         elif key == KEY_UNDO:
-            if len(self.undo) > 0:
+            chain = True
+            while len(self.undo) > 0 and chain:
                 action = self.undo.pop(-1) 
                 if not action[3] in (KEY_INDENT, KEY_UNDENT):
                     self.cur_line = action[0] 
@@ -717,10 +720,11 @@ class Editor:
                         self.content += action[2]
                 else: 
                     del self.content[action[0]:action[0] - action[1]]
-                self.total_lines = len(self.content) 
-                if len(self.undo) == self.undo_zero:
-                    self.changed = ''
-                self.mark = None
+                chain = action[5]
+            self.total_lines = len(self.content) 
+            if len(self.undo) == self.undo_zero:
+                self.changed = ''
+            self.mark = None
         elif key == KEY_COMMENT:
             if self.mark is None:
                 lrange = (self.cur_line, self.cur_line + 1)
