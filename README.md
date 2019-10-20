@@ -26,7 +26,7 @@ shows most of the commands. Commands marked with (opt) may not be supported in
 |Up Down Left Right| Cursor movement by one line or char|
 |Ctrl-Left| Move the cursor left to the start of the (next) word|
 |Ctrl-Right| Move the cursor right behind the end of the (next) word|
-|Shift-Up Shift-Down| Mark the current line or extend the mark|
+|Shift-Up -Down -Left -Right| Mark the current line or extend the mark|
 |Ctrl-Up Ctr-Down|Scroll the windows down/up|
 |PgUp & PgDd|Page up/down|
 |Home|Toggle the position between the start-of-code and the start of line|
@@ -102,8 +102,6 @@ CPython also accepts data from a pipe or redirection.
 Runs on the Micros as well, but the file size is much larger
 than the stripped down version.
 - pye_sml.py: Source file without RE search and reduced line edit.
-- pye2.py: a variant of pye.py which does not change the cursor column during
-vertical moves.
 - pye_win.py: an experimental version for the cmd window of Windows 10. It requires
 enabling the VT100 support, as detailed e.g. here: https://stackoverflow.com/questions/51680709/colored-text-output-in-powershell-console-using-ansi-vt100-codes
 - Pyboard Editor.pdf: A short documentation
@@ -123,8 +121,10 @@ using cpp.
 |Branch|Features|
 |:---|:---|
 |master|Actual main line with slowly changing features|
-|dup_del_line|A version which allows to duplicate and delete a single line without marking it before|
-|new_mark|Changed method of marking blocks, allowing to move away the cursor once a block is marked|
+|pye2|Similar to main line, but the column does not change during vertcal moves|
+|charmode|Supports characte mode cut/paste/delete|
+|dup_del_line|A version which allows to duplicate and delete a single line without marking it before (stale)|
+|new_mark|Changed method of marking blocks, allowing to move away the cursor once a block is marked (stale)|
 |vcol|Alternative behavior when moving a cursor up and down. The cursor returns back to a previous column if the line is sufficiently long|
 
 ## Short Version History
@@ -441,3 +441,5 @@ the list of files in the current dir
 **2.32** Comment toggle ignores emty lines
 
 **2.33** Scroll step is 1 for keyboard and 3 for mouse
+
+**2.34** Added a branch with character mode mark/cut/paste/delete. Intended to be the new master

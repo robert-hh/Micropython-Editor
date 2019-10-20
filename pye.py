@@ -359,6 +359,8 @@ class Editor:
                 l = (flag,
                      self.content[line][self.margin:self.margin + Editor.width])
                 if (flag and line == self.cur_line) or l != Editor.scrbuf[c]: ## line changed, print it
+                    if flag and len(l[1]) == 0: # extent empty lines
+                        l= (flag, ' ')
                     self.goto(c, 0)
                     if flag == 0: # no mark
                         self.wr(l[1])
@@ -380,7 +382,7 @@ class Editor:
                         self.wr(l[1][high_mark_c:])
                     else: # middle line of a mark
                         self.hilite(2)
-                        self.wr(l[1] if l[1] else ' ')
+                        self.wr(l[1])
                         self.hilite(0)
                     if len(l[1]) < Editor.width:
                         self.clear_to_eol()
@@ -867,8 +869,8 @@ class Editor:
                     self.content[self.cur_line:self.cur_line] = Editor.yank_buffer # insert lines
                 else: # insert in actual line
                     head, tail = Editor.yank_buffer[0], Editor.yank_buffer[-1]
-                    Editor.yank_buffer[0] = l[:self.col] + Editor.yank_buffer[0]
-                    Editor.yank_buffer[-1] += l[self.col:]
+                    Editor.yank_buffer[0] = self.content[self.cur_line][:self.col] + Editor.yank_buffer[0]
+                    Editor.yank_buffer[-1] += self.content[self.cur_line][self.col:]
                     self.undo_add(self.cur_line, [self.content[self.cur_line]], KEY_NONE)
                     if len(Editor.yank_buffer) > 1:
                         self.undo_add(self.cur_line, None, KEY_NONE, -len(Editor.yank_buffer) + 1, True)
