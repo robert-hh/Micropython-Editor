@@ -145,7 +145,6 @@ class Editor:
     }
 ## symbols that are shared between instances of Editor
     yank_buffer = []
-    yank_flag = 0
     find_pattern = ""
     case = "n"
     autoindent = "y"
@@ -289,7 +288,7 @@ class Editor:
         self.row = min(Editor.height - 1, self.row)
         self.scroll_region(Editor.height)
         self.mouse_reporting(True) ## enable mouse reporting
-        if flag: 
+        if flag:
             self.message = PYE_VERSION
         if is_linux and not is_micropython:
             signal.signal(signal.SIGWINCH, Editor.signal_handler)
@@ -341,10 +340,10 @@ class Editor:
         ## update_screen
         self.cursor(False)
         line = self.top_line
-        low_mark_l, low_mark_c, high_mark_l, high_mark_c = (
+        start_line, start_col, end_line, end_col = (
             (-2, 0, -1, 0) if self.mark is None else self.mark_range())
-        low_mark_c = max(low_mark_c - self.margin, 0)
-        high_mark_c = max(high_mark_c - self.margin, 0)
+        start_col = max(start_col - self.margin, 0)
+        end_col = max(end_col - self.margin, 0)
 
         for c in range(Editor.height):
             if line == self.total_lines: ## at empty bottom screen part
@@ -353,33 +352,33 @@ class Editor:
                     self.clear_to_eol()
                     Editor.scrbuf[c] = (False,'')
             else:
-                flag = ((low_mark_l <= line < high_mark_l) +
-                        ((low_mark_l == line) << 1) + 
-                        (((high_mark_l - 1) == line) << 2))
+                flag = ((start_line <= line < end_line) +
+                        ((start_line == line) << 1) +
+                        (((end_line - 1) == line) << 2))
                 l = (flag,
                      self.content[line][self.margin:self.margin + Editor.width])
                 if (flag and line == self.cur_line) or l != Editor.scrbuf[c]: ## line changed, print it
                     if flag and len(l[1]) == 0: # extent empty lines
-                        l= (flag, ' ')
+                        l = (flag, ' ')
                     self.goto(c, 0)
                     if flag == 0: # no mark
                         self.wr(l[1])
                     elif flag == 7: # only line of a mark
-                        self.wr(l[1][:low_mark_c])
+                        self.wr(l[1][:start_col])
                         self.hilite(2)
-                        self.wr(l[1][low_mark_c:high_mark_c])
+                        self.wr(l[1][start_col:end_col])
                         self.hilite(0)
-                        self.wr(l[1][high_mark_c:])
+                        self.wr(l[1][end_col:])
                     elif flag == 3: # first line of mark
-                        self.wr(l[1][:low_mark_c])
+                        self.wr(l[1][:start_col])
                         self.hilite(2)
-                        self.wr(l[1][low_mark_c:])
+                        self.wr(l[1][start_col:])
                         self.hilite(0)
                     elif flag == 5: # last line of mark
                         self.hilite(2)
-                        self.wr(l[1][:high_mark_c])
+                        self.wr(l[1][:end_col])
                         self.hilite(0)
-                        self.wr(l[1][high_mark_c:])
+                        self.wr(l[1][end_col:])
                     else: # middle line of a mark
                         self.hilite(2)
                         self.wr(l[1])
@@ -413,16 +412,9 @@ class Editor:
                     if self.mark[0] < self.cur_line else
                     (self.cur_line, self.col, self.mark[0] + 1, self.mark[1]))
 
-    def mark_range_trim(self):
-        res = self.mark_range()
-        if res[3] == 0: # Mark at the start of the last line:
-            return (res[0], res[1], res[2] - 1, res[3])
-        else:
-            return res
-
     def line_range(self):
-        res = self.mark_range_trim()
-        return res[0], res[2]
+        res = self.mark_range()
+        return (res[0], res[2]) if res[3] > 0 else (res[0], res[2] - 1)
 
     def line_edit(self, prompt, default, zap=None):  ## better one: added cursor keys and backsp, delete
         push_msg = lambda msg: self.wr(msg + "\b" * len(msg)) ## Write a message and move cursor back
@@ -472,22 +464,22 @@ class Editor:
                     pos -= 1
                     push_msg(res[pos:] + ' ') ## update tail
             elif key == KEY_PASTE: ## Get from content
-                char = self.getsymbol(self.content[self.cur_line], self.col, zap)
-                if char is not None:
-                    self.wr('\b' * pos + ' ' * len(res) + '\b' * len(res))
-                    res = char
-                    self.wr(res)
-                    pos = len(res)
+                self.wr('\b' * pos + ' ' * len(res) + '\b' * len(res))
+                res = self.getsymbol(self.content[self.cur_line], self.col, zap)
+                self.wr(res)
+                pos = len(res)
 
     def getsymbol(self, s, pos, zap):
         if pos < len(s) and zap is not None:
             start = self.skip_while(s, pos, zap, -1)
             stop = self.skip_while(s, pos, zap, 1)
             return s[start+1:stop]
+        else:
+            return ''
 
     def issymbol(self, c, zap):
         return c.isalpha() or c.isdigit() or c in zap
-    
+
     def skip_until(self, s, pos, zap, way):
         stop = -1 if way < 0 else len(s)
         while pos != stop and not self.issymbol(s[pos], zap):
@@ -580,31 +572,26 @@ class Editor:
             self.undo.append([lnum, span, text, key, self.col, chain])
 
     def yank_mark(self): # Copy marked area to the yank buffer
-        start_row, start_col, end_row, end_col = self.mark_range_trim()
-        if start_row == (end_row - 1) and end_col > 0: # single line copy
-            Editor.yank_buffer = self.content[start_row:end_row]
-            Editor.yank_buffer[0] = Editor.yank_buffer[0][start_col:end_col]
-        else:    
-            Editor.yank_buffer = self.content[start_row:end_row]
-            Editor.yank_buffer[0] = Editor.yank_buffer[0][start_col:]
-            if end_col > 0:
-                Editor.yank_buffer[-1] = Editor.yank_buffer[-1][:end_col]
-        Editor.yank_mode = (start_col == 0 and end_col == 0)
+        start_row, start_col, end_row, end_col = self.mark_range()
+        ## copy first the whole area
+        Editor.yank_buffer = self.content[start_row:end_row]
+        ## then remove parts that do not have to be copied. Last line first
+        Editor.yank_buffer[-1] = Editor.yank_buffer[-1][:end_col]
+        Editor.yank_buffer[0] = Editor.yank_buffer[0][start_col:]
 
     def delete_mark(self, yank): ## copy marked lines (opt) and delete them
         if yank:
             self.yank_mark()
-        start_row, start_col, end_row, end_col = self.mark_range_trim()
-        if end_col == 0:
-            end_row += 1
-        saved = ['']
-        saved[0] = self.content[start_row][:start_col] + self.content[end_row - 1][end_col:]
-        self.undo_add(start_row, self.content[start_row:end_row], KEY_NONE, 0) 
-        del self.content[start_row:end_row]
-        if saved[0]:
-            self.undo_add(start_row, self.content[start_row:start_row], KEY_NONE, -1, True) ## undo removes
-            self.content[start_row:start_row] = saved
+        ## delete by saving fractional lines, erase lines and re-insert the saved line
+        start_row, start_col, end_row, end_col = self.mark_range()
+        saved = [self.content[start_row][:start_col] + self.content[end_row - 1][end_col:]]
+        self.undo_add(start_row, self.content[start_row:end_row], KEY_NONE, 0, False)
+        del self.content[start_row:end_row] ## delete the area
+
+        self.undo_add(start_row, self.content[start_row:start_row], KEY_NONE, -1, True) ## undo removes
+        self.content[start_row:start_row] = saved ## reinsert the saved line
         self.col = start_col
+
         if self.content == []: ## if all was wiped
             self.content = [""] ## add a line
             self.undo[-1][1] = 1 ## tell undo to overwrite this single line
@@ -759,7 +746,7 @@ class Editor:
                                 level += 1
                             c += way
                         i += way
-                        ## set starting point for the next line. 
+                        ## set starting point for the next line.
                         ## treatment for the first an last line is implicit.
                         c = 0 if way > 0 else len(self.content[i]) - 1
                     self.message = "No match"
@@ -835,7 +822,9 @@ class Editor:
                     q = ''
                     cur_line, cur_col = self.cur_line, self.col ## remember pos
                     if self.mark is not None: ## Replace in Marked area
-                        (self.cur_line, self.col, end_line, end_col) = self.mark_range_trim()
+                        (self.cur_line, self.col, end_line, end_col) = self.mark_range()
+                        if end_col == 0:
+                            end_line -= 1
                     else: ## replace from cur_line to end
                         end_line = self.total_lines
                     self.message = "Replace (yes/No/all/quit) ? "
@@ -873,18 +862,19 @@ class Editor:
                 self.col = self.vcol
                 if self.mark is not None:
                     self.delete_mark(False)
-                if self.yank_mode == 1: # instert full lines
-                    self.undo_add(self.cur_line, None, KEY_NONE, -len(Editor.yank_buffer))
-                    self.content[self.cur_line:self.cur_line] = Editor.yank_buffer # insert lines
-                else: # insert in actual line
-                    head, tail = Editor.yank_buffer[0], Editor.yank_buffer[-1]
-                    Editor.yank_buffer[0] = self.content[self.cur_line][:self.col] + Editor.yank_buffer[0]
-                    Editor.yank_buffer[-1] += self.content[self.cur_line][self.col:]
-                    self.undo_add(self.cur_line, [self.content[self.cur_line]], KEY_NONE)
-                    if len(Editor.yank_buffer) > 1:
-                        self.undo_add(self.cur_line, None, KEY_NONE, -len(Editor.yank_buffer) + 1, True)
-                    self.content[self.cur_line:self.cur_line + 1] = Editor.yank_buffer # insert lines
-                    Editor.yank_buffer[-1], Editor.yank_buffer[0] = tail, head
+                    chain = True ## undo this delete too when undoing paste
+                else:
+                    chain = False ## just undo the paste
+                ## save the yank buffer state, complete the first and last line and insert it
+                head, tail = Editor.yank_buffer[0], Editor.yank_buffer[-1] ## save the buffer
+                Editor.yank_buffer[0] = self.content[self.cur_line][:self.col] + Editor.yank_buffer[0]
+                Editor.yank_buffer[-1] += self.content[self.cur_line][self.col:]
+                if len(Editor.yank_buffer) > 1:
+                    self.undo_add(self.cur_line, None, KEY_NONE, -len(Editor.yank_buffer) + 1, chain) # remove
+                else:
+                    self.undo_add(self.cur_line, [self.content[self.cur_line]], KEY_NONE, 1, chain) # replace
+                self.content[self.cur_line:self.cur_line + 1] = Editor.yank_buffer # insert lines
+                Editor.yank_buffer[-1], Editor.yank_buffer[0] = tail, head ## restore the buffer
 
                 self.total_lines = len(self.content)
         elif key == KEY_WRITE:
