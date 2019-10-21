@@ -433,18 +433,18 @@ class Editor:
                 self.wr(res[pos:])
                 pos = len(res)
             elif key == KEY_ZAP: ## Get from content
-                char = self.getsymbol(self.content[self.cur_line], self.col, zap)
-                if char is not None:
-                    self.wr('\b' * pos + ' ' * len(res) + '\b' * len(res))
-                    res = char
-                    self.wr(res)
-                    pos = len(res)
+                self.wr('\b' * pos + ' ' * len(res) + '\b' * len(res))
+                res = self.getsymbol(self.content[self.cur_line], self.col, zap)
+                self.wr(res)
+                pos = len(res)
 
     def getsymbol(self, s, pos, zap):
         if pos < len(s) and zap is not None:
             start = self.skip_while(s, pos, zap, -1)
             stop = self.skip_while(s, pos, zap, 1)
             return s[start+1:stop]
+        else:
+            return ''
 
     def issymbol(self, c, zap):
         return c.isalpha() or c.isdigit() or c in zap
