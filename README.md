@@ -122,10 +122,9 @@ using cpp.
 |:---|:---|
 |master|Actual main line with slowly changing features|
 |pye2|Similar to main line, but the column does not change during vertcal moves|
-|charmode|Supports characte mode cut/paste/delete|
+|linemode|Old master branch with line mode mark/delete|
 |dup_del_line|A version which allows to duplicate and delete a single line without marking it before (stale)|
 |new_mark|Changed method of marking blocks, allowing to move away the cursor once a block is marked (stale)|
-|vcol|Alternative behavior when moving a cursor up and down. The cursor returns back to a previous column if the line is sufficiently long|
 
 ## Short Version History
 
