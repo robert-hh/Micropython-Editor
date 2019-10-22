@@ -265,8 +265,6 @@ class Editor:
                 l = (flag,
                      self.content[line][self.margin:self.margin + Editor.width])
                 if (flag and line == self.cur_line) or l != Editor.scrbuf[c]:
-                    if flag and len(l[1]) == 0:
-                        l = (flag, ' ')
                     self.goto(c, 0)
                     if flag == 0:
                         self.wr(l[1])
@@ -280,6 +278,7 @@ class Editor:
                         self.wr(l[1][:start_col])
                         self.hilite(2)
                         self.wr(l[1][start_col:])
+                        self.wr(' ')
                         self.hilite(0)
                     elif flag == 5:
                         self.hilite(2)
@@ -289,6 +288,7 @@ class Editor:
                     else:
                         self.hilite(2)
                         self.wr(l[1])
+                        self.wr(' ')
                         self.hilite(0)
                     if len(l[1]) < Editor.width:
                         self.clear_to_eol()
