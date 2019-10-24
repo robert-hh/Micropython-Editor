@@ -823,10 +823,9 @@ class Editor:
                     cur_line, cur_col = self.cur_line, self.col ## remember pos
                     if self.mark is not None: ## Replace in Marked area
                         (self.cur_line, self.col, end_line, end_col) = self.mark_range()
-                        if end_col == 0:
-                            end_line -= 1
                     else: ## replace from cur_line to end
                         end_line = self.total_lines
+                        end_col = 999999 ## just a large number
                     self.message = "Replace (yes/No/all/quit) ? "
                     chain = False
                     while True: ## and go
