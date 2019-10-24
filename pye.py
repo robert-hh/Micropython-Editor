@@ -68,6 +68,7 @@ KEY_SCRLDN    = const(0x1d)
 KEY_FIND_AGAIN= const(0x0e)
 KEY_REDRAW    = const(0x05)
 KEY_UNDO      = const(0x1a)
+KEY_REDO      = const(0xffee)
 KEY_CUT       = const(0x18)
 KEY_PASTE     = const(0x16)
 KEY_COPY      = const(0x04)
@@ -109,7 +110,7 @@ class Editor:
     "\x7f"   : KEY_BACKSPACE, ## Ctrl-? (127)
     "\x1b[3~": KEY_DELETE,
     "\x1b[Z" : KEY_BACKTAB, ## Shift Tab
-    "\x19"   : KEY_CUT, ## Ctrl-Y alias to Ctrl-X
+    "\x19"   : KEY_REDO, ## Ctrl-Y
     "\x08"   : KEY_REPLC, ## Ctrl-H
     "\x12"   : KEY_REPLC, ## Ctrl-R
     "\x11"   : KEY_QUIT, ## Ctrl-Q
@@ -161,6 +162,7 @@ class Editor:
         self.undo = []
         self.undo_limit = max(undo_limit, 0)
         self.undo_zero = 0
+        self.redo = []
         self.mark = None
         self.write_tabs = "n"
 
@@ -570,6 +572,40 @@ class Editor:
                 del self.undo[0]
                 self.undo_zero -= 1
             self.undo.append([lnum, span, text, key, self.col, chain])
+            self.redo = []  ## clear re-do list.
+    
+    def undo_redo(self, undo, redo):
+        chain = True
+        redo_temp = []
+        while len(undo) > 0 and chain:
+            action = undo.pop() ## get action from stack
+            if not action[3] in (KEY_INDENT, KEY_DEDENT, KEY_COMMENT):
+                self.cur_line = action[0] ## wrong for Bkspc of BOL
+            self.col = action[4]
+            if action[1] >= 0: ## insert or replace line
+                if action[1] == 0: ## undo inserts, redo deletes
+                    redo_temp.append(action[0:1] + [-len(action[2]), None] + action[3:])
+                else: ## undo replaces, and so does redo
+                    redo_temp.append(action[0:1] + [len(action[2])] +  ## safe to redo stack
+                        [self.content[action[0]:action[0] + action[1]]] + action[3:])
+                if action[0] < self.total_lines:
+                    self.content[action[0]:action[0] + action[1]] = action[2] # insert lines
+                else:
+                    self.content += action[2]
+            else: ## delete lines
+                redo_temp.append(action[0:1] + [0] +   ## undo deletes, redo inserts
+                    [self.content[action[0]:action[0] - action[1]]] + action[3:])
+                del self.content[action[0]:action[0] - action[1]]
+            chain = action[5]
+        if len(redo_temp) > 0:
+            if len(redo) >= self.undo_limit: ## mybe not enough
+                del redo[0]
+            redo_temp[-1][5] = True  ## Force flags for chaining
+            redo_temp[0][5] = False
+            redo += redo_temp
+        self.total_lines = len(self.content) ## brute force
+        self.changed = '' if len(self.undo) == self.undo_zero else '*'
+        self.mark = None
 
     def yank_mark(self): # Copy marked area to the yank buffer
         start_row, start_col, end_row, end_col = self.mark_range()
@@ -823,10 +859,9 @@ class Editor:
                     cur_line, cur_col = self.cur_line, self.col ## remember pos
                     if self.mark is not None: ## Replace in Marked area
                         (self.cur_line, self.col, end_line, end_col) = self.mark_range()
-                        if end_col == 0:
-                            end_line -= 1
                     else: ## replace from cur_line to end
                         end_line = self.total_lines
+                        end_col = 99999
                     self.message = "Replace (yes/No/all/quit) ? "
                     chain = False
                     while True: ## and go
@@ -885,24 +920,9 @@ class Editor:
                 self.undo_zero = len(self.undo) ## remember state
                 self.fname = fname ## remember (new) name
         elif key == KEY_UNDO:
-            chain = True
-            while len(self.undo) > 0 and chain:
-                action = self.undo.pop(-1) ## get action from stack
-                if not action[3] in (KEY_INDENT, KEY_DEDENT, KEY_COMMENT):
-                    self.cur_line = action[0] ## wrong for Bkspc of BOL
-                self.col = action[4]
-                if action[1] >= 0: ## insert or replace line
-                    if action[0] < self.total_lines:
-                        self.content[action[0]:action[0] + action[1]] = action[2] # insert lines
-                    else:
-                        self.content += action[2]
-                else: ## delete lines
-                    del self.content[action[0]:action[0] - action[1]]
-                chain = action[5]
-            self.total_lines = len(self.content) ## brute force
-            if len(self.undo) == self.undo_zero:
-                self.changed = ''
-            self.mark = None
+            self.undo_redo(self.undo, self.redo)
+        elif key == KEY_REDO:
+            self.undo_redo(self.redo, self.undo)
         elif key == KEY_COMMENT:
             if self.mark is None:
                 lrange = (self.cur_line, self.cur_line + 1)
@@ -1049,7 +1069,7 @@ def pye(*content, tab_size=4, undo=50, device=0):
                 index += 1
         except Exception as err:
             slot[index].message = "{!r}".format(err)
-            ## raise
+            raise
 ## All windows closed, clean up
     Editor.deinit_tty()
     Editor.yank_buffer = []
