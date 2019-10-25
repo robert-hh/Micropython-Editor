@@ -962,7 +962,12 @@ class Editor:
                 self.clear_to_eol()
                 self.undo = []
                 return key
-            elif key in (KEY_NEXT, KEY_GET):
+            elif key == KEY_NEXT:
+                return key
+            elif key == KEY_GET:
+                if self.mark is not None:
+                    self.mark = None
+                    self.display_window()  ## Update & display window
                 return key
             else:
                 self.handle_edit_keys(key, char)
@@ -1069,7 +1074,7 @@ def pye(*content, tab_size=4, undo=50, device=0):
                 index += 1
         except Exception as err:
             slot[index].message = "{!r}".format(err)
-            raise
+            ## raise
 ## All windows closed, clean up
     Editor.deinit_tty()
     Editor.yank_buffer = []

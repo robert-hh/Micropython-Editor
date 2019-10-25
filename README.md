@@ -26,7 +26,7 @@ shows most of the commands. Commands marked with (opt) may not be supported in
 |Up Down Left Right| Cursor movement by one line or char|
 |Ctrl-Left| Move the cursor left to the start of the (next) word|
 |Ctrl-Right| Move the cursor right behind the end of the (next) word|
-|Shift-Up -Down -Left -Right| Mark the current line or extend the mark|
+|Shift-Up -Down -Left -Right| Mark the text or extend the mark|
 |Ctrl-Up Ctr-Down|Scroll the windows down/up|
 |PgUp & PgDd|Page up/down|
 |Home|Toggle the position between the start-of-code and the start of line|
@@ -46,11 +46,12 @@ shows most of the commands. Commands marked with (opt) may not be supported in
 |Ctrl-T|Go to the first line (opt)|
 |Ctrl-B|Go to the last line (opt)|
 |Ctrl-K|Goto the bracket matching the one under the cursor (opt)|
-|Ctrl-L or Ctrl-Space|Mark/Unmark the current line. The mark can then be extended by moving the cursor|
-|Ctrl-X or Ctrl-Y|Cut the marked lines
+|Ctrl-L or Ctrl-Space|Start a mark at the current position, or clear the mark. The mark can then be extended by moving the cursor|
+|Ctrl-X|Cut the marked lines
 |Ctrl-C or Ctrl-D|Copy the marked lines
 |Ctrl-V|Insert the copied/cut lines. In the line edit mode paste the item under the cursor of the active window. |
 |Ctrl-Z|Undo the last change(s)|
+|Ctrl-Y|Redo the last undo(s), repeating what had been undone by undo|
 |Ctrl-P|Comment/Uncomment a line or marked area|
 |Ctrl-A|Change settings for tab size, search case sensitivity, auto-indent, comment string and writing tabs (opt)|
 |Ctrl-E|Redraw the screen. On the Micro devices it shows the amount of free memory|
