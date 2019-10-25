@@ -122,8 +122,8 @@ using cpp.
 |Branch|Features|
 |:---|:---|
 |master|Actual main line with slowly changing features|
-|pye2|Similar to main line, but the column does not change during vertcal moves|
 |linemode|Old master branch with line mode mark/delete|
+|pye2|Similar to the linemode branch, but the column does not change during vertcal moves|
 |dup_del_line|A version which allows to duplicate and delete a single line without marking it before (stale)|
 |new_mark|Changed method of marking blocks, allowing to move away the cursor once a block is marked (stale)|
 
@@ -445,3 +445,5 @@ the list of files in the current dir
 **2.34** Added a branch with character mode mark/cut/paste/delete. Intended to be the new master
 
 **2.35** Change behaviour of the column position durign vertical moves, in that it tries to keep the position
+
+**2.36** Add the redo function, which restates changes undone by undo.

@@ -35,7 +35,7 @@ else:
     from _io import StringIO
     from re import compile as re_compile
 
-PYE_VERSION   = " V2.35 "
+PYE_VERSION   = " V2.36 "
 
 KEY_NONE      = const(0x00)
 KEY_UP        = const(0x0b)
