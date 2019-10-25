@@ -26,7 +26,7 @@ shows most of the commands. Commands marked with (opt) may not be supported in
 |Up Down Left Right| Cursor movement by one line or char|
 |Ctrl-Left| Move the cursor left to the start of the (next) word|
 |Ctrl-Right| Move the cursor right behind the end of the (next) word|
-|Shift-Up -Down -Left -Right| Mark the current line or extend the mark|
+|Shift-Up -Down -Left -Right| Mark the text or extend the mark|
 |Ctrl-Up Ctr-Down|Scroll the windows down/up|
 |PgUp & PgDd|Page up/down|
 |Home|Toggle the position between the start-of-code and the start of line|
@@ -46,11 +46,12 @@ shows most of the commands. Commands marked with (opt) may not be supported in
 |Ctrl-T|Go to the first line (opt)|
 |Ctrl-B|Go to the last line (opt)|
 |Ctrl-K|Goto the bracket matching the one under the cursor (opt)|
-|Ctrl-L or Ctrl-Space|Mark/Unmark the current line. The mark can then be extended by moving the cursor|
-|Ctrl-X or Ctrl-Y|Cut the marked lines
+|Ctrl-L or Ctrl-Space|Start a mark at the current position, or clear the mark. The mark can then be extended by moving the cursor|
+|Ctrl-X|Cut the marked lines
 |Ctrl-C or Ctrl-D|Copy the marked lines
 |Ctrl-V|Insert the copied/cut lines. In the line edit mode paste the item under the cursor of the active window. |
 |Ctrl-Z|Undo the last change(s)|
+|Ctrl-Y|Redo the last undo(s), repeating what had been undone by undo|
 |Ctrl-P|Comment/Uncomment a line or marked area|
 |Ctrl-A|Change settings for tab size, search case sensitivity, auto-indent, comment string and writing tabs (opt)|
 |Ctrl-E|Redraw the screen. On the Micro devices it shows the amount of free memory|
@@ -121,8 +122,8 @@ using cpp.
 |Branch|Features|
 |:---|:---|
 |master|Actual main line with slowly changing features|
-|pye2|Similar to main line, but the column does not change during vertcal moves|
 |linemode|Old master branch with line mode mark/delete|
+|pye2|Similar to the linemode branch, but the column does not change during vertcal moves|
 |dup_del_line|A version which allows to duplicate and delete a single line without marking it before (stale)|
 |new_mark|Changed method of marking blocks, allowing to move away the cursor once a block is marked (stale)|
 
@@ -444,3 +445,5 @@ the list of files in the current dir
 **2.34** Added a branch with character mode mark/cut/paste/delete. Intended to be the new master
 
 **2.35** Change behaviour of the column position durign vertical moves, in that it tries to keep the position
+
+**2.36** Add the redo function, which restates changes undone by undo.
