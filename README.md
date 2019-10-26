@@ -9,13 +9,15 @@ A small text editor written in Python running on PYBoard, WiPy1, the pycom.io
  ESP8266, Teensy, ESP32, the Pycom.io and MaixPy devices, and added a few functions:
 
 - Use sys.stdin.read() and sys.stdout.write() for input and output of the Micropython version.
-- Changed the read keyboard function to comply with slow byte-by-byte input on serial lines.
+- Changed the read keyboard function to comply with byte-by-byte input on serial lines.
 - Added support for Tab, BackTab, Save, Del and Backspace joining lines, Find,
-Replace, Goto Line, Undo, Get file, Auto-Indent, Set Flags, Copy/Delete & Paste, Indent, Un-Indent
+Replace, Goto Line, Undo, Redo, Open file, Auto-Indent, Set Flags, Copy/Delete & Paste,
+Indent, Dedent, Block-Comment, Scrolling
 - Handling tab (0x09) on reading & writing files,
 - Added a status line, and single line prompts for Quit, Save, Find, Replace,
-Goto, Get file and Flag settings.
-- Optional support of the basic mouse functions scrolling up/down, setting the cursor and marking lines.
+Goto, Open file and Flag settings.
+- Support the simultaneous editing of multiple files.
+- Basic mouse functions for scrolling up/down, setting the cursor and marking text.
 
 The editor assumes a VT100 terminal. It works in Insert mode. The following list
 shows most of the commands. Commands marked with (opt) may not be supported in
@@ -77,7 +79,7 @@ It is always the last buffer closed, which determines the return value of pye().
 Optional named parameters:
 
 tabsize=n    Tab step (integer). The default is 4  
-undo=n  Size of the undo stack (integer). A value of 0 or False disables undo.  
+undo=n  Size of the undo stack (integer). The minimum Size is 4.  
 
 The Linux/Darwin version can be called from the command line with:
 

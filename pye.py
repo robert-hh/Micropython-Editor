@@ -566,9 +566,9 @@ class Editor:
 
     def undo_add(self, lnum, text, key, span = 1, chain=False):
         self.changed = '*'
-        if self.undo_limit > 0 and (
-           len(self.undo) == 0 or key == KEY_NONE or self.undo[-1][3] != key or self.undo[-1][0] != lnum):
-            if len(self.undo) >= self.undo_limit: ## drop oldest undo, if full
+        if (len(self.undo) == 0 or key == KEY_NONE or 
+            self.undo[-1][3] != key or self.undo[-1][0] != lnum):
+            if len(self.undo) >= self.undo_limit: ## drop oldest undo(s), if full
                 del self.undo[0]
                 self.undo_zero -= 1
             self.undo.append([lnum, span, text, key, self.col, chain])
@@ -576,33 +576,28 @@ class Editor:
     
     def undo_redo(self, undo, redo):
         chain = True
-        redo_temp = []
         while len(undo) > 0 and chain:
             action = undo.pop() ## get action from stack
             if not action[3] in (KEY_INDENT, KEY_DEDENT, KEY_COMMENT):
                 self.cur_line = action[0] ## wrong for Bkspc of BOL
             self.col = action[4]
+            if len(redo) >= self.undo_limit: ## mybe not enough
+                del redo[0]
             if action[1] >= 0: ## insert or replace line
                 if action[1] == 0: ## undo inserts, redo deletes
-                    redo_temp.append(action[0:1] + [-len(action[2]), None] + action[3:])
+                    redo.append(action[0:1] + [-len(action[2]), None] + action[3:])
                 else: ## undo replaces, and so does redo
-                    redo_temp.append(action[0:1] + [len(action[2])] +  ## safe to redo stack
+                    redo.append(action[0:1] + [len(action[2])] +  ## safe to redo stack
                         [self.content[action[0]:action[0] + action[1]]] + action[3:])
                 if action[0] < self.total_lines:
                     self.content[action[0]:action[0] + action[1]] = action[2] # insert lines
                 else:
                     self.content += action[2]
             else: ## delete lines
-                redo_temp.append(action[0:1] + [0] +   ## undo deletes, redo inserts
+                redo.append(action[0:1] + [0] +   ## undo deletes, redo inserts
                     [self.content[action[0]:action[0] - action[1]]] + action[3:])
                 del self.content[action[0]:action[0] - action[1]]
             chain = action[5]
-        if len(redo_temp) > 0:
-            if len(redo) >= self.undo_limit: ## mybe not enough
-                del redo[0]
-            redo_temp[-1][5] = True  ## Force flags for chaining
-            redo_temp[0][5] = False
-            redo += redo_temp
         self.total_lines = len(self.content) ## brute force
         self.changed = '' if len(self.undo) == self.undo_zero else '*'
         self.mark = None
@@ -618,14 +613,12 @@ class Editor:
     def delete_mark(self, yank): ## copy marked lines (opt) and delete them
         if yank:
             self.yank_mark()
-        ## delete by saving fractional lines, erase lines and re-insert the saved line
+        ## delete by composing fractional lines into the ifrst one and erase remaining lines
         start_row, start_col, end_row, end_col = self.mark_range()
-        saved = [self.content[start_row][:start_col] + self.content[end_row - 1][end_col:]]
-        self.undo_add(start_row, self.content[start_row:end_row], KEY_NONE, 0, False)
-        del self.content[start_row:end_row] ## delete the area
-
-        self.undo_add(start_row, self.content[start_row:start_row], KEY_NONE, -1, True) ## undo removes
-        self.content[start_row:start_row] = saved ## reinsert the saved line
+        self.undo_add(start_row, self.content[start_row:end_row], KEY_NONE, 1, False)
+        self.content[start_row] = self.content[start_row][:start_col] + self.content[end_row - 1][end_col:]
+        if start_row + 1 < end_row:
+            del self.content[start_row + 1:end_row] ## delete the ramining area
         self.col = start_col
 
         if self.content == []: ## if all was wiped
@@ -1040,6 +1033,7 @@ def pye(*content, tab_size=4, undo=50, device=0):
 ## prepare content
     gc.collect() ## all (memory) is mine
     index = 0
+    undo = max(4, (undo if type(undo) is int else 0)) # minimum undo size
     if content:
         slot = []
         for f in content:
