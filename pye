@@ -936,9 +936,10 @@ def pye(*content, tab_size=4, undo=50, device=0):
                 del slot[index]
             elif key == KEY_GET:
                 f = slot[index].line_edit("Open file: ", "", "_.-")
-                slot.append(Editor(tab_size, undo))
-                index = len(slot) - 1
-                slot[index].get_file(f)
+                if f is not None:
+                    slot.append(Editor(tab_size, undo))
+                    index = len(slot) - 1
+                    slot[index].get_file(f)
             elif key == KEY_NEXT:
                 index += 1
         except Exception as err:

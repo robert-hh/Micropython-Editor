@@ -71,8 +71,9 @@ window. If object_n is a list of strings, these will be edited, and the edited
 list will be returned. If no object is named, pye() will give you an empty
 screen with the Linux versiom, or show the list of files in the micropython board versions, creating a list of strings, unless you save to a file. In that case,
 the file name will be returned. If object_n is neither a string nor a list of
-strings, an empty buffer is opened. It is always the last buffer closed, which
-determines the return value of pye().  
+strings, a buffer with the list of the file names of the actula directory is opened.
+It is always the last buffer closed, which determines the return value of pye().  
+
 Optional named parameters:
 
 tabsize=n    Tab step (integer). The default is 4  
