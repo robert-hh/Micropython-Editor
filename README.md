@@ -79,7 +79,7 @@ It is always the last buffer closed, which determines the return value of pye().
 Optional named parameters:
 
 tabsize=n    Tab step (integer). The default is 4  
-undo=n  Size of the undo stack (integer). The minimum Size is 4.  
+undo=n  Size of the undo stack (integer). The minimum size is 4.  
 
 The Linux/Darwin version can be called from the command line with:
 

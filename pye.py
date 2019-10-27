@@ -157,11 +157,11 @@ class Editor:
         self.top_line = self.cur_line = self.row = self.vcol = self.col = self.margin = 0
         self.tab_size = tab_size
         self.changed = ""
+        self.hash = 0
         self.message = self.fname = ""
         self.content = [""]
         self.undo = []
-        self.undo_limit = max(undo_limit, 0)
-        self.undo_zero = 0
+        self.undo_limit = undo_limit
         self.redo = []
         self.mark = None
         self.write_tabs = "n"
@@ -570,7 +570,6 @@ class Editor:
             self.undo[-1][3] != key or self.undo[-1][0] != lnum):
             if len(self.undo) >= self.undo_limit: ## drop oldest undo(s), if full
                 del self.undo[0]
-                self.undo_zero -= 1
             self.undo.append([lnum, span, text, key, self.col, chain])
             self.redo = []  ## clear re-do list.
     
@@ -599,7 +598,7 @@ class Editor:
                 del self.content[action[0]:action[0] - action[1]]
             chain = action[5]
         self.total_lines = len(self.content) ## brute force
-        self.changed = '' if len(self.undo) == self.undo_zero else '*'
+        self.changed = '' if self.hash == self.hash_buffer() else '*'
         self.mark = None
 
     def yank_mark(self): # Copy marked area to the yank buffer
@@ -909,9 +908,9 @@ class Editor:
             fname = self.line_edit("Save File: ", self.fname)
             if fname:
                 self.put_file(fname)
-                self.changed = '' ## clear change flag
-                self.undo_zero = len(self.undo) ## remember state
                 self.fname = fname ## remember (new) name
+                self.hash = self.hash_buffer()
+                self.changed = ''
         elif key == KEY_UNDO:
             self.undo_redo(self.undo, self.redo)
         elif key == KEY_REDO:
@@ -931,6 +930,7 @@ class Editor:
                     else:
                         self.content[i] = ns * " " + Editor.comment_char + self.content[i][ns:]
         elif key == KEY_REDRAW:
+            self.changed = '' if self.hash == self.hash_buffer() else '*'
             self.redraw(True)
 
     def edit_loop(self): ## main editing loop
@@ -945,8 +945,8 @@ class Editor:
             self.message = '' ## clear message
 
             if key == KEY_QUIT:
-                if self.changed:
-                    res = self.line_edit("Content changed! Quit without saving (y/N)? ", "N")
+                if self.hash != self.hash_buffer():
+                    res = self.line_edit("The content may be changed! Quit without saving (y/N)? ", "N")
                     if not res or res[0].upper() != 'Y':
                         continue
                 self.scroll_region(0)
@@ -977,6 +977,13 @@ class Editor:
                 sb.write(c)
         return sb.getvalue()
 
+## calculate a hash over the content
+    def hash_buffer(self):
+        res = 0
+        for line in self.content:
+            res = ((res * 17) ^ hash(line)) & 0x3fffffff
+        return res
+
 ## Read file into content
     def get_file(self, fname):
         from os import listdir, stat
@@ -996,6 +1003,7 @@ class Editor:
                     self.content[i], tf = expandtabs(l.rstrip('\r\n\t '))
                     tabs |= tf
                 self.write_tabs = "y" if tabs else "n"
+            self.hash = self.hash_buffer()
 
 ## write file
     def put_file(self, fname):
