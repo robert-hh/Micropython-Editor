@@ -213,6 +213,7 @@ class Editor:
             gc.collect()
             if flag:
                 self.message += "{} Bytes Memory available".format(gc.mem_free())
+        self.changed = '' if self.hash == self.hash_buffer() else '*'
     def get_input(self):
         while True:
             in_buffer = self.rd()
@@ -461,6 +462,7 @@ class Editor:
             self.redo = []
     def undo_redo(self, undo, redo):
         chain = True
+        redo_start = len(redo)
         while len(undo) > 0 and chain:
             action = undo.pop()
             if not action[3] in (KEY_INDENT, KEY_DEDENT, KEY_COMMENT):
@@ -483,9 +485,12 @@ class Editor:
                     [self.content[action[0]:action[0] - action[1]]] + action[3:])
                 del self.content[action[0]:action[0] - action[1]]
             chain = action[5]
-        self.total_lines = len(self.content)
-        self.changed = '' if self.hash == self.hash_buffer() else '*'
-        self.mark = None
+        if (len(redo) - redo_start) > 0:
+            redo[-1][5] = True
+            redo[redo_start][5] = False
+            self.total_lines = len(self.content)
+            self.changed = '' if self.hash == self.hash_buffer() else '*'
+            self.mark = None
     def yank_mark(self):
         start_row, start_col, end_row, end_col = self.mark_range()
         Editor.yank_buffer = self.content[start_row:end_row]
@@ -646,7 +651,7 @@ class Editor:
                             if self.content[i][c] == match:
                                 if level == 0:
                                     self.cur_line, self.col = i, c
-                                    return True
+                                    return
                                 else:
                                     level -= 1
                             elif self.content[i][c] == srch:
@@ -805,7 +810,6 @@ class Editor:
                     else:
                         self.content[i] = ns * " " + Editor.comment_char + self.content[i][ns:]
         elif key == KEY_REDRAW:
-            self.changed = '' if self.hash == self.hash_buffer() else '*'
             self.redraw(True)
     def edit_loop(self):
         if not self.content:

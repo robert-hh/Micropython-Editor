@@ -298,6 +298,7 @@ class Editor:
             gc.collect()
             if flag:
                 self.message += "{} Bytes Memory available".format(gc.mem_free())
+        self.changed = '' if self.hash == self.hash_buffer() else '*'
 
     def get_input(self):  ## read from interface/keyboard one byte each and match against function keys
         while True:
@@ -575,6 +576,7 @@ class Editor:
     
     def undo_redo(self, undo, redo):
         chain = True
+        redo_start = len(redo)
         while len(undo) > 0 and chain:
             action = undo.pop() ## get action from stack
             if not action[3] in (KEY_INDENT, KEY_DEDENT, KEY_COMMENT):
@@ -597,9 +599,12 @@ class Editor:
                     [self.content[action[0]:action[0] - action[1]]] + action[3:])
                 del self.content[action[0]:action[0] - action[1]]
             chain = action[5]
-        self.total_lines = len(self.content) ## brute force
-        self.changed = '' if self.hash == self.hash_buffer() else '*'
-        self.mark = None
+        if (len(redo) - redo_start) > 0: ## Performed at least one action
+            redo[-1][5] = True ## fix the chaining flags for reversed action order.
+            redo[redo_start][5] = False
+            self.total_lines = len(self.content) ## Reset the length and change indicator
+            self.changed = '' if self.hash == self.hash_buffer() else '*'
+            self.mark = None
 
     def yank_mark(self): # Copy marked area to the yank buffer
         start_row, start_col, end_row, end_col = self.mark_range()
@@ -767,7 +772,7 @@ class Editor:
                             if self.content[i][c] == match:
                                 if level == 0:  ## match found
                                     self.cur_line, self.col  = i, c
-                                    return True  ## return here instead of ml-breaking
+                                    return  ## return here instead of ml-breaking
                                 else:
                                     level -= 1
                             elif self.content[i][c] == srch:
@@ -930,7 +935,6 @@ class Editor:
                     else:
                         self.content[i] = ns * " " + Editor.comment_char + self.content[i][ns:]
         elif key == KEY_REDRAW:
-            self.changed = '' if self.hash == self.hash_buffer() else '*'
             self.redraw(True)
 
     def edit_loop(self): ## main editing loop
