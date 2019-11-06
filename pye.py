@@ -249,7 +249,7 @@ class Editor:
 
     def hilite(self, mode):
         if mode == 1: ## used for the status line
-            self.wr("\x1b[1;47m")
+            self.wr("\x1b[1;37;46m")
         elif mode == 2: ## used for the marked area
             self.wr("\x1b[43m")
         else:         ## plain text
@@ -950,7 +950,7 @@ class Editor:
 
             if key == KEY_QUIT:
                 if self.hash != self.hash_buffer():
-                    res = self.line_edit("The content may be changed! Quit without saving (y/N)? ", "N")
+                    res = self.line_edit("The content was changed! Quit without saving (y/N)? ", "N")
                     if not res or res[0].upper() != 'Y':
                         continue
                 self.scroll_region(0)
@@ -992,22 +992,25 @@ class Editor:
     def get_file(self, fname):
         from os import listdir, stat
         if fname:
-            self.fname = fname
-            if fname in ('.', '..') or (stat(fname)[0] & 0x4000): ## Dir
-                self.content = ["Directory '{}'".format(fname), ""] + sorted(listdir(fname))
-            else:
-                if is_micropython:
-                    with open(fname) as f:
-                        self.content = f.readlines()
+            try:
+                self.fname = fname
+                if fname in ('.', '..') or (stat(fname)[0] & 0x4000): ## Dir
+                    self.content = ["Directory '{}'".format(fname), ""] + sorted(listdir(fname))
                 else:
-                    with open(fname, errors="ignore") as f:
-                        self.content = f.readlines()
-                tabs = False
-                for i, l in enumerate(self.content):
-                    self.content[i], tf = expandtabs(l.rstrip('\r\n\t '))
-                    tabs |= tf
-                self.write_tabs = "y" if tabs else "n"
-            self.hash = self.hash_buffer()
+                    if is_micropython:
+                        with open(fname) as f:
+                            self.content = f.readlines()
+                    else:
+                        with open(fname, errors="ignore") as f:
+                            self.content = f.readlines()
+                    tabs = False
+                    for i, l in enumerate(self.content):
+                        self.content[i], tf = expandtabs(l.rstrip('\r\n\t '))
+                        tabs |= tf
+                    self.write_tabs = "y" if tabs else "n"
+            except OSError:
+                self.message = "Error: file '" + fname + "' may not exist"
+        self.hash = self.hash_buffer()
 
 ## write file
     def put_file(self, fname):
