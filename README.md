@@ -17,7 +17,7 @@ Indent, Dedent, Block-Comment, Scrolling
 - Added a status line, and single line prompts for Quit, Save, Find, Replace,
 Goto, Open file and Flag settings.
 - Support the simultaneous editing of multiple files.
-- Basic mouse functions for scrolling up/down, setting the cursor and marking text.
+- Basic mouse functions for scrolling up/down, setting the cursor and highlighting text.
 
 The editor assumes a VT100 terminal. It works in Insert mode. The following list
 shows most of the commands. Commands marked with (opt) may not be supported in
@@ -28,14 +28,14 @@ shows most of the commands. Commands marked with (opt) may not be supported in
 |Up Down Left Right| Cursor movement by one line or char|
 |Ctrl-Left| Move the cursor left to the start of the (next) word|
 |Ctrl-Right| Move the cursor right behind the end of the (next) word|
-|Shift-Up -Down -Left -Right| Mark the text or extend the mark|
+|Shift-Up -Down -Left -Right| Highlight the text or extend the highlighted area|
 |Ctrl-Up Ctr-Down|Scroll the windows down/up|
 |PgUp & PgDd|Page up/down|
 |Home|Toggle the position between the start-of-code and the start of line|
 |End|Toggle the position between the end-of-the-code and end-of-line|
 |Enter|Enter a line break at the cursor position. Auto-indent is supported|
 |Backspace|Delete char left to the  cursor (The key must be set to ASCII-Del)|
-|Del|Delete the char under the cursor. At the end of the line join the next line. If autoindent is enabled, delete also the leading spaces of the joined line. If lines are marked, delete the marked area|
+|Del|Delete the char under the cursor. At the end of the line join the next line. If autoindent is enabled, delete also the leading spaces of the joined line. If lines are highlighted, delete the highlighted area|
 |Ctrl-Del|Delete the word under the cursor or space up to the next non-space|
 |Ctrl-O|Open a new file. If the file name is left empty, an empty buffer is opened|
 |Ctrl-W|Toggle to the next file buffer|
@@ -48,13 +48,13 @@ shows most of the commands. Commands marked with (opt) may not be supported in
 |Ctrl-T|Go to the first line (opt)|
 |Ctrl-B|Go to the last line (opt)|
 |Ctrl-K|Goto the bracket matching the one under the cursor (opt)|
-|Ctrl-L or Ctrl-Space|Start a mark at the current position, or clear the mark. The mark can then be extended by moving the cursor|
-|Ctrl-X|Cut the marked lines
-|Ctrl-C or Ctrl-D|Copy the marked lines
+|Ctrl-L or Ctrl-Space|Start hightlighting at the current position, or clear the highlight. The highlight can then be extended by moving the cursor|
+|Ctrl-X|Cut the highlighted lines
+|Ctrl-C or Ctrl-D|Copy the highlighted lines
 |Ctrl-V|Insert the copied/cut lines. In the line edit mode paste the item under the cursor of the active window. |
 |Ctrl-Z|Undo the last change(s)|
 |Ctrl-Y|Redo the last undo(s), repeating what had been undone by undo|
-|Ctrl-P|Comment/Uncomment a line or marked area|
+|Ctrl-P|Comment/Uncomment a line or highlighted area|
 |Ctrl-A|Change settings for tab size, search case sensitivity, auto-indent, comment string and writing tabs (opt)|
 |Ctrl-E|Redraw the screen. On the Micro devices it shows the amount of free memory|
 
@@ -125,10 +125,10 @@ using cpp.
 |Branch|Features|
 |:---|:---|
 |master|Actual main line with slowly changing features|
-|linemode|Old master branch with line mode mark/delete|
+|linemode|Old master branch with line mode highlight/delete|
 |pye2|Similar to the linemode branch, but the column does not change during vertcal moves|
-|dup_del_line|A version which allows to duplicate and delete a single line without marking it before (stale)|
-|new_mark|Changed method of marking blocks, allowing to move away the cursor once a block is marked (stale)|
+|dup_del_line|A version which allows to duplicate and delete a single line without highlighting it before (stale)|
+|new_mark|Changed method of highlighting blocks, allowing to move away the cursor once a block is highlighted (stale)|
 
 ## Short Version History
 
@@ -225,7 +225,7 @@ at col 1 indents/unindents the line and moves the cursor one line down.
 
 **1.8** Clean Copy & Paste, Indent, Un-Indent
 
-- Added a Mark Line key for Line Delete, Line Copy, Indent and Un-Indent
+- Added a Highlight Line key for Line Delete, Line Copy, Indent and Un-Indent
 - Fixed a glitch, that allowed to paste text longer
 then the available space on the status line. No harm was done, just the screen
 content scrolled up. After leaving the line edit mode, a redraw fixed that.
@@ -234,10 +234,10 @@ content scrolled up. After leaving the line edit mode, a redraw fixed that.
 - Removed the attempt to recover from out-of-memory situations: did not work.
 - Still runs on WiPy, but really at it's limit
 
-**1.9** Refinement of Mark and Undo
+**1.9** Refinement of Highlight and Undo
 
-- Mark setting affects Save and Replace now. With Save, only the marked range is
-written, with replace, search & replace is done in the marked area only.
+- Highlight setting affects Save and Replace now. With Save, only the highlighted range is
+written, with replace, search & replace is done in the highlighted area only.
 - The Undo history is kept after Save. So you can go back to a state before saving
 - Removed UART mode on WiPy. Not stable yet. UART mode can be achieved by
 redirecting REPL.
@@ -247,22 +247,22 @@ if a line is shorter than the actual cursor column. Another variant, pye3, tries
 to go back to the cursor column which once was set by a horizontal move.
 That's more how gedit works. Not sure which I like better.
 
-**1.10** Further refinement of Mark
+**1.10** Further refinement of Highlight
 
-- When the mark is set, the whole area affected is now highlighted instead of
-just the line with the mark.
-- Paste, Delete and Backspace now also take notice of the line Mark. You can Mark
-a line range and delete it (or cut it). Implicit deleting marked lines when
+- When the highlight is set, the whole area affected is now highlighted instead of
+just the line with the highlight.
+- Paste, Delete and Backspace now also take notice of the line Highlight. You can Highlight
+a line range and delete it (or cut it). Implicit deleting highlighted lines when
 pressing the Enter or character key was considered but rejected (easy - just 3
     lines of code).
-- Except for Delete, Backspace, Cut and Paste, Mark has to be toggled off when
+- Except for Delete, Backspace, Cut and Paste, Highlight has to be toggled off when
 not needed any more.
-- Right click (Button 2) or Ctrl-Click on the mouse sets/unsets the Mark, left
+- Right click (Button 2) or Ctrl-Click on the mouse sets/unsets the Highlight, left
 Click extends it, when set.
 
 **1.11** Minor fixes
 
-- Change the way a marked area is highlighted from reverse to a different
+- Change the way a highlighted area is highlighted from reverse to a different
 background colour. That works well for black chars on yellow background (code 43).
 For white chars on black background, the setting for background colour in the
 function hilite() has to be changed, e.g. to blue (code 44).
@@ -276,7 +276,7 @@ way to tell if more chars are waiting in the input or at least a read with timeo
 
 - Ctrl-K causes the cursor set to the matching bracket, if any. Pretty raw, not elegant.
 Brackets in comments and strings are counting as well.
-- On Copy the mark will be cleared, since it is assumed that the just copied
+- On Copy the highlight will be cleared, since it is assumed that the just copied
 lines will not be overwritten.
 - High level try/except catching internal errors (mostly coding errors)
 - Separate cpp options for including scroll optimization, replace or bracket
@@ -412,14 +412,14 @@ remaining are Linux/CPython vs. MicroPython
 
 **2.18** On deleting the end of a line, remove space characters from the joined line, if autoindent is active. This behavior mirrors autoindent.
 
-**2.19** Add a toggle key for commenting/uncommenting a line or marked area. The
+**2.19** Add a toggle key for commenting/uncommenting a line or highlighted area. The
  default comment string is '#', but can be changed through the settings command.
 
 **2.20** Change the End-Key to toggle between EOL and last non-space char.
 
 **2.21** Add Ctrl-\ as alternative key to close a file
 
-**2.22** Add Ctrl-Space asl alternative to mark line (Ctrl-L), and Block comment adds the comment string after leading spaces.
+**2.22** Add Ctrl-Space asl alternative to highlight line (Ctrl-L), and Block comment adds the comment string after leading spaces.
 
 **2.23** Change the End key to toggle between end-of-line and end-of-code
 
@@ -435,7 +435,7 @@ the list of files in the current dir
 
 **2.28** Add word left & right with ctrl-left and ctrl-right
 
-**2.29** Add shift-up and shift-down for setting/extending the marke area
+**2.29** Add shift-up and shift-down for setting/extending the highlighted area
 
 **2.30** Add Delete Word with Ctr-Del
 
@@ -445,8 +445,10 @@ the list of files in the current dir
 
 **2.33** Scroll step is 1 for keyboard and 3 for mouse
 
-**2.34** Added a branch with character mode mark/cut/paste/delete. Intended to be the new master
+**2.34** Added a branch with character mode highlight/cut/paste/delete. Intended to be the new master
 
 **2.35** Change behaviour of the column position durign vertical moves, in that it tries to keep the position
 
 **2.36** Add the redo function, which restates changes undone by undo.
+
+**2.37** Entering text replaces an highlighted area.

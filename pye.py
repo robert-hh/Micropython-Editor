@@ -35,7 +35,7 @@ else:
     from _io import StringIO
     from re import compile as re_compile
 
-PYE_VERSION   = " V2.36 "
+PYE_VERSION   = " V2.37 "
 
 KEY_NONE      = const(0x00)
 KEY_UP        = const(0x0b)
@@ -636,7 +636,9 @@ class Editor:
         l = self.content[self.cur_line]
         if key == KEY_NONE: ## character to be added
             self.col = self.vcol
-            self.mark = None
+            if self.mark is not None:
+                self.delete_mark(False)
+                l = self.content[self.cur_line]
             self.undo_add(self.cur_line, [l], 0x20 if char == " " else 0x41)
             self.content[self.cur_line] = l[:self.col] + char + l[self.col:]
             self.col += len(char)
