@@ -527,7 +527,10 @@ class Editor:
             if self.mark is not None:
                 self.delete_mark(False)
                 l = self.content[self.cur_line]
-            self.undo_add(self.cur_line, [l], 0x20 if char == " " else 0x41)
+                chain = True
+            else:
+                chain = False
+            self.undo_add(self.cur_line, [l], 0x20 if char == " " else 0x41, 1, chain)
             self.content[self.cur_line] = l[:self.col] + char + l[self.col:]
             self.col += len(char)
         elif key == KEY_DOWN:
