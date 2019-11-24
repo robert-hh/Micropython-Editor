@@ -29,7 +29,9 @@ shows most of the commands. Commands marked with (opt) may not be supported in
 |Ctrl-Left| Move the cursor left to the start of the (next) word|
 |Ctrl-Right| Move the cursor right behind the end of the (next) word|
 |Shift-Up -Down -Left -Right| Highlight the text or extend the highlighted area|
+|Ctrl-Shift-Left -Right|Highlight the next or previous word or extend the highlighted area|
 |Ctrl-Up Ctr-Down|Scroll the windows down/up|
+|Alt-Up Alt-Down|Move the current line up/down|
 |PgUp & PgDd|Page up/down|
 |Home|Toggle the position between the start-of-code and the start of line|
 |End|Toggle the position between the end-of-the-code and end-of-line|

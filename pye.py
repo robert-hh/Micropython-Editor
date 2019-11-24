@@ -35,7 +35,7 @@ else:
     from _io import StringIO
     from re import compile as re_compile
 
-PYE_VERSION   = " V2.37 "
+PYE_VERSION   = " V2.39 "
 
 KEY_NONE      = const(0x00)
 KEY_UP        = const(0x0b)
@@ -49,9 +49,13 @@ KEY_PGDN      = const(0xfff2)
 KEY_WORD_LEFT = const(0xfff3)
 KEY_WORD_RIGHT= const(0xfff4)
 KEY_SHIFT_UP  = const(0xfff5)
+KEY_ALT_UP    = const(0xffea)
 KEY_SHIFT_DOWN= const(0xfff6)
+KEY_ALT_DOWN  = const(0xffeb)
 KEY_SHIFT_LEFT= const(0xfff0)
 KEY_SHIFT_RIGHT= const(0xffef)
+KEY_SHIFT_CTRL_LEFT= const(0xffed)
+KEY_SHIFT_CTRL_RIGHT= const(0xffec)
 KEY_QUIT      = const(0x11)
 KEY_ENTER     = const(0x0a)
 KEY_BACKSPACE = const(0x08)
@@ -89,12 +93,16 @@ class Editor:
     KEYMAP = { ## Gets lengthy
     "\x1b[A" : KEY_UP,
     "\x1b[1;2A": KEY_SHIFT_UP,
+    "\x1b[1;3A": KEY_ALT_UP,
     "\x1b[B" : KEY_DOWN,
     "\x1b[1;2B": KEY_SHIFT_DOWN,
+    "\x1b[1;3B": KEY_ALT_DOWN,
     "\x1b[D" : KEY_LEFT,
     "\x1b[1;2D": KEY_SHIFT_LEFT,
+    "\x1b[1;6D": KEY_SHIFT_CTRL_LEFT,
     "\x1b[C" : KEY_RIGHT,
     "\x1b[1;2C": KEY_SHIFT_RIGHT,
+    "\x1b[1;6C": KEY_SHIFT_CTRL_RIGHT,
     "\x1b[H" : KEY_HOME, ## in Linux Terminal
     "\x1bOH" : KEY_HOME, ## Picocom, Minicom
     "\x1b[1~": KEY_HOME, ## Putty
@@ -606,6 +614,11 @@ class Editor:
             self.changed = '' if self.hash == self.hash_buffer() else '*'
             self.mark = None
 
+    def swap_lines(self):
+        self.undo_add(self.cur_line, self.content[self.cur_line:self.cur_line + 2], KEY_NONE, 2)
+        self.content[self.cur_line:self.cur_line + 2] = (
+            [self.content[self.cur_line + 1], self.content[self.cur_line]])
+
     def yank_mark(self): # Copy marked area to the yank buffer
         start_row, start_col, end_row, end_col = self.mark_range()
         ## copy first the whole area
@@ -645,8 +658,17 @@ class Editor:
             self.undo_add(self.cur_line, [l], 0x20 if char == " " else 0x41, 1, chain)
             self.content[self.cur_line] = l[:self.col] + char + l[self.col:]
             self.col += len(char)
-        elif key == KEY_DOWN:
-            self.move_down()
+        elif key == KEY_SHIFT_CTRL_LEFT:
+            if self.mark is None:
+                self.mark = (self.cur_line, self.col)
+            key = KEY_WORD_LEFT
+        elif key == KEY_SHIFT_CTRL_RIGHT:
+            if self.mark is None:
+                self.mark = (self.cur_line, self.col)
+            key = KEY_WORD_RIGHT
+## start new if/elif sequence, since the value of key might have changed
+        if key == KEY_DOWN:
+             self.move_down()
         elif key == KEY_UP:
             self.move_up()
         elif key == KEY_LEFT:
@@ -810,6 +832,14 @@ class Editor:
             if self.mark is None:
                 self.mark = (self.cur_line, self.col)
             self.move_right(l)
+        elif key == KEY_ALT_UP:
+            if self.cur_line > 0:
+                self.move_up()
+                self.swap_lines()
+        elif key == KEY_ALT_DOWN:
+            if self.cur_line < self.total_lines - 1:
+                self.swap_lines()
+                self.move_down()
         elif key == KEY_ENTER:
             self.col = self.vcol
             self.mark = None
