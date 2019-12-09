@@ -20,8 +20,7 @@ Goto, Open file and Flag settings.
 - Basic mouse functions for scrolling up/down, setting the cursor and highlighting text.
 
 The editor assumes a VT100 terminal. It works in Insert mode. The following list
-shows most of the commands. Commands marked with (opt) may not be supported in
- minimal versions:
+shows most of the commands.:
 
 |Key(s)|Function|
 |:---|:---|
@@ -36,8 +35,8 @@ shows most of the commands. Commands marked with (opt) may not be supported in
 |Home|Toggle the position between the start-of-code and the start of line|
 |End|Toggle the position between the end-of-the-code and end-of-line|
 |Enter|Enter a line break at the cursor position. Auto-indent is supported|
-|Backspace|Delete char left to the  cursor (The key must be set to ASCII-Del)|
-|Del|Delete the char under the cursor. At the end of the line join the next line. If autoindent is enabled, delete also the leading spaces of the joined line. If lines are highlighted, delete the highlighted area|
+|Backspace|Delete char left to the  cursor (The key must be set to ASCII-Del). If text are highlighted, delete the highlighted area|
+|Del|Delete the char under the cursor. At the end of the line join the next line. If autoindent is enabled, delete also the leading spaces of the joined line. If text are highlighted, delete the highlighted area|
 |Ctrl-Del|Delete the word under the cursor or space up to the next non-space|
 |Ctrl-O|Open a new file. If the file name is left empty, an empty buffer is opened|
 |Ctrl-W|Toggle to the next file buffer|
@@ -45,15 +44,16 @@ shows most of the commands. Commands marked with (opt) may not be supported in
 |Ctrl-S|Save to file with the option to change the file name|
 |Ctrl-F|Find|
 |Ctrl-N|Repeat the last find|
-|Ctrl-H or Ctrl-R|Find and Replace (opt)|
+|Ctrl-H or Ctrl-R|Find and Replace|
 |Ctrl-G|Go to a line|
-|Ctrl-T|Go to the first line (opt)|
-|Ctrl-B|Go to the last line (opt)|
-|Ctrl-K|Goto the bracket matching the one under the cursor (opt)|
+|Ctrl-T|Go to the first line|
+|Ctrl-B|Go to the last line|
+|Ctrl-K|Goto the bracket matching the one under the cursor|
+|Ctrl-Home & Ctr-End|Got to the first/last line|
 |Ctrl-L or Ctrl-Space|Start hightlighting at the current position, or clear the highlight. The highlight can then be extended by moving the cursor|
-|Ctrl-X|Cut the highlighted lines
-|Ctrl-C or Ctrl-D|Copy the highlighted lines
-|Ctrl-V|Insert the copied/cut lines. In the line edit mode paste the item under the cursor of the active window. |
+|Ctrl-X|Cut the highlighted text|
+|Ctrl-C or Ctrl-D|Copy the highlighted text|
+|Ctrl-V|Insert the copied/cut text. In the line edit mode paste the item under the cursor of the active window. |
 |Ctrl-Z|Undo the last change(s)|
 |Ctrl-Y|Redo the last undo(s), repeating what had been undone by undo|
 |Ctrl-P|Comment/Uncomment a line or highlighted area|
@@ -107,12 +107,11 @@ CPython also accepts data from a pipe or redirection.
 - pye.py: Source file with comments and code for all versions. 
 Runs on the Micros as well, but the file size is much larger
 than the stripped down version.
-- pye_sml.py: Source file without RE search and reduced line edit.
 - pye_win.py: an experimental version for the cmd window of Windows 10. It requires
 enabling the VT100 support, as detailed e.g. here: https://stackoverflow.com/questions/51680709/colored-text-output-in-powershell-console-using-ansi-vt100-codes
 - Pyboard Editor.pdf: A short documentation
 - README.md: This one
-- pye_mp.py, pye2_mp, pye_mp.mpy: Condensed source files of pye.py and pye2.py for
+- pye_mp.py, pye_mp.mpy: Condensed source files of pye.py for
 all MicroPython boards. In order to use it on an board with small memory
 like the esp8266, you have to put pye_mp.py into the directory esp8266/modules,
 esp32/modules or smt32/modules (micropython.org) or esp32/frozen (pycom.io) and
@@ -454,3 +453,7 @@ the list of files in the current dir
 **2.36** Add the redo function, which restates changes undone by undo.
 
 **2.37** Entering text replaces an highlighted area.
+
+**2.38** Add Ctrl-Shift-Left and Ctrl-Shift-Right for move & highlight 
+
+**2.39** Move a line with Alt-Up and Alt-Dn

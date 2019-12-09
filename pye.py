@@ -164,7 +164,7 @@ class Editor:
     def __init__(self, tab_size, undo_limit):
         self.top_line = self.cur_line = self.row = self.vcol = self.col = self.margin = 0
         self.tab_size = tab_size
-        self.changed = ""
+        self.changed = ''
         self.hash = 0
         self.message = self.fname = ""
         self.content = [""]
@@ -351,10 +351,12 @@ class Editor:
         ## update_screen
         self.cursor(False)
         line = self.top_line
-        start_line, start_col, end_line, end_col = (
-            (-2, 0, -1, 0) if self.mark is None else self.mark_range())
-        start_col = max(start_col - self.margin, 0)
-        end_col = max(end_col - self.margin, 0)
+        if self.mark is None:
+            flag = 0
+        else:
+            start_line, start_col, end_line, end_col = self.mark_range()
+            start_col = max(start_col - self.margin, 0)
+            end_col = max(end_col - self.margin, 0)
 
         for c in range(Editor.height):
             if line == self.total_lines: ## at empty bottom screen part
@@ -363,9 +365,10 @@ class Editor:
                     self.clear_to_eol()
                     Editor.scrbuf[c] = (False,'')
             else:
-                flag = ((start_line <= line < end_line) +
-                        ((start_line == line) << 1) +
-                        (((end_line - 1) == line) << 2))
+                if self.mark is not None:
+                    flag = ((start_line <= line < end_line) +
+                            ((start_line == line) << 1) +
+                            (((end_line - 1) == line) << 2))
                 l = (flag,
                      self.content[line][self.margin:self.margin + Editor.width])
                 if (flag and line == self.cur_line) or l != Editor.scrbuf[c]: ## line changed, print it
@@ -616,7 +619,7 @@ class Editor:
 
     def swap_lines(self):
         self.undo_add(self.cur_line, self.content[self.cur_line:self.cur_line + 2], KEY_NONE, 2)
-        self.content[self.cur_line:self.cur_line + 2] = (
+        self.content[self.cur_line], self.content[self.cur_line + 1] = (
             [self.content[self.cur_line + 1], self.content[self.cur_line]])
 
     def yank_mark(self): # Copy marked area to the yank buffer
