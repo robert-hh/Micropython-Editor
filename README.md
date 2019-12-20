@@ -30,7 +30,7 @@ shows most of the commands.:
 |Shift-Up -Down -Left -Right| Highlight the text or extend the highlighted area|
 |Ctrl-Shift-Left -Right|Highlight the next or previous word or extend the highlighted area|
 |Ctrl-Up Ctr-Down|Scroll the windows down/up|
-|Alt-Up Alt-Down|Move the current line up/down|
+|Alt-Up Alt-Down|Move the current line or highlighted area up/down by one line|
 |PgUp & PgDd|Page up/down|
 |Home|Toggle the position between the start-of-code and the start of line|
 |End|Toggle the position between the end-of-the-code and end-of-line|
@@ -457,3 +457,5 @@ the list of files in the current dir
 **2.38** Add Ctrl-Shift-Left and Ctrl-Shift-Right for move & highlight 
 
 **2.39** Move a line with Alt-Up and Alt-Dn
+
+**2.40** Extend move up/down to move highlighted areas too.

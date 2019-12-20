@@ -35,7 +35,7 @@ else:
     from _io import StringIO
     from re import compile as re_compile
 
-PYE_VERSION   = " V2.39 "
+PYE_VERSION   = " V2.40 "
 
 KEY_NONE      = const(0x00)
 KEY_UP        = const(0x0b)
@@ -617,11 +617,6 @@ class Editor:
             self.changed = '' if self.hash == self.hash_buffer() else '*'
             self.mark = None
 
-    def swap_lines(self):
-        self.undo_add(self.cur_line, self.content[self.cur_line:self.cur_line + 2], KEY_NONE, 2)
-        self.content[self.cur_line], self.content[self.cur_line + 1] = (
-            [self.content[self.cur_line + 1], self.content[self.cur_line]])
-
     def yank_mark(self): # Copy marked area to the yank buffer
         start_row, start_col, end_row, end_col = self.mark_range()
         ## copy first the whole area
@@ -836,12 +831,35 @@ class Editor:
                 self.mark = (self.cur_line, self.col)
             self.move_right(l)
         elif key == KEY_ALT_UP:
-            if self.cur_line > 0:
+            if self.mark is None:
+                start_line = self.cur_line
+                end_line = start_line + 1
+            else:
+                start_line, end_line = self.line_range()
+                if start_line > 0:
+                    self.mark = (self.mark[0] - 1, self.mark[1])
+            if start_line > 0:
+                self.undo_add(start_line - 1, self.content[start_line - 1:end_line], 
+                              KEY_NONE, end_line - start_line + 1)
+                self.content[start_line - 1:end_line - 1], self.content[end_line - 1] = (
+                    self.content[start_line:end_line], self.content[start_line - 1])
                 self.move_up()
-                self.swap_lines()
         elif key == KEY_ALT_DOWN:
-            if self.cur_line < self.total_lines - 1:
-                self.swap_lines()
+            if self.mark is None:
+                start_line = self.cur_line
+                end_line = start_line + 1
+            else:
+                start_line, end_line = self.line_range()
+                if end_line < self.total_lines:
+                    self.mark = (self.mark[0] + 1, self.mark[1])
+                    ## very special case: cursor at the start of the last line
+                    if self.cur_line == end_line == (self.total_lines - 1):
+                        self.move_left()
+            if end_line < self.total_lines:
+                self.undo_add(start_line, self.content[start_line:end_line + 1], 
+                              KEY_NONE, end_line - start_line + 1)
+                self.content[start_line + 1:end_line + 1], self.content[start_line] = (
+                    self.content[start_line:end_line], self.content[end_line])
                 self.move_down()
         elif key == KEY_ENTER:
             self.col = self.vcol
