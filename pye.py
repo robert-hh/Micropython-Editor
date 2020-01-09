@@ -617,6 +617,10 @@ class Editor:
             self.changed = '' if self.hash == self.hash_buffer() else '*'
             self.mark = None
 
+    def set_mark(self):  ## start the highlighting if not done yet
+        if self.mark is None:
+            self.mark = (self.cur_line, self.col)
+
     def yank_mark(self): # Copy marked area to the yank buffer
         start_row, start_col, end_row, end_col = self.mark_range()
         ## copy first the whole area
@@ -657,12 +661,10 @@ class Editor:
             self.content[self.cur_line] = l[:self.col] + char + l[self.col:]
             self.col += len(char)
         elif key == KEY_SHIFT_CTRL_LEFT:
-            if self.mark is None:
-                self.mark = (self.cur_line, self.col)
+            self.set_mark()
             key = KEY_WORD_LEFT
         elif key == KEY_SHIFT_CTRL_RIGHT:
-            if self.mark is None:
-                self.mark = (self.cur_line, self.col)
+            self.set_mark()
             key = KEY_WORD_RIGHT
 ## start new if/elif sequence, since the value of key might have changed
         if key == KEY_DOWN:
@@ -815,20 +817,16 @@ class Editor:
             else:
                 self.mark = None
         elif key == KEY_SHIFT_DOWN:
-            if self.mark is None:
-                self.mark = (self.cur_line, self.col)
+            self.set_mark()
             self.move_down()
         elif key == KEY_SHIFT_UP:
-            if self.mark is None:
-                self.mark = (self.cur_line, self.col)
+            self.set_mark()
             self.move_up()
         elif key == KEY_SHIFT_LEFT:
-            if self.mark is None:
-                self.mark = (self.cur_line, self.col)
+            self.set_mark()
             self.move_left()
         elif key == KEY_SHIFT_RIGHT:
-            if self.mark is None:
-                self.mark = (self.cur_line, self.col)
+            self.set_mark()
             self.move_right(l)
         elif key == KEY_ALT_UP:
             if self.mark is None:
