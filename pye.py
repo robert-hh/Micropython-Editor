@@ -28,14 +28,16 @@ else:
 if sys.implementation.name == "micropython":
     is_micropython = True
     from uio import StringIO
-    from ure import compile as re_compile
+elif sys.implementation.name == "circuitpython":
+    is_micropython = True
+    from io import StringIO
 else:
     is_micropython = False
     const = lambda x:x
     from _io import StringIO
-    from re import compile as re_compile
+from re import compile as re_compile
 
-PYE_VERSION   = " V2.40 "
+PYE_VERSION   = " V2.41 "
 
 KEY_NONE      = const(0x00)
 KEY_UP        = const(0x0b)
