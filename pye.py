@@ -37,7 +37,7 @@ else:
     from _io import StringIO
 from re import compile as re_compile
 
-PYE_VERSION   = " V2.41 "
+PYE_VERSION   = " V2.42 "
 
 KEY_NONE      = const(0x00)
 KEY_UP        = const(0x0b)
@@ -124,7 +124,6 @@ class Editor:
     "\x08"   : KEY_REPLC, ## Ctrl-H
     "\x12"   : KEY_REPLC, ## Ctrl-R
     "\x11"   : KEY_QUIT, ## Ctrl-Q
-    "\x1bq"  : KEY_QUIT, ## Alt-Q
     "\n"     : KEY_ENTER,
     "\x13"   : KEY_WRITE,  ## Ctrl-S
     "\x06"   : KEY_FIND, ## Ctrl-F
@@ -319,6 +318,8 @@ class Editor:
                     c = in_buffer[-1]
                     if c == '~' or (c.isalpha() and c != 'O'):
                         break
+                if len(in_buffer) == 2 and c.isalpha():  ## map alt-chr onto ctrl-chr
+                    in_buffer = chr(ord(in_buffer[1]) & 0x1f)
             if in_buffer in self.KEYMAP:
                 c = self.KEYMAP[in_buffer]
                 if c != KEY_MOUSE:

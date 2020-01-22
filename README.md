@@ -40,7 +40,7 @@ shows most of the commands.:
 |Ctrl-Del|Delete the word under the cursor or space up to the next non-space|
 |Ctrl-O|Open a new file. If the file name is left empty, an empty buffer is opened|
 |Ctrl-W|Toggle to the next file buffer|
-|Ctrl-Q or Alt-Q |Close a file buffer or end line-edit|
+|Ctrl-Q|Close a file buffer or end line-edit|
 |Ctrl-S|Save to file with the option to change the file name|
 |Ctrl-F|Find|
 |Ctrl-N|Repeat the last find|
@@ -59,6 +59,8 @@ shows most of the commands.:
 |Ctrl-P|Comment/Uncomment a line or highlighted area|
 |Ctrl-A|Change settings for tab size, search case sensitivity, auto-indent, comment string and writing tabs (opt)|
 |Ctrl-E|Redraw the screen. On the Micro devices it shows the amount of free memory|
+
+**Instead of Ctrl-letter (e.g. Ctrl-Q), Alt-letter (e.g. Alt-Q) can be used, avoiding conflicts with key binding of some terminal emulators.**
 
 The editor is contained in the file pye.py. Start pye from the REPL prompt
 e.g. with  
