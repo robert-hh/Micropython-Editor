@@ -16,7 +16,7 @@ else:
     const = lambda x:x
     from _io import StringIO
 from re import compile as re_compile
-PYE_VERSION = " V2.42 "
+PYE_VERSION = " V2.44 "
 KEY_NONE = const(0x00)
 KEY_UP = const(0x0b)
 KEY_DOWN = const(0x0d)
@@ -147,6 +147,7 @@ class Editor:
         self.redo = []
         self.mark = None
         self.write_tabs = "n"
+        self.work_dir = os.getcwd()
     if is_micropython and not is_linux:
         def wr(self, s):
             sys.stdout.write(s)
@@ -870,6 +871,7 @@ class Editor:
         if not self.content:
             self.content = [""]
         self.total_lines = len(self.content)
+        os.chdir(self.work_dir)
         self.redraw(self.message == "")
         while True:
             self.display_window()
@@ -913,10 +915,13 @@ class Editor:
     def get_file(self, fname):
         if fname:
             try:
-                self.fname = fname
                 if fname in ('.', '..') or (os.stat(fname)[0] & 0x4000):
-                    self.content = ["Directory '{}'".format(fname), ""] + sorted(os.listdir(fname))
+                    os.chdir(fname)
+                    self.work_dir = os.getcwd()
+                    self.fname = self.work_dir.split("/")[-1]
+                    self.content = ["Directory '{}'".format(self.work_dir), ""] + sorted(os.listdir('.'))
                 else:
+                    self.fname = fname
                     if is_micropython:
                         with open(fname) as f:
                             self.content = f.readlines()
@@ -962,6 +967,7 @@ def pye(*content, tab_size=4, undo=50, device=0):
     gc.collect()
     index = 0
     undo = max(4, (undo if type(undo) is int else 0))
+    current_dir = os.getcwd()
     if content:
         slot = []
         for f in content:
@@ -998,4 +1004,5 @@ def pye(*content, tab_size=4, undo=50, device=0):
             slot[index].message = "{!r}".format(err)
     Editor.deinit_tty()
     Editor.yank_buffer = []
+    os.chdir(current_dir)
     return slot[0].content if (slot[0].fname == "") else slot[0].fname

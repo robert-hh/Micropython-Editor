@@ -38,7 +38,7 @@ else:
     from _io import StringIO
 from re import compile as re_compile
 
-PYE_VERSION   = " V2.42 "
+PYE_VERSION   = " V2.44 "
 
 KEY_NONE      = const(0x00)
 KEY_UP        = const(0x0b)
@@ -175,6 +175,7 @@ class Editor:
         self.redo = []
         self.mark = None
         self.write_tabs = "n"
+        self.work_dir = os.getcwd()
 
 #ifdef LINUX
     if is_linux:
@@ -811,7 +812,7 @@ class Editor:
                             c += way
                         i += way
                         ## set starting point for the next line.
-                        ## treatment for the first an last line is implicit.
+                        ## treatment for the first and last line is implicit.
                         c = 0 if way > 0 else len(self.content[i]) - 1
                     self.message = "No match"
         elif key == KEY_MARK:
@@ -933,7 +934,7 @@ class Editor:
                                 self.content[self.cur_line] = self.content[self.cur_line][:self.col] + rpat + self.content[self.cur_line][self.col + ni:]
                                 self.col += len(rpat) + (ni == 0) # ugly but short
                                 count += 1
-                                chain = True
+                                chain = True  ## delete that line if undo for each replace is preferred.
                             else: ## everything else is no
                                  self.col += 1
                         else: ## not found, quit
@@ -999,6 +1000,7 @@ class Editor:
         if not self.content: ## ensure content
             self.content = [""]
         self.total_lines = len(self.content)
+        os.chdir(self.work_dir)
         self.redraw(self.message == "")
 
         while True:
@@ -1050,10 +1052,13 @@ class Editor:
     def get_file(self, fname):
         if fname:
             try:
-                self.fname = fname
                 if fname in ('.', '..') or (os.stat(fname)[0] & 0x4000): ## Dir
-                    self.content = ["Directory '{}'".format(fname), ""] + sorted(os.listdir(fname))
+                    os.chdir(fname)
+                    self.work_dir = os.getcwd()  # let the os module do the normalization
+                    self.fname = self.work_dir.split("/")[-1]
+                    self.content = ["Directory '{}'".format(self.work_dir), ""] + sorted(os.listdir('.'))
                 else:
+                    self.fname = fname
                     if is_micropython:
                         with open(fname) as f:
                             self.content = f.readlines()
@@ -1105,6 +1110,7 @@ def pye(*content, tab_size=4, undo=50, device=0):
     gc.collect() ## all (memory) is mine
     index = 0
     undo = max(4, (undo if type(undo) is int else 0)) # minimum undo size
+    current_dir = os.getcwd()  ## remember current dir
     if content:
         slot = []
         for f in content:
@@ -1145,6 +1151,7 @@ def pye(*content, tab_size=4, undo=50, device=0):
     Editor.deinit_tty()
     Editor.yank_buffer = []
 ## close
+    os.chdir(current_dir)  ## restore dir
     return slot[0].content if (slot[0].fname == "") else slot[0].fname
 
 #ifdef LINUX
