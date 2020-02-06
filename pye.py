@@ -23,6 +23,7 @@ if sys.platform in ("linux", "darwin"):
     import os, signal, tty, termios
     is_linux = True
 else:
+    import os
     is_linux = False
 
 if sys.implementation.name == "micropython":
@@ -1047,12 +1048,11 @@ class Editor:
 
 ## Read file into content
     def get_file(self, fname):
-        from os import listdir, stat
         if fname:
             try:
                 self.fname = fname
-                if fname in ('.', '..') or (stat(fname)[0] & 0x4000): ## Dir
-                    self.content = ["Directory '{}'".format(fname), ""] + sorted(listdir(fname))
+                if fname in ('.', '..') or (os.stat(fname)[0] & 0x4000): ## Dir
+                    self.content = ["Directory '{}'".format(fname), ""] + sorted(os.listdir(fname))
                 else:
                     if is_micropython:
                         with open(fname) as f:
@@ -1071,7 +1071,6 @@ class Editor:
 
 ## write file
     def put_file(self, fname):
-        from os import remove, rename
         tmpfile = fname + ".pyetmp"
         with open(tmpfile, "w") as f:
             for l in self.content:
@@ -1080,10 +1079,10 @@ class Editor:
                 else:
                     f.write(l + '\n')
         try:
-            remove(fname)
+            os.remove(fname)
         except:
             pass
-        rename(tmpfile, fname)
+        os.rename(tmpfile, fname)
 
 ## expandtabs: hopefully sometimes replaced by the built-in function
 def expandtabs(s):
