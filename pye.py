@@ -1055,7 +1055,7 @@ class Editor:
                 if fname in ('.', '..') or (os.stat(fname)[0] & 0x4000): ## Dir
                     os.chdir(fname)
                     self.work_dir = os.getcwd()  # let the os module do the normalization
-                    self.fname = self.work_dir.split("/")[-1]
+                    self.fname = "/" if self.work_dir == "/" else self.work_dir.split("/")[-1]
                     self.content = ["Directory '{}'".format(self.work_dir), ""] + sorted(os.listdir('.'))
                 else:
                     self.fname = fname
