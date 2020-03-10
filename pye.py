@@ -38,7 +38,7 @@ else:
     from _io import StringIO
 from re import compile as re_compile
 
-PYE_VERSION   = " V2.44 "
+PYE_VERSION   = " V2.45 "
 
 KEY_NONE      = const(0x00)
 KEY_UP        = const(0x0b)
@@ -1045,7 +1045,7 @@ class Editor:
     def hash_buffer(self):
         res = 0
         for line in self.content:
-            res = ((res * 17) ^ hash(line)) & 0x3fffffff
+            res = ((res * 17 + 1) ^ hash(line)) & 0x3fffffff
         return res
 
 ## Read file into content
