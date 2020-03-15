@@ -915,13 +915,13 @@ class Editor:
     def get_file(self, fname):
         if fname:
             try:
+                self.fname = fname
                 if fname in ('.', '..') or (os.stat(fname)[0] & 0x4000):
                     os.chdir(fname)
                     self.work_dir = os.getcwd()
                     self.fname = "/" if self.work_dir == "/" else self.work_dir.split("/")[-1]
                     self.content = ["Directory '{}'".format(self.work_dir), ""] + sorted(os.listdir('.'))
                 else:
-                    self.fname = fname
                     if is_micropython:
                         with open(fname) as f:
                             self.content = f.readlines()
