@@ -16,7 +16,7 @@ else:
     const = lambda x:x
     from _io import StringIO
 from re import compile as re_compile
-PYE_VERSION = " V2.45 "
+PYE_VERSION = " V2.46 "
 KEY_NONE = const(0x00)
 KEY_UP = const(0x0b)
 KEY_DOWN = const(0x0d)
@@ -841,7 +841,7 @@ class Editor:
                 Editor.yank_buffer[-1], Editor.yank_buffer[0] = tail, head
                 self.total_lines = len(self.content)
         elif key == KEY_WRITE:
-            fname = self.line_edit("Save File: ", self.fname)
+            fname = self.line_edit("Save File: ", self.fname, "_.-")
             if fname:
                 self.put_file(fname)
                 self.fname = fname
