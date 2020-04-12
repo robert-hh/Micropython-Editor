@@ -986,12 +986,15 @@ def pye(*content, tab_size=4, undo=50, device=0):
                     slot[index].get_file(f)
                 except Exception as err:
                     slot[index].message = "{!r}".format(err)
-            elif type(f) == list and len(f) > 0 and type(f[0]) == str:
-                slot[index].content = f
+            else:
+                try:
+                    slot[index].content = [str(_) for _ in f]
+                except:
+                    slot[index].content = [str(f)]
             index += 1
     else:
         slot = [Editor(tab_size, undo)]
-        slot[0].get_file(".")
+        slot[0].get_file(current_dir)
     Editor.init_tty(device)
     while True:
         try:

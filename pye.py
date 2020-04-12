@@ -2,16 +2,16 @@
 ## Small python text editor based on the
 ## Very simple VT100 terminal text editor widget
 ## Copyright (c) 2015 Paul Sokolovsky (initial code)
-## Copyright (c) 2015-2019 Robert Hammelrath (additional code)
+## Copyright (c) 2015-2020 Robert Hammelrath (additional code)
 ## Distributed under MIT License
 ## Changes:
-## - Ported the code to PyBoard and Wipy (still runs on Linux or Darwin)
-##   It uses VCP_USB on Pyboard and sys.stdin on WiPy, or UART, if selected.
+## - Ported the code to boards from micropython.org, Pycom Boards, 
+##   sipeed boards, Adafruit Circuitpython boards (still runs on Linux or Darwin)
 ## - changed read keyboard function to comply with char-by-char input
 ## - added support for TAB, BACKTAB, SAVE, DEL and Backspace joining lines,
-##   Find, Replace, Goto Line, UNDO, GET file, Auto-Indent, Set Flags,
-##   Copy/Delete & Paste, Indent, Dedent
-## - Added mouse support for pointing and scrolling (not WiPy)
+##   Find, Replace, Goto Line, UNDO, REDO GET file, Auto-Indent, Set Flags,
+##   Copy/Cut & Paste, Indent, Dedent
+## - Added mouse support for pointing and scrolling
 ## - handling tab (0x09) on reading & writing files,
 ## - Added a status line and single line prompts for
 ##   Quit, Save, Find, Replace, Flags and Goto
@@ -1120,12 +1120,15 @@ def pye(*content, tab_size=4, undo=50, device=0):
                     slot[index].get_file(f)
                 except Exception as err:
                     slot[index].message = "{!r}".format(err)
-            elif type(f) == list and len(f) > 0 and type(f[0]) == str:
-                slot[index].content = f ## non-empty list of strings -> edit
+            else:
+                try:
+                    slot[index].content = [str(_) for _ in f] ## iterable item -> make strings and edit
+                except:
+                    slot[index].content = [str(f)]
             index += 1
     else:
         slot = [Editor(tab_size, undo)]
-        slot[0].get_file(".")
+        slot[0].get_file(current_dir)
 ## edit
     Editor.init_tty(device)
     while True:
