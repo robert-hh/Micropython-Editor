@@ -1225,7 +1225,6 @@ def pye(*content, tab_size=4, undo=50, device=0):
             if key == KEY_QUIT:
                 if len(slot) == 1:
                     break
-                print('deleting index: {}'.format(index))
                 del slot[index]
             elif key == KEY_GET:
                 f = slot[index].line_edit("Open file: ", "", "_.-")
@@ -1233,12 +1232,9 @@ def pye(*content, tab_size=4, undo=50, device=0):
                         slot.append(Editor(tab_size, undo))
                         index = len(slot) - 1
                         slot[index].get_file(f)
-                        print('3', end='')
             elif key == KEY_NEXT:
                         index += 1
-                        print('4', end='')
         except Exception as err:
-            print('ex')
             sys.print_exception(err)
             slot[index].message = "{!r}".format(err)
     deinit_tty()
