@@ -9,6 +9,7 @@
 # Moved some functions to root (init_tty and init_display) to support multiple windows, but single display
 #
 # ToDo: add highlight function for external display.
+# Move changes to pye.py and have #ifdef to select subset during strip.sh execution
 
 
 import sys, gc
