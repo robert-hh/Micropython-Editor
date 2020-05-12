@@ -31,7 +31,7 @@ else:
     const = lambda x:x
     from _io import StringIO
 from re import compile as re_compile
-PYE_VERSION = " V2.46x "
+PYE_VERSION = " V2.46x_super_awesome "
 KEY_NONE = const(0x00)
 KEY_UP = const(0x0b)
 KEY_DOWN = const(0x0d)
