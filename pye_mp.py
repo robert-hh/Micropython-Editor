@@ -1,19 +1,5 @@
-# Origin: robert-hh/Micropython-editor
-# Updates by KMatocha ksmatocha@gmail.com
-# Added external display output 5/3/2020
-# Added UART capability 5/4/2020
-# Updated SPI display pinouts 5/5/2020
-# Improved scrolling performance by turning display.auto_refresh=False when writing a large amout of changes
-#   should probably change this to permanent auto_refresh=False and only update when necessary
-# Repaired status line writing 5/5/2020
-# Moved some functions to root (init_tty and init_display) to support multiple windows, but single display
-#
-# ToDo: add highlight function for external display.
-# Move changes to pye.py and have #ifdef to select subset during strip.sh execution
-
-
 import sys, gc
-import board, busio # for uart and SPI display 
+termcap_vt100 = True
 if sys.platform in ("linux", "darwin"):
     import os, signal, tty, termios
     is_linux = True
@@ -31,7 +17,7 @@ else:
     const = lambda x:x
     from _io import StringIO
 from re import compile as re_compile
-PYE_VERSION = " V2.46 "
+PYE_VERSION = " V2.47 "
 KEY_NONE = const(0x00)
 KEY_UP = const(0x0b)
 KEY_DOWN = const(0x0d)
@@ -112,8 +98,7 @@ class Editor:
     "\x1b[3~": KEY_DELETE,
     "\x1b[Z" : KEY_BACKTAB,
     "\x19" : KEY_REDO,
-#    "\x08" : KEY_REPLC,
-    "\x08" : KEY_BACKSPACE,
+    "\x08" : KEY_REPLC,
     "\x12" : KEY_REPLC,
     "\x11" : KEY_QUIT,
     "\n" : KEY_ENTER,
@@ -144,6 +129,33 @@ class Editor:
     "\x0b" : KEY_MATCH,
     "\x1b[M" : KEY_MOUSE,
     }
+    if termcap_vt100:
+        TERMCAP = (
+            "\x1b[{row};{col}H",
+            "\x1b[0K",
+            "\x1b[?25h",
+            "\x1b[?25l",
+            "\x1b[0m",
+            "\x1b[1;37;46m",
+            "\x1b[43m",
+            '\x1b[?9h',
+            '\x1b[?9l',
+            "\x1bM",
+            "\n",
+            '\x1b[1;{stop}r',
+            '\x1b[r',
+            '\x1b[999;999H\x1b[6n',
+            "{chd}{file} Row: {row}/{total} Col: {col}  {msg}",
+            "\b"
+        )
+        def get_screen_size(self):
+            self.wr(Editor.TERMCAP[13])
+            pos = ''
+            char = self.rd()
+            while char != 'R':
+                pos += char
+                char = self.rd()
+            return [int(i, 10) for i in pos.lstrip("\n\x1b[").split(';')]
     yank_buffer = []
     find_pattern = ""
     case = "n"
@@ -151,15 +163,6 @@ class Editor:
     replc_pattern = ""
     comment_char = "\x23 "
     word_char = "_\\"
-    uart=''
-    display=''
-
-
-    inputUART= True # set True if using uart as input, set False if using stdin (serial bus)
-    displayOutput=True # displayOutput=True means to use connected display, False outputs on stdout
-    displayYPixels=240 # dimensions of the display
-    displayXPixels=240 # display dimensions
-
     def __init__(self, tab_size, undo_limit):
         self.top_line = self.cur_line = self.row = self.vcol = self.col = self.margin = 0
         self.tab_size = tab_size
@@ -173,147 +176,59 @@ class Editor:
         self.mark = None
         self.write_tabs = "n"
         self.work_dir = os.getcwd()
-        self.g='' # group to hold the terminal displays
-
-        self.init_terminal() # create the display terminal, if required.
-
     if is_micropython and not is_linux:
         def wr(self, s):
-            if Editor.displayOutput:
-                self.mainTerminal.write(s) ## writes to terminalio
-            else:
-                sys.stdout.write(s)
-
+            sys.stdout.write(s)
         def rd(self):
-            if Editor.inputUART:
-                while True:
-                    myInput=Editor.uart.read(1)# for using uart
-                    if myInput==None:
-                        pass
-                    else:
-
-                        return myInput.decode('utf-8')  # use this if UART is sending int  before 5/4/2020
-
-            else:
-                myInput=sys.stdin.read(1)
-
-                return myInput
-
-
-
-
-        def rd_raw(self): 
+            return sys.stdin.read(1)
+        def rd_raw(self):
             return Editor.rd_raw_fct(1)
-
-        def init_terminal(self):
-            if Editor.displayOutput:
-
-                from simpleTerminal import simpleTerminal # https://github.com/kmatch98/simpleTerminal
-                import terminalio, displayio
-                myFont=terminalio.FONT # default font
-
-                # instance the main text terminal
-                from math import floor
-                fontW, fontH = myFont.get_bounding_box()
-                numRows=floor(Editor.displayYPixels/fontH)-1 # subtract one row for the status line
-                numCols=floor(Editor.displayXPixels/fontW)
-                self.mainTerminal=simpleTerminal(rows=numRows,columns=numCols, x=0, y=0, font=myFont, cursorDisplay=True)
-
-                # create another highlighted terminal for the status line
-                yStatusLine=self.mainTerminal.pixelHeight+1 # the status line y-position is just below the upper main terminal
-                # instance the status terminal, cursorDisplay is OFF
-                self.statusTerminal=simpleTerminal(rows=1,columns=40, y=yStatusLine, textColor=0x000000, bgColor=0xFFFFFF, cursorDisplay=False)
-
-                self.g=displayio.Group(max_size=2, scale=1)
-                Editor.display.show(self.g) #
-                self.g.append(self.mainTerminal.displayGroup)
-                self.g.append(self.statusTerminal.displayGroup)
-
-    def goto(self, rowx, coly):
-        if Editor.displayOutput:
-            self.mainTerminal.setCursor(coly,rowx)
-        else:
-            self.wr("\x1b[{};{}H".format(rowx + 1, coly + 1))
+        @staticmethod
+        def init_tty(device):
+            try:
+                from micropython import kbd_intr
+                kbd_intr(-1)
+            except ImportError:
+                pass
+            if hasattr(sys.stdin, "buffer"):
+                Editor.rd_raw_fct = sys.stdin.buffer.read
+            else:
+                Editor.rd_raw_fct = sys.stdin.read
+        @staticmethod
+        def deinit_tty():
+            try:
+                from micropython import kbd_intr
+                kbd_intr(3)
+            except ImportError:
+                pass
+    def goto(self, row, col):
+        self.wr(Editor.TERMCAP[0].format(row=row + 1, col=col + 1))
     def clear_to_eol(self):
-        if Editor.displayOutput:
-            self.mainTerminal.clearEOL()
-        else:
-            self.wr("\x1b[0K")
-    def cursor(self, onoff): # alternate the color of the cursor
-        if Editor.displayOutput:
-            if onoff:
-                self.mainTerminal.cursorOn()
-            else:
-                self.mainTerminal.cursorOff()
-        else:
-            self.wr("\x1b[?25h" if onoff else "\x1b[?25l")
-
+        self.wr(Editor.TERMCAP[1])
+    def cursor(self, onoff):
+        self.wr(Editor.TERMCAP[2] if onoff else Editor.TERMCAP[3])
     def hilite(self, mode):
-        if Editor.displayOutput:
-            pass # No highlight function with external display
+        if mode == 1:
+            self.wr(Editor.TERMCAP[5])
+        elif mode == 2:
+            self.wr(Editor.TERMCAP[6])
         else:
-            if mode == 1:
-                self.wr("\x1b[1;37;46m")
-            elif mode == 2:
-                self.wr("\x1b[43m")
-            else:
-                self.wr("\x1b[0m")
-
+            self.wr(Editor.TERMCAP[4])
     def mouse_reporting(self, onoff):
-        if Editor.displayOutput:
-            pass
-        else:
-            self.wr('\x1b[?9h' if onoff else '\x1b[?9l')
-
+        self.wr(Editor.TERMCAP[7] if onoff else Editor.TERMCAP[8])
     def scroll_region(self, stop):
-        if Editor.displayOutput:
-            pass # unnecessary for this display
-        else:
-            self.wr('\x1b[1;{}r'.format(stop) if stop else '\x1b[r')
-
+        self.wr(Editor.TERMCAP[11].format(stop=stop) if stop else Editor.TERMCAP[12])
     def scroll_up(self, scrolling):
-        if Editor.displayOutput:
-            Editor.display.auto_refresh=False
-            for i in range(0, scrolling):
-                self.mainTerminal.scrollUp()
-            Editor.display.auto_refresh=True
-        else:
-            Editor.scrbuf[scrolling:] = Editor.scrbuf[:-scrolling]
-            Editor.scrbuf[:scrolling] = [''] * scrolling
-            self.goto(0, 0)
-            self.wr("\x1bM" * scrolling)
+        Editor.scrbuf[scrolling:] = Editor.scrbuf[:-scrolling]
+        Editor.scrbuf[:scrolling] = [''] * scrolling
+        self.goto(0, 0)
+        self.wr(Editor.TERMCAP[9] * scrolling)
     def scroll_down(self, scrolling):
-        if Editor.displayOutput:
-            Editor.display.auto_refresh=False
-            for i in range(0, scrolling):
-                self.mainTerminal.scrollDown()
-            Editor.display.auto_refresh=True
-        else:
-            Editor.scrbuf[:-scrolling] = Editor.scrbuf[scrolling:]
-            Editor.scrbuf[-scrolling:] = [''] * scrolling
-            self.goto(Editor.height - 1, 0)
-            self.wr("\n" * scrolling)
-    def get_screen_size(self):
-        if Editor.displayOutput:
-            displayRows=self.mainTerminal.rows+self.statusTerminal.rows
-            displayColumns=self.mainTerminal.columns
-            screenSize=[displayRows, displayColumns]
-            return screenSize
-        else:
-            self.wr('\x1b[999;999H\x1b[6n')
-            pos = ''
-
-            char=self.rd_raw()
-            while char != 'R':
-                pos += char
-                char = self.rd_raw()
-            return [int(i, 10) for i in pos.lstrip("\n\x1b[").split(';')]
-
-
+        Editor.scrbuf[:-scrolling] = Editor.scrbuf[scrolling:]
+        Editor.scrbuf[-scrolling:] = [''] * scrolling
+        self.goto(Editor.height - 1, 0)
+        self.wr(Editor.TERMCAP[10] * scrolling)
     def redraw(self, flag):
-        if Editor.displayOutput:
-            Editor.display.auto_refresh=False # turn off refresh for now
-            Editor.display.show(self.g)
         self.cursor(False)
         Editor.height, Editor.width = self.get_screen_size()
         Editor.height -= 1
@@ -327,13 +242,9 @@ class Editor:
             signal.signal(signal.SIGWINCH, Editor.signal_handler)
         if is_micropython:
             gc.collect()
-            #if flag:
-            #    self.message += "{} Bytes Memory available".format(gc.mem_free())
-            #print("\n here {} Bytes Memory available".format(gc.mem_free()))
+            if flag:
+                self.message += "{} Bytes Memory available".format(gc.mem_free())
         self.changed = '' if self.hash == self.hash_buffer() else '*'
-
-        if Editor.displayOutput:
-            Editor.display.auto_refresh=True # turn display refresh back on
     def get_input(self):
         while True:
             in_buffer = self.rd()
@@ -362,8 +273,6 @@ class Editor:
             elif ord(in_buffer[0]) >= 32:
                 return KEY_NONE, in_buffer
     def display_window(self):
-        if Editor.displayOutput:
-            self.display.auto_refresh=False # turn off refresh for now
         self.cur_line = min(self.total_lines - 1, max(self.cur_line, 0))
         self.vcol = max(0, min(self.col, len(self.content[self.cur_line])))
         if self.vcol >= Editor.width + self.margin:
@@ -426,23 +335,13 @@ class Editor:
                 line += 1
         self.goto(Editor.height, 0)
         self.hilite(1)
-        statusString=("{}{} Row: {}/{} Col: {}  {}".format(
-            self.changed, self.fname, self.cur_line + 1, self.total_lines,
-            self.vcol + 1, self.message)[:self.width - 1])
-        if Editor.displayOutput:
-            self.statusTerminal.setCursor(0,0)
-            self.statusTerminal.write(statusString)
-            self.statusTerminal.clearEOL()
-
-        else:
-            self.wr(statusString)
-            self.clear_to_eol()
-            self.hilite(0)
+        self.wr(Editor.TERMCAP[14].format(
+            chd=self.changed, file=self.fname, row=self.cur_line + 1, total=self.total_lines,
+            col=self.vcol + 1, msg=self.message)[:self.width - 1])
+        self.clear_to_eol()
+        self.hilite(0)
         self.goto(self.row, self.vcol - self.margin)
         self.cursor(True)
-
-        if Editor.displayOutput:
-            self.display.auto_refresh=True # turn display refresh back on
     def spaces(self, line, pos = None):
         return (len(line) - len(line.lstrip(" ")) if pos is None else
                 len(line[:pos]) - len(line[:pos].rstrip(" ")))
@@ -459,21 +358,12 @@ class Editor:
         res = self.mark_range()
         return (res[0], res[2]) if res[3] > 0 else (res[0], res[2] - 1)
     def line_edit(self, prompt, default, zap=None):
-        if Editor.displayOutput:
-            push_msg = lambda msg: self.statusTerminal.write(msg + "\b" * len(msg))
-        else:
-            push_msg = lambda msg: self.wr(msg + "\b" * len(msg))
-        if Editor.displayOutput:
-            self.statusTerminal.setCursor(0,0)
-            self.statusTerminal.write(prompt)
-            self.statusTerminal.write(default)
-            self.statusTerminal.clearEOL()
-        else:
-            self.goto(Editor.height, 0)
-            self.hilite(1)
-            self.wr(prompt)
-            self.wr(default)
-            self.clear_to_eol()
+        push_msg = lambda msg: self.wr(msg + Editor.TERMCAP[15] * len(msg))
+        self.goto(Editor.height, 0)
+        self.hilite(1)
+        self.wr(prompt)
+        self.wr(default)
+        self.clear_to_eol()
         res = default
         pos = len(res)
         while True:
@@ -481,10 +371,7 @@ class Editor:
             if key == KEY_NONE:
                 if len(prompt) + len(res) < self.width - 2:
                     res = res[:pos] + char + res[pos:]
-                    if Editor.displayOutput:
-                        self.statusTerminal.write(res[pos])
-                    else:
-                        self.wr(res[pos])
+                    self.wr(res[pos])
                     pos += len(char)
                     push_msg(res[pos:])
             elif key in (KEY_ENTER, KEY_TAB):
@@ -495,53 +382,32 @@ class Editor:
                 return None
             elif key == KEY_LEFT:
                 if pos > 0:
-                    if Editor.displayOutput:
-                        self.statusTerminal.write("\b")
-                    else:
-                        self.wr("\b")
+                    self.wr(Editor.TERMCAP[15])
                     pos -= 1
             elif key == KEY_RIGHT:
                 if pos < len(res):
-                    if Editor.displayOutput:
-                        self.statusTerminal.write(res[pos])
-                    else:
-                        self.wr(res[pos])
+                    self.wr(res[pos])
                     pos += 1
             elif key == KEY_HOME:
-                if Editor.displayOutput:
-                    self.statusTerminal.write("\b" * pos)
-                else:
-                    self.wr("\b" * pos)
+                self.wr(Editor.TERMCAP[15] * pos)
                 pos = 0
             elif key == KEY_END:
-                if Editor.displayOutput:
-                    self.statusTerminal.write(res[pos:])
-                else:
-                    self.wr(res[pos:])
+                self.wr(res[pos:])
                 pos = len(res)
-            elif key == KEY_DELETE:  
+            elif key == KEY_DELETE:
                 if pos < len(res):
                     res = res[:pos] + res[pos+1:]
                     push_msg(res[pos:] + ' ')
             elif key == KEY_BACKSPACE:
                 if pos > 0:
                     res = res[:pos-1] + res[pos:]
-                    if Editor.displayOutput:
-                        self.statusTerminal.write("\b")
-                    else:
-                        self.wr("\b")
+                    self.wr(Editor.TERMCAP[15])
                     pos -= 1
                     push_msg(res[pos:] + ' ')
             elif key == KEY_PASTE:
-                if Editor.displayOutput:
-                    self.statusTerminal.write('\b' * pos + ' ' * len(res) + '\b' * len(res))
-                else:
-                    self.wr('\b' * pos + ' ' * len(res) + '\b' * len(res))
+                self.wr(Editor.TERMCAP[15] * pos + ' ' * len(res) + Editor.TERMCAP[15] * len(res))
                 res = self.getsymbol(self.content[self.cur_line], self.col, zap)
-                if Editor.displayOutput:
-                    self.statusTerminal.write(res)
-                else:
-                    self.wr(res)
+                self.wr(res)
                 pos = len(res)
     def getsymbol(self, s, pos, zap):
         if pos < len(s) and zap is not None:
@@ -1028,22 +894,18 @@ class Editor:
         os.chdir(self.work_dir)
         self.redraw(self.message == "")
         while True:
-            self.display_window() 
+            self.display_window()
             key, char = self.get_input()
             self.message = ''
             if key == KEY_QUIT:
                 if self.hash != self.hash_buffer():
-                    res = self.line_edit("Quit without saving (y/N)? ", "N")
+                    res = self.line_edit("The content was changed! Quit without saving (y/N)? ", "N")
                     if not res or res[0].upper() != 'Y':
                         continue
-                if Editor.displayOutput:
-                    self.statusTerminal.setCursor(0,0)
-                    self.statusTerminal.clearEOL()
-                else:
-                    self.scroll_region(0)
-                    self.mouse_reporting(False)
-                    self.goto(Editor.height, 0)
-                    self.clear_to_eol()
+                self.scroll_region(0)
+                self.mouse_reporting(False)
+                self.goto(Editor.height, 0)
+                self.clear_to_eol()
                 self.undo = []
                 return key
             elif key == KEY_NEXT:
@@ -1121,83 +983,11 @@ def expandtabs(s):
         return sb.getvalue(), True
     else:
         return s, False
-
-def init_display():
-    if Editor.displayOutput:
-        import fontio, displayio, terminalio
-        from adafruit_st7789 import ST7789
-        displayio.release_displays()
-
-        spi = board.SPI()
-        spi = board.SPI()
-        tft_cs = board.D12 # arbitrary, pin not used for my display
-        tft_dc = board.D2
-        tft_backlight = board.D4
-        tft_reset=board.D3
-
-        while not spi.try_lock():
-            pass
-        spi.unlock()
-
-        display_bus = displayio.FourWire(
-            spi,
-            command=tft_dc,
-            chip_select=tft_cs,
-            reset=tft_reset,
-            baudrate=24000000,
-            polarity=1,
-            phase=1,
-        )
-
-        Editor.display = ST7789(display_bus, width=Editor.displayXPixels, height=Editor.displayYPixels, rotation=0, rowstart=80, colstart=0)
-
-        Editor.display.show(None)
-
-def deinit_display():  #This belongs at the root, should be done only once for each time "pye" is executed.
-    if Editor.displayOutput:
-        Editor.display.show(None)
-
-def init_tty(device):  # This belongs at the root, should be done only once for each time "pye" is executed.
-    if Editor.inputUART:
-        ##### Modified for UART input
-        Editor.uart = busio.UART(board.TX, board.RX, baudrate=115200, timeout=0.1, receiver_buffer_size=64)
-        if Editor.displayOutput:
-            Editor.rd_raw_fct=Editor.rd 
-        else:
-            if hasattr(sys.stdin, "buffer"):
-                Editor.rd_raw_fct = sys.stdin.buffer.read
-            else:
-                Editor.rd_raw_fct = sys.stdin.read
-
-    else:
-        try:
-            from micropython import kbd_intr
-            kbd_intr(-1)
-        except ImportError:
-            pass
-        if hasattr(sys.stdin, "buffer"):
-            Editor.rd_raw_fct = sys.stdin.buffer.read
-        else:
-            Editor.rd_raw_fct = sys.stdin.read
-
-
-def deinit_tty():
-    if Editor.inputUART:
-        Editor.uart.deinit()
-    try:
-        from micropython import kbd_intr
-        kbd_intr(3)
-    except ImportError:
-        pass
-
 def pye(*content, tab_size=4, undo=50, device=0):
     gc.collect()
     index = 0
     undo = max(4, (undo if type(undo) is int else 0))
     current_dir = os.getcwd()
-
-    init_display() # setup the display, if required.
-
     if content:
         slot = []
         for f in content:
@@ -1216,9 +1006,7 @@ def pye(*content, tab_size=4, undo=50, device=0):
     else:
         slot = [Editor(tab_size, undo)]
         slot[0].get_file(current_dir)
-
-    init_tty(device) # Should be done once
-
+    Editor.init_tty(device)
     while True:
         try:
             index %= len(slot)
@@ -1230,16 +1018,14 @@ def pye(*content, tab_size=4, undo=50, device=0):
             elif key == KEY_GET:
                 f = slot[index].line_edit("Open file: ", "", "_.-")
                 if f is not None:
-                        slot.append(Editor(tab_size, undo))
-                        index = len(slot) - 1
-                        slot[index].get_file(f)
+                    slot.append(Editor(tab_size, undo))
+                    index = len(slot) - 1
+                    slot[index].get_file(f)
             elif key == KEY_NEXT:
-                        index += 1
+                index += 1
         except Exception as err:
-            sys.print_exception(err)
             slot[index].message = "{!r}".format(err)
-    deinit_tty()
-    deinit_display()
+    Editor.deinit_tty()
     Editor.yank_buffer = []
     os.chdir(current_dir)
     return slot[0].content if (slot[0].fname == "") else slot[0].fname
