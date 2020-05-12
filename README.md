@@ -462,3 +462,5 @@ the list of files in the current dir
 **2.39** Move a line with Alt-Up and Alt-Dn
 
 **2.40** Extend move up/down to move highlighted areas too.
+
+**2.47** Move all terminal control strings into an list.

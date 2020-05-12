@@ -18,7 +18,11 @@
 ## - moved main into a function with some optional parameters
 ## - Added multi-file support
 ##
+
+PYE_VERSION   = " V2.47 "
+
 import sys, gc
+
 if sys.platform in ("linux", "darwin"):
     import os, signal, tty, termios
     is_linux = True
@@ -38,7 +42,9 @@ else:
     from _io import StringIO
 from re import compile as re_compile
 
-PYE_VERSION   = " V2.46 "
+#ifdef VT100
+termcap_vt100 = True
+#endif
 
 KEY_NONE      = const(0x00)
 KEY_UP        = const(0x0b)
@@ -154,6 +160,42 @@ class Editor:
     "\x0b"   : KEY_MATCH,## Ctrl-K
     "\x1b[M" : KEY_MOUSE,
     }
+
+#ifdef VT100
+    if termcap_vt100: 
+        TERMCAP = [  ## list of terminal control strings
+            "\x1b[{row};{col}H",    ## 0: Set cursor
+            "\x1b[0K",              ## 1: Clear EOL
+            "\x1b[?25h",            ## 2: Cursor ON
+            "\x1b[?25l",            ## 3: Cursor OFF
+            "\x1b[0m",              ## 4: Hilite 0 - normal text
+            "\x1b[1;37;46m",        ## 5: Hilite 1 - Entering the status line
+            "\x1b[43m",             ## 6: Hilite 2 - Highligthing Text
+            '\x1b[?9h',             ## 7: Mouse reporting on
+            '\x1b[?9l',             ## 8: Mouse reporting off
+            "\x1bM",                ## 9: Scroll one line up
+            "\n",                   ## 10: Scroll one line down
+            '\x1b[1;{stop}r',       ## 11: Set lowest line of scrolling range
+            '\x1b[r',               ## 12: Scroll the full screen 
+            '\x1b[999;999H\x1b[6n', ## 13: Report Screen size command
+            "\b",                   ## 14: backspace one character, used in line_edit
+                                    ## 15: Long status line format string.
+            "{chd}{file} Row: {row}/{total} Col: {col}  {msg}",
+                                    ## 16: Shorter status line format string.
+            "{chd}{file} {row}:{col}  {msg}",
+        ]
+
+        def get_screen_size(self):
+            self.wr(Editor.TERMCAP[13])
+            pos = ''
+            char = self.rd() ## expect ESC[yyy;xxxR
+            while char != 'R':
+                pos += char
+                char = self.rd()
+            return [int(i, 10) for i in pos.lstrip("\n\x1b[").split(';')]
+
+#endif
+    
 ## symbols that are shared between instances of Editor
     yank_buffer = []
     find_pattern = ""
@@ -250,48 +292,39 @@ class Editor:
                 pass
 #endif
     def goto(self, row, col):
-        self.wr("\x1b[{};{}H".format(row + 1, col + 1))
+        self.wr(Editor.TERMCAP[0].format(row=row + 1, col=col + 1))
 
     def clear_to_eol(self):
-        self.wr("\x1b[0K")
+        self.wr(Editor.TERMCAP[1])
 
     def cursor(self, onoff):
-        self.wr("\x1b[?25h" if onoff else "\x1b[?25l")
+        self.wr(Editor.TERMCAP[2] if onoff else Editor.TERMCAP[3])
 
     def hilite(self, mode):
         if mode == 1: ## used for the status line
-            self.wr("\x1b[1;37;46m")
+            self.wr(Editor.TERMCAP[5])
         elif mode == 2: ## used for the marked area
-            self.wr("\x1b[43m")
+            self.wr(Editor.TERMCAP[6])
         else:         ## plain text
-            self.wr("\x1b[0m")
+            self.wr(Editor.TERMCAP[4])
 
     def mouse_reporting(self, onoff):
-        self.wr('\x1b[?9h' if onoff else '\x1b[?9l') ## enable/disable mouse reporting
+        self.wr(Editor.TERMCAP[7] if onoff else Editor.TERMCAP[8]) ## enable/disable mouse reporting
 
     def scroll_region(self, stop):
-        self.wr('\x1b[1;{}r'.format(stop) if stop else '\x1b[r') ## set scrolling range
+        self.wr(Editor.TERMCAP[11].format(stop=stop) if stop else Editor.TERMCAP[12]) ## set scrolling range
 
     def scroll_up(self, scrolling):
         Editor.scrbuf[scrolling:] = Editor.scrbuf[:-scrolling]
         Editor.scrbuf[:scrolling] = [''] * scrolling
         self.goto(0, 0)
-        self.wr("\x1bM" * scrolling)
+        self.wr(Editor.TERMCAP[9] * scrolling)
 
     def scroll_down(self, scrolling):
         Editor.scrbuf[:-scrolling] = Editor.scrbuf[scrolling:]
         Editor.scrbuf[-scrolling:] = [''] * scrolling
         self.goto(Editor.height - 1, 0)
-        self.wr("\n" * scrolling)
-
-    def get_screen_size(self):
-        self.wr('\x1b[999;999H\x1b[6n')
-        pos = ''
-        char = self.rd() ## expect ESC[yyy;xxxR
-        while char != 'R':
-            pos += char
-            char = self.rd()
-        return [int(i, 10) for i in pos.lstrip("\n\x1b[").split(';')]
+        self.wr(Editor.TERMCAP[10] * scrolling)
 
     def redraw(self, flag):
         self.cursor(False)
@@ -409,9 +442,9 @@ class Editor:
         ## display Status-Line
         self.goto(Editor.height, 0)
         self.hilite(1)
-        self.wr("{}{} Row: {}/{} Col: {}  {}".format(
-            self.changed, self.fname, self.cur_line + 1, self.total_lines,
-            self.vcol + 1, self.message)[:self.width - 1])
+        self.wr(Editor.TERMCAP[15 if Editor.width > 40 else 16].format(
+            chd=self.changed, file=self.fname, row=self.cur_line + 1, total=self.total_lines,
+            col=self.vcol + 1, msg=self.message)[:self.width - 1])
         self.clear_to_eol() ## once moved up for mate/xfce4-terminal issue with scroll region
         self.hilite(0)
         self.goto(self.row, self.vcol - self.margin)
@@ -436,7 +469,7 @@ class Editor:
         return (res[0], res[2]) if res[3] > 0 else (res[0], res[2] - 1)
 
     def line_edit(self, prompt, default, zap=None):  ## better one: added cursor keys and backsp, delete
-        push_msg = lambda msg: self.wr(msg + "\b" * len(msg)) ## Write a message and move cursor back
+        push_msg = lambda msg: self.wr(msg + Editor.TERMCAP[14] * len(msg)) ## Write a message and move cursor back
         self.goto(Editor.height, 0)
         self.hilite(1)
         self.wr(prompt)
@@ -460,14 +493,14 @@ class Editor:
                 return None
             elif key == KEY_LEFT:
                 if pos > 0:
-                    self.wr("\b")
+                    self.wr(Editor.TERMCAP[14])
                     pos -= 1
             elif key == KEY_RIGHT:
                 if pos < len(res):
                     self.wr(res[pos])
                     pos += 1
             elif key == KEY_HOME:
-                self.wr("\b" * pos)
+                self.wr(Editor.TERMCAP[14] * pos)
                 pos = 0
             elif key == KEY_END:
                 self.wr(res[pos:])
@@ -479,11 +512,11 @@ class Editor:
             elif key == KEY_BACKSPACE: ## Backspace
                 if pos > 0:
                     res = res[:pos-1] + res[pos:]
-                    self.wr("\b")
+                    self.wr(Editor.TERMCAP[14])
                     pos -= 1
                     push_msg(res[pos:] + ' ') ## update tail
             elif key == KEY_PASTE: ## Get from content
-                self.wr('\b' * pos + ' ' * len(res) + '\b' * len(res))
+                self.wr(Editor.TERMCAP[14] * pos + ' ' * len(res) + Editor.TERMCAP[14] * len(res))
                 res = self.getsymbol(self.content[self.cur_line], self.col, zap)
                 self.wr(res)
                 pos = len(res)
@@ -1010,7 +1043,7 @@ class Editor:
 
             if key == KEY_QUIT:
                 if self.hash != self.hash_buffer():
-                    res = self.line_edit("The content was changed! Quit without saving (y/N)? ", "N")
+                    res = self.line_edit("File changed! Quit (y/N)? ", "N")
                     if not res or res[0].upper() != 'Y':
                         continue
                 self.scroll_region(0)
