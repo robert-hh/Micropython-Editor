@@ -196,11 +196,11 @@ Select the correct display library and display settings in following lines:
                 Editor.yPixels=240 # number of yPixels for the display
 
                 Editor.display = ST7789(display_bus, 
-                					width=Editor.xPixels, 
-                					height=Editor.yPixels, 
-                					rotation=0, 
-                					rowstart=80, 
-                					colstart=0)
+                			width=Editor.xPixels, 
+                			height=Editor.yPixels, 
+                			rotation=0, 
+                			rowstart=80, 
+                			colstart=0)
 
 ```
 
