@@ -19,16 +19,11 @@
 ## - Added multi-file support
 ##
 
-PYE_VERSION   = " V2.47 "
+PYE_VERSION   = " V2.48 "
 
-import sys, gc
-
-if sys.platform in ("linux", "darwin"):
-    import os, signal, tty, termios
-    is_linux = True
-else:
-    import os
-    is_linux = False
+import sys
+import gc
+import os
 
 if sys.implementation.name == "micropython":
     is_micropython = True
@@ -41,10 +36,6 @@ else:
     const = lambda x:x
     from _io import StringIO
 from re import compile as re_compile
-
-#ifdef VT100
-termcap_vt100 = True
-#endif
 
 KEY_NONE      = const(0x00)
 KEY_UP        = const(0x0b)
@@ -161,40 +152,26 @@ class Editor:
     "\x1b[M" : KEY_MOUSE,
     }
 
-#ifdef VT100
-    if termcap_vt100: 
-        TERMCAP = [  ## list of terminal control strings
-            "\x1b[{row};{col}H",    ## 0: Set cursor
-            "\x1b[0K",              ## 1: Clear EOL
-            "\x1b[?25h",            ## 2: Cursor ON
-            "\x1b[?25l",            ## 3: Cursor OFF
-            "\x1b[0m",              ## 4: Hilite 0 - normal text
-            "\x1b[1;37;46m",        ## 5: Hilite 1 - Entering the status line
-            "\x1b[43m",             ## 6: Hilite 2 - Highligthing Text
-            '\x1b[?9h',             ## 7: Mouse reporting on
-            '\x1b[?9l',             ## 8: Mouse reporting off
-            "\x1bM",                ## 9: Scroll one line up
-            "\n",                   ## 10: Scroll one line down
-            '\x1b[1;{stop}r',       ## 11: Set lowest line of scrolling range
-            '\x1b[r',               ## 12: Scroll the full screen 
-            '\x1b[999;999H\x1b[6n', ## 13: Report Screen size command
-            "\b",                   ## 14: backspace one character, used in line_edit
-                                    ## 15: Long status line format string.
-            "{chd}{file} Row: {row}/{total} Col: {col}  {msg}",
-                                    ## 16: Shorter status line format string.
-            "{chd}{file} {row}:{col}  {msg}",
-        ]
-
-        def get_screen_size(self):
-            self.wr(Editor.TERMCAP[13])
-            pos = ''
-            char = self.rd() ## expect ESC[yyy;xxxR
-            while char != 'R':
-                pos += char
-                char = self.rd()
-            return [int(i, 10) for i in pos.lstrip("\n\x1b[").split(';')]
-
-#endif
+    TERMCMD = [  ## list of terminal control strings
+        "\x1b[{row};{col}H",    ## 0: Set cursor
+        "\x1b[0K",              ## 1: Clear EOL
+        "\x1b[?25h",            ## 2: Cursor ON
+        "\x1b[?25l",            ## 3: Cursor OFF
+        "\x1b[0m",              ## 4: Hilite 0 - normal text
+        "\x1b[1;37;46m",        ## 5: Hilite 1 - Entering the status line
+        "\x1b[43m",             ## 6: Hilite 2 - Highligthing Text
+        '\x1b[?9h',             ## 7: Mouse reporting on
+        '\x1b[?9l',             ## 8: Mouse reporting off
+        "\x1bM",                ## 9: Scroll one line up
+        "\n",                   ## 10: Scroll one line down
+        '\x1b[1;{stop}r',       ## 11: Set lowest line of scrolling range
+        '\x1b[r',               ## 12: Scroll the full screen 
+        "\b",                   ## 13: backspace one character, used in line_edit
+                                ## 14: Long status line format string.
+        "{chd}{file} Row: {row}/{total} Col: {col}  {msg}",
+                                ## 15: Shorter status line format string.
+        "{chd}{file} {row}:{col}  {msg}",
+    ]
     
 ## symbols that are shared between instances of Editor
     yank_buffer = []
@@ -205,7 +182,7 @@ class Editor:
     comment_char = "\x23 " ## for #
     word_char = "_\\" ## additional character in a word
 
-    def __init__(self, tab_size, undo_limit):
+    def __init__(self, tab_size, undo_limit, io_device):
         self.top_line = self.cur_line = self.row = self.vcol = self.col = self.margin = 0
         self.tab_size = tab_size
         self.changed = ''
@@ -218,117 +195,49 @@ class Editor:
         self.mark = None
         self.write_tabs = "n"
         self.work_dir = os.getcwd()
+        self.io_device = io_device
+        self.wr = io_device.wr
 
-#ifdef LINUX
-    if is_linux:
-
-        def wr(self, s):
-            os.write(1, s.encode("utf-8"))
-
-        def rd(self):
-            while True:
-                try: ## WINCH causes interrupt
-                    c = os.read(self.sdev,1)
-                    flag = c[0]
-                    while (flag & 0xc0) == 0xc0:  ## utf-8 char collection
-                        c += os.read(self.sdev,1)
-                        flag <<= 1
-                    return c.decode("UTF-8")
-                except:
-                    if Editor.winch: ## simulate REDRAW key
-                        Editor.winch = False
-                        return chr(KEY_REDRAW)
-
-        def rd_raw(self):
-            return os.read(self.sdev,1)
-
-        @staticmethod
-        def init_tty(device):
-            Editor.org_termios = termios.tcgetattr(device)
-            tty.setraw(device)
-            Editor.sdev = device
-            Editor.winch = False
-
-        @staticmethod
-        def deinit_tty():
-            termios.tcsetattr(Editor.sdev, termios.TCSANOW, Editor.org_termios)
-
-        @staticmethod
-        def signal_handler(sig, frame):
-            signal.signal(signal.SIGWINCH, signal.SIG_IGN)
-            Editor.winch = True
-            return True
-#endif
-#ifdef MICROPYTHON
-    if is_micropython and not is_linux:
-
-        def wr(self, s):
-            sys.stdout.write(s)
-
-        def rd(self):
-            return sys.stdin.read(1)
-
-        def rd_raw(self):
-            return Editor.rd_raw_fct(1)
-
-        @staticmethod
-        def init_tty(device):
-            try:
-                from micropython import kbd_intr
-                kbd_intr(-1)
-            except ImportError:
-                pass
-            if hasattr(sys.stdin, "buffer"):
-                Editor.rd_raw_fct = sys.stdin.buffer.read
-            else:
-                Editor.rd_raw_fct = sys.stdin.read
-
-        @staticmethod
-        def deinit_tty():
-            try:
-                from micropython import kbd_intr
-                kbd_intr(3)
-            except ImportError:
-                pass
-#endif
     def goto(self, row, col):
-        self.wr(Editor.TERMCAP[0].format(row=row + 1, col=col + 1))
+        self.wr(Editor.TERMCMD[0].format(row=row + 1, col=col + 1))
 
     def clear_to_eol(self):
-        self.wr(Editor.TERMCAP[1])
+        self.wr(Editor.TERMCMD[1])
 
     def cursor(self, onoff):
-        self.wr(Editor.TERMCAP[2] if onoff else Editor.TERMCAP[3])
+        self.wr(Editor.TERMCMD[2] if onoff else Editor.TERMCMD[3])
 
     def hilite(self, mode):
         if mode == 1: ## used for the status line
-            self.wr(Editor.TERMCAP[5])
+            self.wr(Editor.TERMCMD[5])
         elif mode == 2: ## used for the marked area
-            self.wr(Editor.TERMCAP[6])
+            self.wr(Editor.TERMCMD[6])
         else:         ## plain text
-            self.wr(Editor.TERMCAP[4])
+            self.wr(Editor.TERMCMD[4])
 
     def mouse_reporting(self, onoff):
-        self.wr(Editor.TERMCAP[7] if onoff else Editor.TERMCAP[8]) ## enable/disable mouse reporting
+        self.wr(Editor.TERMCMD[7] if onoff else Editor.TERMCMD[8]) ## enable/disable mouse reporting
 
     def scroll_region(self, stop):
-        self.wr(Editor.TERMCAP[11].format(stop=stop) if stop else Editor.TERMCAP[12]) ## set scrolling range
+        self.wr(Editor.TERMCMD[11].format(stop=stop) if stop else Editor.TERMCMD[12]) ## set scrolling range
 
     def scroll_up(self, scrolling):
-        Editor.scrbuf[scrolling:] = Editor.scrbuf[:-scrolling]
-        Editor.scrbuf[:scrolling] = [''] * scrolling
-        self.goto(0, 0)
-        self.wr(Editor.TERMCAP[9] * scrolling)
+        if Editor.TERMCMD[9]:
+            Editor.scrbuf[scrolling:] = Editor.scrbuf[:-scrolling]
+            Editor.scrbuf[:scrolling] = [''] * scrolling
+            self.goto(0, 0)
+            self.wr(Editor.TERMCMD[9] * scrolling)
 
     def scroll_down(self, scrolling):
-        Editor.scrbuf[:-scrolling] = Editor.scrbuf[scrolling:]
-        Editor.scrbuf[-scrolling:] = [''] * scrolling
-        self.goto(Editor.height - 1, 0)
-        self.wr(Editor.TERMCAP[10] * scrolling)
+        if Editor.TERMCMD[10]:
+            Editor.scrbuf[:-scrolling] = Editor.scrbuf[scrolling:]
+            Editor.scrbuf[-scrolling:] = [''] * scrolling
+            self.goto(Editor.height - 1, 0)
+            self.wr(Editor.TERMCMD[10] * scrolling)
 
     def redraw(self, flag):
         self.cursor(False)
-        Editor.height, Editor.width = self.get_screen_size()
+        Editor.height, Editor.width = self.io_device.get_screen_size()
         Editor.height -= 1
         Editor.scrbuf = [(False,"\x00")] * Editor.height ## force delete
         self.row = min(Editor.height - 1, self.row)
@@ -336,8 +245,6 @@ class Editor:
         self.mouse_reporting(True) ## enable mouse reporting
         if flag:
             self.message = PYE_VERSION
-        if is_linux and not is_micropython:
-            signal.signal(signal.SIGWINCH, Editor.signal_handler)
         if is_micropython:
             gc.collect()
             if flag:
@@ -346,10 +253,10 @@ class Editor:
 
     def get_input(self):  ## read from interface/keyboard one byte each and match against function keys
         while True:
-            in_buffer = self.rd()
+            in_buffer = self.io_device.rd()
             if in_buffer == '\x1b': ## starting with ESC, must be fct
                 while True:
-                    in_buffer += self.rd()
+                    in_buffer += self.io_device.rd()
                     c = in_buffer[-1]
                     if c == '~' or (c.isalpha() and c != 'O'):
                         break
@@ -360,9 +267,9 @@ class Editor:
                 if c != KEY_MOUSE:
                     return c, None
                 else: ## special for mice
-                    mouse_fct = ord(self.rd_raw()) ## read 3 more chars
-                    mouse_x = ord(self.rd_raw()) - 33
-                    mouse_y = ord(self.rd_raw()) - 33
+                    mouse_fct = ord(self.io_device.rd_raw()) ## read 3 more chars
+                    mouse_x = ord(self.io_device.rd_raw()) - 33
+                    mouse_y = ord(self.io_device.rd_raw()) - 33
                     if mouse_fct == 0x61:
                         return KEY_SCRLDN, 3
                     elif mouse_fct == 0x60:
@@ -442,7 +349,7 @@ class Editor:
         ## display Status-Line
         self.goto(Editor.height, 0)
         self.hilite(1)
-        self.wr(Editor.TERMCAP[15 if Editor.width > 40 else 16].format(
+        self.wr(Editor.TERMCMD[14 if Editor.width > 40 else 15].format(
             chd=self.changed, file=self.fname, row=self.cur_line + 1, total=self.total_lines,
             col=self.vcol + 1, msg=self.message)[:self.width - 1])
         self.clear_to_eol() ## once moved up for mate/xfce4-terminal issue with scroll region
@@ -469,7 +376,7 @@ class Editor:
         return (res[0], res[2]) if res[3] > 0 else (res[0], res[2] - 1)
 
     def line_edit(self, prompt, default, zap=None):  ## better one: added cursor keys and backsp, delete
-        push_msg = lambda msg: self.wr(msg + Editor.TERMCAP[14] * len(msg)) ## Write a message and move cursor back
+        push_msg = lambda msg: self.wr(msg + Editor.TERMCMD[13] * len(msg)) ## Write a message and move cursor back
         self.goto(Editor.height, 0)
         self.hilite(1)
         self.wr(prompt)
@@ -493,14 +400,14 @@ class Editor:
                 return None
             elif key == KEY_LEFT:
                 if pos > 0:
-                    self.wr(Editor.TERMCAP[14])
+                    self.wr(Editor.TERMCMD[13])
                     pos -= 1
             elif key == KEY_RIGHT:
                 if pos < len(res):
                     self.wr(res[pos])
                     pos += 1
             elif key == KEY_HOME:
-                self.wr(Editor.TERMCAP[14] * pos)
+                self.wr(Editor.TERMCMD[13] * pos)
                 pos = 0
             elif key == KEY_END:
                 self.wr(res[pos:])
@@ -512,11 +419,11 @@ class Editor:
             elif key == KEY_BACKSPACE: ## Backspace
                 if pos > 0:
                     res = res[:pos-1] + res[pos:]
-                    self.wr(Editor.TERMCAP[14])
+                    self.wr(Editor.TERMCMD[13])
                     pos -= 1
                     push_msg(res[pos:] + ' ') ## update tail
             elif key == KEY_PASTE: ## Get from content
-                self.wr(Editor.TERMCAP[14] * pos + ' ' * len(res) + Editor.TERMCAP[14] * len(res))
+                self.wr(Editor.TERMCMD[13] * pos + ' ' * len(res) + Editor.TERMCMD[13] * len(res))
                 res = self.getsymbol(self.content[self.cur_line], self.col, zap)
                 self.wr(res)
                 pos = len(res)
@@ -1138,8 +1045,13 @@ def expandtabs(s):
     else:
         return s, False
 
-def pye(*content, tab_size=4, undo=50, device=0):
+def pye_edit(*content, tab_size=4, undo=50, io_device=None):
 ## prepare content
+    ## test, if the IO class if provided
+    if io_device is None:
+        print("IO device not defined")
+        return
+
     gc.collect() ## all (memory) is mine
     index = 0
     undo = max(4, (undo if type(undo) is int else 0)) # minimum undo size
@@ -1147,7 +1059,7 @@ def pye(*content, tab_size=4, undo=50, device=0):
     if content:
         slot = []
         for f in content:
-            slot.append(Editor(tab_size, undo))
+            slot.append(Editor(tab_size, undo, io_device))
             if type(f) == str and f: ## String = non-empty Filename
                 try:
                     slot[index].get_file(f)
@@ -1160,10 +1072,9 @@ def pye(*content, tab_size=4, undo=50, device=0):
                     slot[index].content = [str(f)]
             index += 1
     else:
-        slot = [Editor(tab_size, undo)]
+        slot = [Editor(tab_size, undo, io_device)]
         slot[0].get_file(current_dir)
 ## edit
-    Editor.init_tty(device)
     while True:
         try:
             index %= len(slot)
@@ -1175,7 +1086,7 @@ def pye(*content, tab_size=4, undo=50, device=0):
             elif key == KEY_GET:
                 f = slot[index].line_edit("Open file: ", "", "_.-")
                 if f is not None:
-                    slot.append(Editor(tab_size, undo))
+                    slot.append(Editor(tab_size, undo,io_device))
                     index = len(slot) - 1
                     slot[index].get_file(f)
             elif key == KEY_NEXT:
@@ -1184,31 +1095,7 @@ def pye(*content, tab_size=4, undo=50, device=0):
             slot[index].message = "{!r}".format(err)
             ## raise
 ## All windows closed, clean up
-    Editor.deinit_tty()
     Editor.yank_buffer = []
 ## close
     os.chdir(current_dir)  ## restore dir
     return slot[0].content if (slot[0].fname == "") else slot[0].fname
-
-#ifdef LINUX
-if __name__ == "__main__":
-    if is_linux:
-        import stat
-        fd_tty = 0
-        if len(sys.argv) > 1:
-            name = sys.argv[1:]
-            pye(*name, undo=500, device=fd_tty)
-        else:
-            name = "."
-            if not is_micropython:
-                mode = os.fstat(0).st_mode
-                if stat.S_ISFIFO(mode) or stat.S_ISREG(mode):
-                    name = sys.stdin.readlines()
-                    os.close(0) ## close and repopen /dev/tty
-                    fd_tty = os.open("/dev/tty", os.O_RDONLY) ## memorized, if new fd
-                    for i, l in enumerate(name):  ## strip and convert
-                        name[i], tc = expandtabs(l.rstrip('\r\n\t '))
-            pye(name, undo=500, device=fd_tty)
-    else:
-        print ("\nSorry, this OS is not supported (yet)")
-#endif

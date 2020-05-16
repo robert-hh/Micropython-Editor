@@ -1,7 +1,4 @@
 #
-# wrapper for Teensy 3.5 and 3.6
-#
-#
 # Wrapper for Micropython standard console IO
 #
 import sys
@@ -48,14 +45,10 @@ try:
     type(Editor)
 except NameError:
     ## no, import it.
-    from pye import pye_edit
+    from pye import pye_edit, Editor
 
 def pye(*args, tab_size=4, undo=50):
-    from pyb import USB_VCP
-    USB_VCP().setinterrupt(-1)
-    io_device = IO_DEVICE(fd_tty)
+    io_device = IO_DEVICE()
     ret = pye_edit(*args, tab_size=tab_size, undo=undo, io_device=io_device)
     io_device.deinit_tty()
-    USB_VCP().setinterrupt(3)
     return ret
-

@@ -1,11 +1,7 @@
-import sys, gc
-termcap_vt100 = True
-if sys.platform in ("linux", "darwin"):
-    import os, signal, tty, termios
-    is_linux = True
-else:
-    import os
-    is_linux = False
+PYE_VERSION   = " V2.48 "
+import sys
+import gc
+import os
 if sys.implementation.name == "micropython":
     is_micropython = True
     from uio import StringIO
@@ -17,57 +13,56 @@ else:
     const = lambda x:x
     from _io import StringIO
 from re import compile as re_compile
-PYE_VERSION = " V2.47 "
-KEY_NONE = const(0x00)
-KEY_UP = const(0x0b)
-KEY_DOWN = const(0x0d)
-KEY_LEFT = const(0x1f)
-KEY_RIGHT = const(0x1e)
-KEY_HOME = const(0x10)
-KEY_END = const(0x03)
-KEY_PGUP = const(0xfff1)
-KEY_PGDN = const(0xfff2)
+KEY_NONE      = const(0x00)
+KEY_UP        = const(0x0b)
+KEY_DOWN      = const(0x0d)
+KEY_LEFT      = const(0x1f)
+KEY_RIGHT     = const(0x1e)
+KEY_HOME      = const(0x10)
+KEY_END       = const(0x03)
+KEY_PGUP      = const(0xfff1)
+KEY_PGDN      = const(0xfff2)
 KEY_WORD_LEFT = const(0xfff3)
 KEY_WORD_RIGHT= const(0xfff4)
-KEY_SHIFT_UP = const(0xfff5)
-KEY_ALT_UP = const(0xffea)
+KEY_SHIFT_UP  = const(0xfff5)
+KEY_ALT_UP    = const(0xffea)
 KEY_SHIFT_DOWN= const(0xfff6)
-KEY_ALT_DOWN = const(0xffeb)
+KEY_ALT_DOWN  = const(0xffeb)
 KEY_SHIFT_LEFT= const(0xfff0)
 KEY_SHIFT_RIGHT= const(0xffef)
 KEY_SHIFT_CTRL_LEFT= const(0xffed)
 KEY_SHIFT_CTRL_RIGHT= const(0xffec)
-KEY_QUIT = const(0x11)
-KEY_ENTER = const(0x0a)
+KEY_QUIT      = const(0x11)
+KEY_ENTER     = const(0x0a)
 KEY_BACKSPACE = const(0x08)
-KEY_DELETE = const(0x7f)
-KEY_DEL_WORD = const(0xfff7)
-KEY_WRITE = const(0x13)
-KEY_TAB = const(0x09)
-KEY_BACKTAB = const(0x15)
-KEY_FIND = const(0x06)
-KEY_GOTO = const(0x07)
-KEY_MOUSE = const(0x1b)
-KEY_SCRLUP = const(0x1c)
-KEY_SCRLDN = const(0x1d)
+KEY_DELETE    = const(0x7f)
+KEY_DEL_WORD  = const(0xfff7)
+KEY_WRITE     = const(0x13)
+KEY_TAB       = const(0x09)
+KEY_BACKTAB   = const(0x15)
+KEY_FIND      = const(0x06)
+KEY_GOTO      = const(0x07)
+KEY_MOUSE     = const(0x1b)
+KEY_SCRLUP    = const(0x1c)
+KEY_SCRLDN    = const(0x1d)
 KEY_FIND_AGAIN= const(0x0e)
-KEY_REDRAW = const(0x05)
-KEY_UNDO = const(0x1a)
-KEY_REDO = const(0xffee)
-KEY_CUT = const(0x18)
-KEY_PASTE = const(0x16)
-KEY_COPY = const(0x04)
-KEY_FIRST = const(0x14)
-KEY_LAST = const(0x02)
-KEY_REPLC = const(0x12)
-KEY_TOGGLE = const(0x01)
-KEY_GET = const(0x0f)
-KEY_MARK = const(0x0c)
-KEY_NEXT = const(0x17)
-KEY_COMMENT = const(0xfffc)
-KEY_MATCH = const(0xfffd)
-KEY_INDENT = const(0xfffe)
-KEY_DEDENT = const(0xffff)
+KEY_REDRAW    = const(0x05)
+KEY_UNDO      = const(0x1a)
+KEY_REDO      = const(0xffee)
+KEY_CUT       = const(0x18)
+KEY_PASTE     = const(0x16)
+KEY_COPY      = const(0x04)
+KEY_FIRST     = const(0x14)
+KEY_LAST      = const(0x02)
+KEY_REPLC     = const(0x12)
+KEY_TOGGLE    = const(0x01)
+KEY_GET       = const(0x0f)
+KEY_MARK      = const(0x0c)
+KEY_NEXT      = const(0x17)
+KEY_COMMENT   = const(0xfffc)
+KEY_MATCH     = const(0xfffd)
+KEY_INDENT    = const(0xfffe)
+KEY_DEDENT    = const(0xffff)
 class Editor:
     KEYMAP = {
     "\x1b[A" : KEY_UP,
@@ -92,71 +87,62 @@ class Editor:
     "\x1b[6~": KEY_PGDN,
     "\x1b[1;5D": KEY_WORD_LEFT,
     "\x1b[1;5C": KEY_WORD_RIGHT,
-    "\x03" : KEY_COPY,
-    "\r" : KEY_ENTER,
-    "\x7f" : KEY_BACKSPACE,
+    "\x03"   : KEY_COPY,
+    "\r"     : KEY_ENTER,
+    "\x7f"   : KEY_BACKSPACE,
     "\x1b[3~": KEY_DELETE,
     "\x1b[Z" : KEY_BACKTAB,
-    "\x19" : KEY_REDO,
-    "\x08" : KEY_REPLC,
-    "\x12" : KEY_REPLC,
-    "\x11" : KEY_QUIT,
-    "\n" : KEY_ENTER,
-    "\x13" : KEY_WRITE,
-    "\x06" : KEY_FIND,
-    "\x0e" : KEY_FIND_AGAIN,
-    "\x07" : KEY_GOTO,
-    "\x05" : KEY_REDRAW,
-    "\x1a" : KEY_UNDO,
-    "\x09" : KEY_TAB,
-    "\x15" : KEY_BACKTAB,
-    "\x18" : KEY_CUT,
-    "\x16" : KEY_PASTE,
-    "\x04" : KEY_COPY,
-    "\x0c" : KEY_MARK,
-    "\x00" : KEY_MARK,
-    "\x14" : KEY_FIRST,
-    "\x02" : KEY_LAST,
-    "\x01" : KEY_TOGGLE,
-    "\x17" : KEY_NEXT,
-    "\x0f" : KEY_GET,
-    "\x10" : KEY_COMMENT,
+    "\x19"   : KEY_REDO,
+    "\x08"   : KEY_REPLC,
+    "\x12"   : KEY_REPLC,
+    "\x11"   : KEY_QUIT,
+    "\n"     : KEY_ENTER,
+    "\x13"   : KEY_WRITE,
+    "\x06"   : KEY_FIND,
+    "\x0e"   : KEY_FIND_AGAIN,
+    "\x07"   : KEY_GOTO,
+    "\x05"   : KEY_REDRAW,
+    "\x1a"   : KEY_UNDO,
+    "\x09"   : KEY_TAB,
+    "\x15"   : KEY_BACKTAB,
+    "\x18"   : KEY_CUT,
+    "\x16"   : KEY_PASTE,
+    "\x04"   : KEY_COPY,
+    "\x0c"   : KEY_MARK,
+    "\x00"   : KEY_MARK,
+    "\x14"   : KEY_FIRST,
+    "\x02"   : KEY_LAST,
+    "\x01"   : KEY_TOGGLE,
+    "\x17"   : KEY_NEXT,
+    "\x0f"   : KEY_GET,
+    "\x10"   : KEY_COMMENT,
     "\x1b[1;5A": KEY_SCRLUP,
     "\x1b[1;5B": KEY_SCRLDN,
     "\x1b[1;5H": KEY_FIRST,
     "\x1b[1;5F": KEY_LAST,
     "\x1b[3;5~": KEY_DEL_WORD,
-    "\x0b" : KEY_MATCH,
+    "\x0b"   : KEY_MATCH,
     "\x1b[M" : KEY_MOUSE,
     }
-    if termcap_vt100:
-        TERMCAP = [
-            "\x1b[{row};{col}H",
-            "\x1b[0K",
-            "\x1b[?25h",
-            "\x1b[?25l",
-            "\x1b[0m",
-            "\x1b[1;37;46m",
-            "\x1b[43m",
-            '\x1b[?9h',
-            '\x1b[?9l',
-            "\x1bM",
-            "\n",
-            '\x1b[1;{stop}r',
-            '\x1b[r',
-            '\x1b[999;999H\x1b[6n',
-            "\b",
-            "{chd}{file} Row: {row}/{total} Col: {col}  {msg}",
-            "{chd}{file} {row}:{col}  {msg}",
-        ]
-        def get_screen_size(self):
-            self.wr(Editor.TERMCAP[13])
-            pos = ''
-            char = self.rd()
-            while char != 'R':
-                pos += char
-                char = self.rd()
-            return [int(i, 10) for i in pos.lstrip("\n\x1b[").split(';')]
+    TERMCMD = [
+        "\x1b[{row};{col}H",
+        "\x1b[0K",
+        "\x1b[?25h",
+        "\x1b[?25l",
+        "\x1b[0m",
+        "\x1b[1;37;46m",
+        "\x1b[43m",
+        '\x1b[?9h',
+        '\x1b[?9l',
+        "\x1bM",
+        "\n",
+        '\x1b[1;{stop}r',
+        '\x1b[r',
+        "\b",
+        "{chd}{file} Row: {row}/{total} Col: {col}  {msg}",
+        "{chd}{file} {row}:{col}  {msg}",
+    ]
+    
     yank_buffer = []
     find_pattern = ""
     case = "n"
@@ -164,7 +150,7 @@ class Editor:
     replc_pattern = ""
     comment_char = "\x23 "
     word_char = "_\\"
-    def __init__(self, tab_size, undo_limit):
+    def __init__(self, tab_size, undo_limit, io_device):
         self.top_line = self.cur_line = self.row = self.vcol = self.col = self.margin = 0
         self.tab_size = tab_size
         self.changed = ''
@@ -177,61 +163,40 @@ class Editor:
         self.mark = None
         self.write_tabs = "n"
         self.work_dir = os.getcwd()
-    if is_micropython and not is_linux:
-        def wr(self, s):
-            sys.stdout.write(s)
-        def rd(self):
-            return sys.stdin.read(1)
-        def rd_raw(self):
-            return Editor.rd_raw_fct(1)
-        @staticmethod
-        def init_tty(device):
-            try:
-                from micropython import kbd_intr
-                kbd_intr(-1)
-            except ImportError:
-                pass
-            if hasattr(sys.stdin, "buffer"):
-                Editor.rd_raw_fct = sys.stdin.buffer.read
-            else:
-                Editor.rd_raw_fct = sys.stdin.read
-        @staticmethod
-        def deinit_tty():
-            try:
-                from micropython import kbd_intr
-                kbd_intr(3)
-            except ImportError:
-                pass
+        self.io_device = io_device
+        self.wr = io_device.wr
     def goto(self, row, col):
-        self.wr(Editor.TERMCAP[0].format(row=row + 1, col=col + 1))
+        self.wr(Editor.TERMCMD[0].format(row=row + 1, col=col + 1))
     def clear_to_eol(self):
-        self.wr(Editor.TERMCAP[1])
+        self.wr(Editor.TERMCMD[1])
     def cursor(self, onoff):
-        self.wr(Editor.TERMCAP[2] if onoff else Editor.TERMCAP[3])
+        self.wr(Editor.TERMCMD[2] if onoff else Editor.TERMCMD[3])
     def hilite(self, mode):
         if mode == 1:
-            self.wr(Editor.TERMCAP[5])
+            self.wr(Editor.TERMCMD[5])
         elif mode == 2:
-            self.wr(Editor.TERMCAP[6])
+            self.wr(Editor.TERMCMD[6])
         else:
-            self.wr(Editor.TERMCAP[4])
+            self.wr(Editor.TERMCMD[4])
     def mouse_reporting(self, onoff):
-        self.wr(Editor.TERMCAP[7] if onoff else Editor.TERMCAP[8])
+        self.wr(Editor.TERMCMD[7] if onoff else Editor.TERMCMD[8])
     def scroll_region(self, stop):
-        self.wr(Editor.TERMCAP[11].format(stop=stop) if stop else Editor.TERMCAP[12])
+        self.wr(Editor.TERMCMD[11].format(stop=stop) if stop else Editor.TERMCMD[12])
     def scroll_up(self, scrolling):
-        Editor.scrbuf[scrolling:] = Editor.scrbuf[:-scrolling]
-        Editor.scrbuf[:scrolling] = [''] * scrolling
-        self.goto(0, 0)
-        self.wr(Editor.TERMCAP[9] * scrolling)
+        if Editor.TERMCMD[9]:
+            Editor.scrbuf[scrolling:] = Editor.scrbuf[:-scrolling]
+            Editor.scrbuf[:scrolling] = [''] * scrolling
+            self.goto(0, 0)
+            self.wr(Editor.TERMCMD[9] * scrolling)
     def scroll_down(self, scrolling):
-        Editor.scrbuf[:-scrolling] = Editor.scrbuf[scrolling:]
-        Editor.scrbuf[-scrolling:] = [''] * scrolling
-        self.goto(Editor.height - 1, 0)
-        self.wr(Editor.TERMCAP[10] * scrolling)
+        if Editor.TERMCMD[10]:
+            Editor.scrbuf[:-scrolling] = Editor.scrbuf[scrolling:]
+            Editor.scrbuf[-scrolling:] = [''] * scrolling
+            self.goto(Editor.height - 1, 0)
+            self.wr(Editor.TERMCMD[10] * scrolling)
     def redraw(self, flag):
         self.cursor(False)
-        Editor.height, Editor.width = self.get_screen_size()
+        Editor.height, Editor.width = self.io_device.get_screen_size()
         Editor.height -= 1
         Editor.scrbuf = [(False,"\x00")] * Editor.height
         self.row = min(Editor.height - 1, self.row)
@@ -239,8 +204,6 @@ class Editor:
         self.mouse_reporting(True)
         if flag:
             self.message = PYE_VERSION
-        if is_linux and not is_micropython:
-            signal.signal(signal.SIGWINCH, Editor.signal_handler)
         if is_micropython:
             gc.collect()
             if flag:
@@ -248,10 +211,10 @@ class Editor:
         self.changed = '' if self.hash == self.hash_buffer() else '*'
     def get_input(self):
         while True:
-            in_buffer = self.rd()
+            in_buffer = self.io_device.rd()
             if in_buffer == '\x1b':
                 while True:
-                    in_buffer += self.rd()
+                    in_buffer += self.io_device.rd()
                     c = in_buffer[-1]
                     if c == '~' or (c.isalpha() and c != 'O'):
                         break
@@ -262,9 +225,9 @@ class Editor:
                 if c != KEY_MOUSE:
                     return c, None
                 else:
-                    mouse_fct = ord(self.rd_raw())
-                    mouse_x = ord(self.rd_raw()) - 33
-                    mouse_y = ord(self.rd_raw()) - 33
+                    mouse_fct = ord(self.io_device.rd_raw())
+                    mouse_x = ord(self.io_device.rd_raw()) - 33
+                    mouse_y = ord(self.io_device.rd_raw()) - 33
                     if mouse_fct == 0x61:
                         return KEY_SCRLDN, 3
                     elif mouse_fct == 0x60:
@@ -336,7 +299,7 @@ class Editor:
                 line += 1
         self.goto(Editor.height, 0)
         self.hilite(1)
-        self.wr(Editor.TERMCAP[15 if Editor.width > 40 else 16].format(
+        self.wr(Editor.TERMCMD[14 if Editor.width > 40 else 15].format(
             chd=self.changed, file=self.fname, row=self.cur_line + 1, total=self.total_lines,
             col=self.vcol + 1, msg=self.message)[:self.width - 1])
         self.clear_to_eol()
@@ -359,7 +322,7 @@ class Editor:
         res = self.mark_range()
         return (res[0], res[2]) if res[3] > 0 else (res[0], res[2] - 1)
     def line_edit(self, prompt, default, zap=None):
-        push_msg = lambda msg: self.wr(msg + Editor.TERMCAP[14] * len(msg))
+        push_msg = lambda msg: self.wr(msg + Editor.TERMCMD[13] * len(msg))
         self.goto(Editor.height, 0)
         self.hilite(1)
         self.wr(prompt)
@@ -383,14 +346,14 @@ class Editor:
                 return None
             elif key == KEY_LEFT:
                 if pos > 0:
-                    self.wr(Editor.TERMCAP[14])
+                    self.wr(Editor.TERMCMD[13])
                     pos -= 1
             elif key == KEY_RIGHT:
                 if pos < len(res):
                     self.wr(res[pos])
                     pos += 1
             elif key == KEY_HOME:
-                self.wr(Editor.TERMCAP[14] * pos)
+                self.wr(Editor.TERMCMD[13] * pos)
                 pos = 0
             elif key == KEY_END:
                 self.wr(res[pos:])
@@ -402,11 +365,11 @@ class Editor:
             elif key == KEY_BACKSPACE:
                 if pos > 0:
                     res = res[:pos-1] + res[pos:]
-                    self.wr(Editor.TERMCAP[14])
+                    self.wr(Editor.TERMCMD[13])
                     pos -= 1
                     push_msg(res[pos:] + ' ')
             elif key == KEY_PASTE:
-                self.wr(Editor.TERMCAP[14] * pos + ' ' * len(res) + Editor.TERMCAP[14] * len(res))
+                self.wr(Editor.TERMCMD[13] * pos + ' ' * len(res) + Editor.TERMCMD[13] * len(res))
                 res = self.getsymbol(self.content[self.cur_line], self.col, zap)
                 self.wr(res)
                 pos = len(res)
@@ -491,12 +454,13 @@ class Editor:
             return None
     def undo_add(self, lnum, text, key, span = 1, chain=False):
         self.changed = '*'
-        if (len(self.undo) == 0 or key == KEY_NONE or
+        if (len(self.undo) == 0 or key == KEY_NONE or 
             self.undo[-1][3] != key or self.undo[-1][0] != lnum):
             if len(self.undo) >= self.undo_limit:
                 del self.undo[0]
             self.undo.append([lnum, span, text, key, self.col, chain])
             self.redo = []
+    
     def undo_redo(self, undo, redo):
         chain = True
         redo_start = len(redo)
@@ -658,9 +622,9 @@ class Editor:
             ", Tabsize {}, Comment {}, Tabwrite {}: ".format(
             Editor.autoindent, Editor.case, self.tab_size, Editor.comment_char, self.write_tabs), "")
             try:
-                res = [i.lstrip().lower() for i in pat.split(",")]
+                res =  [i.lstrip().lower() for i in pat.split(",")]
                 if res[0]: Editor.autoindent = 'y' if res[0][0] == 'y' else 'n'
-                if res[1]: Editor.case = 'y' if res[1][0] == 'y' else 'n'
+                if res[1]: Editor.case     = 'y' if res[1][0] == 'y' else 'n'
                 if res[2]: self.tab_size = int(res[2])
                 if res[3]: Editor.comment_char = res[3]
                 if res[4]: self.write_tabs = 'y' if res[4][0] == 'y' else 'n'
@@ -701,7 +665,7 @@ class Editor:
                         while c != cstop:
                             if self.content[i][c] == match:
                                 if level == 0:
-                                    self.cur_line, self.col = i, c
+                                    self.cur_line, self.col  = i, c
                                     return
                                 else:
                                     level -= 1
@@ -738,7 +702,7 @@ class Editor:
                 if start_line > 0:
                     self.mark = (self.mark[0] - 1, self.mark[1])
             if start_line > 0:
-                self.undo_add(start_line - 1, self.content[start_line - 1:end_line],
+                self.undo_add(start_line - 1, self.content[start_line - 1:end_line], 
                               KEY_NONE, end_line - start_line + 1)
                 self.content[start_line - 1:end_line - 1], self.content[end_line - 1] = (
                     self.content[start_line:end_line], self.content[start_line - 1])
@@ -754,7 +718,7 @@ class Editor:
                     if self.cur_line == end_line == (self.total_lines - 1):
                         self.move_left()
             if end_line < self.total_lines:
-                self.undo_add(start_line, self.content[start_line:end_line + 1],
+                self.undo_add(start_line, self.content[start_line:end_line + 1], 
                               KEY_NONE, end_line - start_line + 1)
                 self.content[start_line + 1:end_line + 1], self.content[start_line] = (
                     self.content[start_line:end_line], self.content[end_line])
@@ -984,7 +948,10 @@ def expandtabs(s):
         return sb.getvalue(), True
     else:
         return s, False
-def pye(*content, tab_size=4, undo=50, device=0):
+def pye_edit(*content, tab_size=4, undo=50, io_device=None):
+    if io_device is None:
+        print("IO device not defined")
+        return
     gc.collect()
     index = 0
     undo = max(4, (undo if type(undo) is int else 0))
@@ -992,7 +959,7 @@ def pye(*content, tab_size=4, undo=50, device=0):
     if content:
         slot = []
         for f in content:
-            slot.append(Editor(tab_size, undo))
+            slot.append(Editor(tab_size, undo, io_device))
             if type(f) == str and f:
                 try:
                     slot[index].get_file(f)
@@ -1005,9 +972,8 @@ def pye(*content, tab_size=4, undo=50, device=0):
                     slot[index].content = [str(f)]
             index += 1
     else:
-        slot = [Editor(tab_size, undo)]
+        slot = [Editor(tab_size, undo, io_device)]
         slot[0].get_file(current_dir)
-    Editor.init_tty(device)
     while True:
         try:
             index %= len(slot)
@@ -1019,14 +985,54 @@ def pye(*content, tab_size=4, undo=50, device=0):
             elif key == KEY_GET:
                 f = slot[index].line_edit("Open file: ", "", "_.-")
                 if f is not None:
-                    slot.append(Editor(tab_size, undo))
+                    slot.append(Editor(tab_size, undo,io_device))
                     index = len(slot) - 1
                     slot[index].get_file(f)
             elif key == KEY_NEXT:
                 index += 1
         except Exception as err:
             slot[index].message = "{!r}".format(err)
-    Editor.deinit_tty()
     Editor.yank_buffer = []
     os.chdir(current_dir)
     return slot[0].content if (slot[0].fname == "") else slot[0].fname
+import sys
+class IO_DEVICE:
+    def __init__(self):
+        try:
+            from micropython import kbd_intr
+            kbd_intr(-1)
+        except ImportError:
+            pass
+        if hasattr(sys.stdin, "buffer"):
+            self.rd_raw_fct = sys.stdin.buffer.read
+        else:
+            self.rd_raw_fct = sys.stdin.read
+    def wr(self, s):
+        sys.stdout.write(s)
+    def rd(self):
+        return sys.stdin.read(1)
+    def rd_raw(self):
+        return self.rd_raw_fct(1)
+    def deinit_tty(self):
+        try:
+            from micropython import kbd_intr
+            kbd_intr(3)
+        except ImportError:
+            pass
+    def get_screen_size(self):
+        self.wr('\x1b[999;999H\x1b[6n')
+        pos = ''
+        char = self.rd()
+        while char != 'R':
+            pos += char
+            char = self.rd()
+        return [int(i, 10) for i in pos.lstrip("\n\x1b[").split(';')]
+try:
+    type(Editor)
+except NameError:
+    from pye import pye_edit, Editor
+def pye(*args, tab_size=4, undo=50):
+    io_device = IO_DEVICE()
+    ret = pye_edit(*args, tab_size=tab_size, undo=undo, io_device=io_device)
+    io_device.deinit_tty()
+    return ret
