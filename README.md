@@ -216,10 +216,10 @@ Double-check that the settings in the `init_tty` function match your UART hardwa
 
 ```python
                 Editor.uart = busio.UART(board.TX, 
-                					board.RX, 
-                					baudrate=115200, 
-                					timeout=0.1, 
-                					receiver_buffer_size=64)
+                			board.RX, 
+                			baudrate=115200, 
+                			timeout=0.1, 
+                			receiver_buffer_size=64)
 ```
 
 
