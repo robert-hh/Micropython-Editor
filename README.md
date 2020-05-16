@@ -133,6 +133,7 @@ using cpp.
 |pye2|Similar to the linemode branch, but the column does not change during vertcal moves|
 |dup_del_line|A version which allows to duplicate and delete a single line without highlighting it before (stale)|
 |new_mark|Changed method of highlighting blocks, allowing to move away the cursor once a block is highlighted (stale)|
+|lcd_io|Display output to an LCD, accepts input from UART|
 
 ## lcd_io usage
 
@@ -211,11 +212,14 @@ Update the following parameters as required for your display: `rotation=0`, `row
 ***Example:*** This example shows a 240x240 pixel display using an ST7789 display controller chip.  Because this chip can handle up to 320x240 pixel display, so to accommodate our 240x240 display size, we utilize an 80 pixel offset using the `rowstart` parameter.  Your display library is likely is different than this, and may not require any offset.
 
 ## Using UART as an input
+Double-check that the settings in the `init_tty` function match your UART hardware connections, especially for `board.TX`, `board.RX` and `baudrate`:
 
-To use UART as the input, change the following line to `True`
-
-```
-uart_input = True
+```python
+                Editor.uart = busio.UART(board.TX, 
+                					board.RX, 
+                					baudrate=115200, 
+                					timeout=0.1, 
+                					receiver_buffer_size=64)
 ```
 
 
