@@ -133,7 +133,7 @@ using cpp.
 |pye2|Similar to the linemode branch, but the column does not change during vertcal moves|
 |dup_del_line|A version which allows to duplicate and delete a single line without highlighting it before (stale)|
 |new_mark|Changed method of highlighting blocks, allowing to move away the cursor once a block is highlighted (stale)|
-|lcd_io|Display output to an LCD, accepts input from UART|
+|lcd_io|Display output to an LCD display, accepts input from UART|
 
 ## lcd_io usage
 
