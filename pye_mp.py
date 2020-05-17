@@ -150,7 +150,7 @@ class Editor:
     replc_pattern = ""
     comment_char = "\x23 "
     word_char = "_\\"
-    def __init__(self, tab_size, undo_limit):
+    def __init__(self, tab_size, undo_limit, io_device):
         self.top_line = self.cur_line = self.row = self.vcol = self.col = self.margin = 0
         self.tab_size = tab_size
         self.changed = ''
@@ -163,10 +163,8 @@ class Editor:
         self.mark = None
         self.write_tabs = "n"
         self.work_dir = os.getcwd()
-    @staticmethod
-    def init_io(io_device):
-        Editor.io_device = io_device
-        Editor.wr = io_device.wr
+        self.io_device = io_device
+        self.wr = io_device.wr
     def goto(self, row, col):
         self.wr(Editor.TERMCAP[0].format(row=row + 1, col=col + 1))
     def clear_to_eol(self):
@@ -952,7 +950,6 @@ def pye_edit(*content, tab_size=4, undo=50, io_device=None):
     if io_device is None:
         print("IO device not defined")
         return
-    Editor.init_io(io_device)
     gc.collect()
     index = 0
     undo = max(4, (undo if type(undo) is int else 0))
@@ -960,7 +957,7 @@ def pye_edit(*content, tab_size=4, undo=50, io_device=None):
     if content:
         slot = []
         for f in content:
-            slot.append(Editor(tab_size, undo))
+            slot.append(Editor(tab_size, undo, io_device))
             if type(f) == str and f:
                 try:
                     slot[index].get_file(f)
@@ -973,7 +970,7 @@ def pye_edit(*content, tab_size=4, undo=50, io_device=None):
                     slot[index].content = [str(f)]
             index += 1
     else:
-        slot = [Editor(tab_size, undo)]
+        slot = [Editor(tab_size, undo, io_device)]
         slot[0].get_file(current_dir)
     while True:
         try:
@@ -986,22 +983,17 @@ def pye_edit(*content, tab_size=4, undo=50, io_device=None):
             elif key == KEY_GET:
                 f = slot[index].line_edit("Open file: ", "", "_.-")
                 if f is not None:
-                    slot.append(Editor(tab_size, undo))
+                    slot.append(Editor(tab_size, undo,io_device))
                     index = len(slot) - 1
                     slot[index].get_file(f)
             elif key == KEY_NEXT:
                 index += 1
         except Exception as err:
             slot[index].message = "{!r}".format(err)
-    io_device.deinit_tty()
     Editor.yank_buffer = []
     os.chdir(current_dir)
     return slot[0].content if (slot[0].fname == "") else slot[0].fname
 import sys
-try:
-    type(Editor)
-except NameError:
-    from pye_core import pye_edit, is_micropython
 class IO_DEVICE:
     def __init__(self):
         try:
@@ -1019,7 +1011,7 @@ class IO_DEVICE:
         return sys.stdin.read(1)
     def rd_raw(self):
         return self.rd_raw_fct(1)
-    def deinit_tty():
+    def deinit_tty(self):
         try:
             from micropython import kbd_intr
             kbd_intr(3)
@@ -1033,5 +1025,12 @@ class IO_DEVICE:
             pos += char
             char = self.rd()
         return [int(i, 10) for i in pos.lstrip("\n\x1b[").split(';')]
+try:
+    type(Editor)
+except NameError:
+    from pye import pye_edit, Editor
 def pye(*args, tab_size=4, undo=50):
-    pye_edit(*args, tab_size=tab_size, undo=undo, io_device=IO_DEVICE(0))
+    io_device = IO_DEVICE()
+    ret = pye_edit(*args, tab_size=tab_size, undo=undo, io_device=io_device)
+    io_device.deinit_tty()
+    return ret

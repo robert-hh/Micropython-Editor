@@ -3,13 +3,6 @@
 #
 import sys
 
-## test, if the Editor class is already in this file
-try:
-    type(Editor)
-except NameError:
-    ## no, import it.
-    from pye_core import pye_edit, is_micropython
-
 class IO_DEVICE:
     def __init__(self):
         try:
@@ -31,7 +24,7 @@ class IO_DEVICE:
     def rd_raw(self):
         return self.rd_raw_fct(1)
 
-    def deinit_tty():
+    def deinit_tty(self):
         try:
             from micropython import kbd_intr
             kbd_intr(3)
@@ -47,5 +40,15 @@ class IO_DEVICE:
             char = self.rd()
         return [int(i, 10) for i in pos.lstrip("\n\x1b[").split(';')]
 
+## test, if the Editor class is already in this file
+try:
+    type(Editor)
+except NameError:
+    ## no, import it.
+    from pye import pye_edit, Editor
+
 def pye(*args, tab_size=4, undo=50):
-    pye_edit(*args, tab_size=tab_size, undo=undo, io_device=IO_DEVICE(0))
+    io_device = IO_DEVICE()
+    ret = pye_edit(*args, tab_size=tab_size, undo=undo, io_device=io_device)
+    io_device.deinit_tty()
+    return ret

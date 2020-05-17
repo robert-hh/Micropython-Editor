@@ -8,7 +8,7 @@ class IO_DEVICE:
         self.org_termios = termios.tcgetattr(device)
         tty.setraw(device)
         self.sdev = device
-       
+
     def wr(self, s):
         os.write(1, s.encode("utf-8"))
 
@@ -45,19 +45,20 @@ try:
     type(Editor)
 except NameError:
     ## no, import it.
-    from pye_core import pye_edit, is_micropython
+    from pye import pye_edit, is_micropython
 
 
 def pye(*args, tab_size=4, undo=500):
-    pye_edit(*args, tab_size=tab_size, undo=undo, io_device=IO_DEVICE(0))
+    io_device = IO_DEVICE(0)
+    ret = pye_edit(*args, tab_size=tab_size, undo=undo, io_device=io_device)
+    io_device.deinit_tty()
+    return ret
 
-#ifdef LINUX
 if __name__ == "__main__":
     import stat
     fd_tty = 0
     if len(sys.argv) > 1:
         name = sys.argv[1:]
-        pye_edit(*name, undo=500, io_device=IO_DEVICE(fd_tty))
     else:
         name = "."
         if not is_micropython:
@@ -68,7 +69,7 @@ if __name__ == "__main__":
                 fd_tty = os.open("/dev/tty", os.O_RDONLY) ## memorized, if new fd
                 for i, l in enumerate(name):  ## strip and convert
                     name[i], tc = expandtabs(l.rstrip('\r\n\t '))
-        pye_edit(name, undo=500, io_device=IO_DEVICE(fd_tty))
-else:
-    print ("\nSorry, this OS is not supported (yet)")
-#endif
+
+    io_device = IO_DEVICE(fd_tty)
+    pye_edit(*name, undo=500, io_device=io_device)
+    io_device.deinit_tty()
