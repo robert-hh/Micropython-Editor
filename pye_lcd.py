@@ -62,7 +62,8 @@ class IO_DEVICE:
     def rd(self):
         while True:
             myInput = self.uart.read(1) # for using uart
-            if myInput is None:
+            if (myInput is None) or (myInput.decode('utf-8') == ''): 
+		# for some reason, ItsyBitsy NRF52840 needs second Boolean check
                 pass
             else:
                 return myInput.decode('utf-8')
