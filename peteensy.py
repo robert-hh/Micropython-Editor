@@ -1,8 +1,5 @@
 #
-# wrapper for Teensy 3.5 and 3.6
-#
-#
-# Wrapper for Micropython standard console IO
+# Front-end for Teensy 3.5 and 3.6
 #
 import sys
 
@@ -43,11 +40,8 @@ class IO_DEVICE:
             char = self.rd()
         return [int(i, 10) for i in pos.lstrip("\n\x1b[").split(';')]
 
-## test, if the Editor class is already in this file
-try:
-    type(Editor)
-except NameError:
-    ## no, import it.
+## test, if the Editor class is already present
+if "pye_edit" not in globals().keys():
     from pye import pye_edit
 
 def pye(*args, tab_size=4, undo=50):

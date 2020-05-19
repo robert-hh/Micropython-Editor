@@ -1027,10 +1027,8 @@ class IO_DEVICE:
             pos += char
             char = self.rd()
         return [int(i, 10) for i in pos.lstrip("\n\x1b[").split(';')]
-try:
-    type(Editor)
-except NameError:
-    from pye import pye_edit, Editor
+if "pye_edit" not in globals().keys():
+    from pye import pye_edit
 def pye(*args, tab_size=4, undo=50):
     io_device = IO_DEVICE()
     ret = pye_edit(*args, tab_size=tab_size, undo=undo, io_device=io_device)

@@ -1,13 +1,14 @@
 #
-# wrapper for Linux
+# Front-end for Linux
 #
-import os, tty, termios, sys
+import os, tty, signal, termios, sys
 
 class IO_DEVICE:
     def __init__(self, device):
         self.org_termios = termios.tcgetattr(device)
         tty.setraw(device)
         self.sdev = device
+        self.winch = False
 
     def wr(self, s):
         os.write(1, s.encode("utf-8"))
@@ -23,12 +24,15 @@ class IO_DEVICE:
                 return c.decode("utf-8")
             except:
                 if self.winch: ## simulate REDRAW key
+                    self.winch = False
                     return chr(KEY_REDRAW)
 
     def rd_raw(self):
         return os.read(self.sdev,1)
 
     def get_screen_size(self):
+        if hasattr(signal, "SIGWINCH"):
+            signal.signal(signal.SIGWINCH, IO_DEVICE.signal_handler)
         self.wr('\x1b[999;999H\x1b[6n')
         pos = ''
         char = self.rd() ## expect ESC[yyy;xxxR
@@ -40,13 +44,15 @@ class IO_DEVICE:
     def deinit_tty(self):
         termios.tcsetattr(self.sdev, termios.TCSANOW, self.org_termios)
 
-## test, if the Editor class is already part of this file
-try:
-    type(Editor)
-except NameError:
-    ## no, import it.
-    from pye import pye_edit, is_micropython
+    @staticmethod
+    def signal_handler(sig, frame):
+        signal.signal(signal.SIGWINCH, signal.SIG_IGN)
+        self.winch = True
+        return True
 
+## test, if the Editor class is already present
+if "pye_edit" not in globals().keys():
+    from pye import pye_edit, is_micropython
 
 def pye(*args, tab_size=4, undo=500):
     io_device = IO_DEVICE(0)
