@@ -114,7 +114,7 @@ CPython also accepts data from a pipe or redirection.
 ### Base files
 - pye.py: Core file with comments, intended to ebtha same for all platforms 
 - pye_ux.py: Front-end for Linux CPython and Linux MicroPython
-- pye_std.py: Front-end for Micropython and Circuitpython modules with I/O through
+- pye_gen.py: Front-end for Micropython and Circuitpython modules with I/O through
 sys.stdout and sys.stdin.
 - peteensy.py: A front-end for teensy 3.5 and 3.6 .
 - pye_win.py: an experimental version for the cmd window of Windows 10. It requires
@@ -125,7 +125,7 @@ the front-end files, using cat and sed.
 - README.md: This one
 
 ### Derived files
-- pye_mp.py, pye_mp.mpy: Condensed source files of pye.py + pye_std.py for
+- pye_mp.py, pye_mp.mpy: Condensed source files of pye.py + pye_gen.py for
 all MicroPython boards. In order to use it on an board with small memory
 like the esp8266, you have to put pye_mp.py into the directory esp8266/modules,
 esp32/modules or smt32/modules (micropython.org) or esp32/frozen (pycom.io) and

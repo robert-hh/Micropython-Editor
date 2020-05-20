@@ -47,7 +47,7 @@ if "pye_edit" not in globals().keys():
 def pye(*args, tab_size=4, undo=50):
     from pyb import USB_VCP
     USB_VCP().setinterrupt(-1)
-    io_device = IO_DEVICE(fd_tty)
+    io_device = IO_DEVICE()
     ret = pye_edit(*args, tab_size=tab_size, undo=undo, io_device=io_device)
     io_device.deinit_tty()
     USB_VCP().setinterrupt(3)
