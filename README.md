@@ -2,18 +2,22 @@
 
 ## Description
 
-A small text editor written in Python running on PYBoard, WiPy1, the pycom.io
- modules like WipPy 2, Lopy, SiPy, FiPy, ESP8266 modules, teensy 3.5/3.6 and the MaixPy,
- allowing to edit files locally. It is based on the editor widget of pfalcon at
- <https://github.com/pfalcon/pyedit.> I ported it to PyBoard, WiPy1,
- ESP8266, Teensy, ESP32, the Pycom.io, MaixPy devices, CircuitPython devices
- and added a few functions:
+A small text editor written in Python running on 
+- MicroPython.org modules like the PYBoards, ESP32, ESP8266, Teensy 3.5, 3.6 and 4.x
+- pycom.io modules like WipPy, Lopy, SiPy, FiPy, GPy
+- Adafruit Circuitpython modules,
+- SiPeed MaixPy modules,
+- Linux and Android's terminal windows
+
+ It allows allows to edit files locally on the boards. The offsprong was the editor widget of pfalcon at
+ <https://github.com/pfalcon/pyedit>. I ported it to PyBoard and the other modules
+ and added a lot of functions:
 
 - Use sys.stdin.read() and sys.stdout.write() for input and output of the Micropython version.
 - Changed the read keyboard function to comply with byte-by-byte input on serial lines.
 - Added support for Tab, BackTab, Save, Del and Backspace joining lines, Find,
 Replace, Goto Line, Undo, Redo, Open file, Auto-Indent, Set Flags, Copy/Delete & Paste,
-Indent, Dedent, Block-Comment, Scrolling
+Indent, Dedent, Block-Comment, Scrolling, line-shift
 - Handling tab (0x09) on reading & writing files,
 - Added a status line, and single line prompts for Quit, Save, Find, Replace,
 Goto, Open file and Flag settings.
@@ -107,31 +111,42 @@ CPython also accepts data from a pipe or redirection.
 
 ## Files
 
-- pye.py: Source file with comments and code for all versions. 
-Runs on the Micros as well, but the file size is much larger
-than the stripped down version.
+### Base files
+- pye.py: Core file with comments, intended to ebtha same for all platforms 
+- pye_ux.py: Front-end for Linux CPython and Linux MicroPython
+- pye_std.py: Front-end for Micropython and Circuitpython modules with I/O through
+sys.stdout and sys.stdin.
+- peteensy.py: A front-end for teensy 3.5 and 3.6 .
 - pye_win.py: an experimental version for the cmd window of Windows 10. It requires
 enabling the VT100 support, as detailed e.g. here: https://stackoverflow.com/questions/51680709/colored-text-output-in-powershell-console-using-ansi-vt100-codes
 - Pyboard Editor.pdf: A short documentation
+- strip.sh: sample Shell script which creates the different derived files out of pye.py and
+the front-end files, using cat and sed.
 - README.md: This one
-- pye_mp.py, pye_mp.mpy: Condensed source files of pye.py for
+
+### Derived files
+- pye_mp.py, pye_mp.mpy: Condensed source files of pye.py + pye_std.py for
 all MicroPython boards. In order to use it on an board with small memory
 like the esp8266, you have to put pye_mp.py into the directory esp8266/modules,
 esp32/modules or smt32/modules (micropython.org) or esp32/frozen (pycom.io) and
 rebuild micropython.  A cross-compiled version may executed from the file system.
-- peteensy.py: A small wrapper for teensy 3.5 and 3.6 disabling Ctrl-C
-keyboard interrupt.
-- strip.sh: sample Shell script which creates the different variants out of pye.py
-using cpp.
+- pye: Executable single file for Linux
+
+### Further front-ends
+- pye_lcd.py: Front-end provided by user @kmatch98 for Circuitpython using a LCD as output
+device and UART as input device. The port requires further python scripts.
+- lcd_io.md: Readme for the pye_lcd version, provided by @kmatch98.
+- pye_tft.py: Sample front-end using a tft with a SSD1963 controller as output device. The port
+requires the SSD1963 drivers: https://github.com/robert-hh/SSD1963-TFT-Library-for-PyBoard
+
 
 ## Branches
 
 |Branch|Features|
 |:---|:---|
 |master|Actual main line with slowly changing features|
-|linemode|Old master branch with line mode highlight/delete|
-|pye2|Similar to the linemode branch, but the column does not change during vertcal moves|
-|dup_del_line|A version which allows to duplicate and delete a single line without highlighting it before (stale)|
+|modules| Split pye.py into a core editor and port specific front-ends|
+|pye2|Similar to the linemode branch, but the column does not change during vertcal moves (stale)|
 |new_mark|Changed method of highlighting blocks, allowing to move away the cursor once a block is highlighted (stale)|
 
 ## Short Version History
@@ -464,3 +479,5 @@ the list of files in the current dir
 **2.40** Extend move up/down to move highlighted areas too.
 
 **2.47** Move all terminal control strings into an list.
+
+**2.48** Split pye.py into a core file and port specific front-ends. If a single file is required, just put the core and the front-end into a single file.
