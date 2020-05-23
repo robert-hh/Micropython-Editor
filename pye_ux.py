@@ -27,9 +27,6 @@ class IO_DEVICE:
                     self.winch = False
                     return chr(KEY_REDRAW)
 
-    def rd_raw(self):
-        return os.read(self.sdev,1)
-
     def get_screen_size(self):
         if hasattr(signal, "SIGWINCH"):
             signal.signal(signal.SIGWINCH, IO_DEVICE.signal_handler)

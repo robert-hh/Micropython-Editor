@@ -375,6 +375,10 @@ class Editor:
                     self.wr(self.TERMCMD[11])
                     pos -= 1
                     push_msg(res[pos:] + ' ') ## update tail
+            elif key == KEY_PASTE: ## Paste
+                if Editor.yank_buffer:
+                    res += Editor.yank_buffer[0]
+                    push_msg(res[pos:]) ## update tail
 
     def move_up(self):
         if self.cur_line > 0:

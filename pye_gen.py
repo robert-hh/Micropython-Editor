@@ -10,19 +10,12 @@ class IO_DEVICE:
             kbd_intr(-1)
         except ImportError:
             pass
-        if hasattr(sys.stdin, "buffer"):
-            self.rd_raw_fct = sys.stdin.buffer.read
-        else:
-            self.rd_raw_fct = sys.stdin.read
 
     def wr(self, s):
         sys.stdout.write(s)
 
     def rd(self):
         return sys.stdin.read(1)
-
-    def rd_raw(self):
-        return self.rd_raw_fct(1)
 
     def deinit_tty(self):
         try:
