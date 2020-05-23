@@ -423,10 +423,8 @@ class Editor:
                     pos -= 1
                     push_msg(res[pos:] + ' ') ## update tail
             elif key == KEY_PASTE: ## Get from content
-                self.wr(Editor.TERMCMD[13] * pos + ' ' * len(res) + Editor.TERMCMD[13] * len(res))
-                res = self.getsymbol(self.content[self.cur_line], self.col, zap)
-                self.wr(res)
-                pos = len(res)
+                res += self.getsymbol(self.content[self.cur_line], self.col, zap)[:Editor.width - pos - len(prompt) - 1]
+                push_msg(res[pos:])
 
     def getsymbol(self, s, pos, zap):
         if pos < len(s) and zap is not None:

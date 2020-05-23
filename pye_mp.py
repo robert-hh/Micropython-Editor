@@ -369,10 +369,8 @@ class Editor:
                     pos -= 1
                     push_msg(res[pos:] + ' ')
             elif key == KEY_PASTE:
-                self.wr(Editor.TERMCMD[13] * pos + ' ' * len(res) + Editor.TERMCMD[13] * len(res))
-                res = self.getsymbol(self.content[self.cur_line], self.col, zap)
-                self.wr(res)
-                pos = len(res)
+                res += self.getsymbol(self.content[self.cur_line], self.col, zap)[:Editor.width - pos - len(prompt) - 1]
+                push_msg(res[pos:])
     def getsymbol(self, s, pos, zap):
         if pos < len(s) and zap is not None:
             start = self.skip_while(s, pos, zap, -1)
