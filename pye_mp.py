@@ -124,8 +124,6 @@ class Editor:
     case = "n"
     autoindent = "y"
     replc_pattern = ""
-    comment_char = "\x23 "
-    word_char = "_\\"
     def __init__(self, tab_size, undo_limit, io_device):
         self.top_line = self.cur_line = self.row = self.vcol = self.col = self.margin = 0
         self.tab_size = tab_size
@@ -141,32 +139,32 @@ class Editor:
         self.io_device = io_device
         self.wr = io_device.wr
     def goto(self, row, col):
-        self.wr(Editor.TERMCMD[0].format(row=row + 1, col=col + 1))
+        self.wr(self.TERMCMD[0].format(row=row + 1, col=col + 1))
     def clear_to_eol(self):
-        self.wr(Editor.TERMCMD[1])
+        self.wr(self.TERMCMD[1])
     def cursor(self, onoff):
-        self.wr(Editor.TERMCMD[2] if onoff else Editor.TERMCMD[3])
+        self.wr(self.TERMCMD[2] if onoff else self.TERMCMD[3])
     def hilite(self, mode):
         if mode == 1:
-            self.wr(Editor.TERMCMD[5])
+            self.wr(self.TERMCMD[5])
         elif mode == 2:
-            self.wr(Editor.TERMCMD[6])
+            self.wr(self.TERMCMD[6])
         else:
-            self.wr(Editor.TERMCMD[4])
+            self.wr(self.TERMCMD[4])
     def scroll_region(self, stop):
-        self.wr(Editor.TERMCMD[9].format(stop=stop) if stop else Editor.TERMCMD[10])
+        self.wr(self.TERMCMD[9].format(stop=stop) if stop else self.TERMCMD[10])
     def scroll_up(self, scrolling):
-        if Editor.TERMCMD[7]:
+        if self.TERMCMD[7]:
             Editor.scrbuf[scrolling:] = Editor.scrbuf[:-scrolling]
             Editor.scrbuf[:scrolling] = [''] * scrolling
             self.goto(0, 0)
-            self.wr(Editor.TERMCMD[7] * scrolling)
+            self.wr(self.TERMCMD[7] * scrolling)
     def scroll_down(self, scrolling):
-        if Editor.TERMCMD[8]:
+        if self.TERMCMD[8]:
             Editor.scrbuf[:-scrolling] = Editor.scrbuf[scrolling:]
             Editor.scrbuf[-scrolling:] = [''] * scrolling
             self.goto(Editor.height - 1, 0)
-            self.wr(Editor.TERMCMD[8] * scrolling)
+            self.wr(self.TERMCMD[8] * scrolling)
     def redraw(self, flag):
         self.cursor(False)
         Editor.height, Editor.width = self.io_device.get_screen_size()
@@ -260,7 +258,7 @@ class Editor:
                 line += 1
         self.goto(Editor.height, 0)
         self.hilite(1)
-        self.wr(Editor.TERMCMD[12 if Editor.width > 40 else 13].format(
+        self.wr(self.TERMCMD[12 if Editor.width > 40 else 13].format(
             chd=self.changed, file=self.fname, row=self.cur_line + 1, total=self.total_lines,
             col=self.vcol + 1, msg=self.message)[:self.width - 1])
         self.clear_to_eol()
@@ -282,7 +280,7 @@ class Editor:
     def line_range(self):
         res = self.mark_range()
         return (res[0], res[2]) if res[3] > 0 else (res[0], res[2] - 1)
-    def line_edit(self, prompt, default, zap=None):
+    def line_edit(self, prompt, default):
         push_msg = lambda msg: self.wr(msg + self.TERMCMD[11] * len(msg))
         self.goto(Editor.height, 0)
         self.hilite(1)
@@ -323,6 +321,10 @@ class Editor:
                     self.wr(self.TERMCMD[11])
                     pos -= 1
                     push_msg(res[pos:] + ' ')
+            elif key == KEY_PASTE:
+                if Editor.yank_buffer:
+                    res += Editor.yank_buffer[0][:self.width - len(prompt) - pos - 1]
+                    push_msg(res[pos:])
     def move_up(self):
         if self.cur_line > 0:
             self.cur_line -= 1
@@ -478,7 +480,7 @@ class Editor:
         elif key == KEY_HOME:
             self.col = self.spaces(l) if self.col == 0 else 0
         elif key == KEY_END:
-            ni = len(l.split(Editor.comment_char.strip())[0].rstrip())
+            ni = len(l.split("\x23")[0].rstrip())
             ns = self.spaces(l)
             self.col = ni if self.col >= len(l) and ni > ns else len(l)
         elif key == KEY_PGUP:
@@ -486,7 +488,7 @@ class Editor:
         elif key == KEY_PGDN:
             self.cur_line += Editor.height
         elif key == KEY_FIND:
-            pat = self.line_edit("Find: ", Editor.find_pattern, "_")
+            pat = self.line_edit("Find: ", Editor.find_pattern)
             if pat:
                 self.find_in_file(pat, self.col, self.total_lines)
                 self.row = Editor.height >> 1
@@ -495,7 +497,7 @@ class Editor:
                 self.find_in_file(Editor.find_pattern, self.col + 1, self.total_lines)
                 self.row = Editor.height >> 1
         elif key == KEY_GOTO:
-            line = self.line_edit("Goto Line: ", "")
+            line = self.line_edit("Goto Line: ")
             if line:
                 self.cur_line = int(line) - 1
                 self.row = Editor.height >> 1
@@ -507,7 +509,7 @@ class Editor:
         elif key == KEY_TOGGLE:
             pat = self.line_edit("Autoindent {}, Search Case {}"
             ", Tabsize {}".format(
-            Editor.autoindent, Editor.case, self.tab_size), "")
+            Editor.autoindent, Editor.case, self.tab_size))
             try:
                 res =  [i.lstrip().lower() for i in pat.split(",")]
                 if res[0]: Editor.autoindent = 'y' if res[0][0] == 'y' else 'n'
@@ -575,9 +577,9 @@ class Editor:
                         self.content[i] = self.content[i][(ns - 1) % self.tab_size + 1:]
         elif key == KEY_REPLC:
             count = 0
-            pat = self.line_edit("Replace: ", Editor.find_pattern, "_")
+            pat = self.line_edit("Replace: ", Editor.find_pattern)
             if pat:
-                rpat = self.line_edit("With: ", Editor.replc_pattern, "_")
+                rpat = self.line_edit("With: ", Editor.replc_pattern)
                 if rpat is not None:
                     Editor.replc_pattern = rpat
                     q = ''
@@ -636,7 +638,7 @@ class Editor:
                 Editor.yank_buffer[-1], Editor.yank_buffer[0] = tail, head
                 self.total_lines = len(self.content)
         elif key == KEY_WRITE:
-            fname = self.line_edit("Save File: ", self.fname, "_.-")
+            fname = self.line_edit("Save File: ", self.fname)
             if fname:
                 self.put_file(fname)
                 self.fname = fname
@@ -762,7 +764,7 @@ def pye_edit(*content, tab_size=4, undo=50, io_device=None):
                     break
                 del slot[index]
             elif key == KEY_GET:
-                f = slot[index].line_edit("Open file: ", "", "_.-")
+                f = slot[index].line_edit("Open file: ", "")
                 if f is not None:
                     slot.append(Editor(tab_size, undo,io_device))
                     index = len(slot) - 1
@@ -783,16 +785,10 @@ class IO_DEVICE:
             kbd_intr(-1)
         except ImportError:
             pass
-        if hasattr(sys.stdin, "buffer"):
-            self.rd_raw_fct = sys.stdin.buffer.read
-        else:
-            self.rd_raw_fct = sys.stdin.read
     def wr(self, s):
         sys.stdout.write(s)
     def rd(self):
         return sys.stdin.read(1)
-    def rd_raw(self):
-        return self.rd_raw_fct(1)
     def deinit_tty(self):
         try:
             from micropython import kbd_intr
@@ -808,7 +804,7 @@ class IO_DEVICE:
             char = self.rd()
         return [int(i, 10) for i in pos.lstrip("\n\x1b[").split(';')]
 if "pye_edit" not in globals().keys():
-    from pye_min import pye_edit
+    from pye import pye_edit
 def pye(*args, tab_size=4, undo=50):
     io_device = IO_DEVICE()
     ret = pye_edit(*args, tab_size=tab_size, undo=undo, io_device=io_device)

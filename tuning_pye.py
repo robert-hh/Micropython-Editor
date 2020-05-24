@@ -104,6 +104,13 @@
                 res = self.getsymbol(self.content[self.cur_line], self.col, zap)
                 self.wr(res)
                 pos = len(res)
+"""
+## paste from content, alternate version w/o zap and get_symbol
+            elif key == KEY_PASTE: ## Paste
+                res += (self.content[self.cur_line][:self.col].rsplit(" ")[-1] +
+                        self.content[self.cur_line][self.col:].split(" ")[0])[:self.width - pos - len(prompt) - 1]
+                push_msg(res[pos:]) ## update tail
+"""
 
     def line_edit(self, prompt, default):  # simple one: only 4+1 fcts
         self.goto(Editor.height, 0)
@@ -164,3 +171,4 @@
 
     def cls(self):
         self.wr(b"\x1b[2J")
+
