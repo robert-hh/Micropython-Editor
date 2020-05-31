@@ -1,4 +1,4 @@
-PYE_VERSION   = " V2.48 "
+PYE_VERSION   = " V2.49 "
 import sys
 import gc
 import os
@@ -323,6 +323,9 @@ class Editor:
         return (res[0], res[2]) if res[3] > 0 else (res[0], res[2] - 1)
     def line_edit(self, prompt, default, zap=None):
         push_msg = lambda msg: self.wr(msg + Editor.TERMCMD[13] * len(msg))
+        symbol = self.getsymbol(self.content[self.cur_line], self.col, zap)
+        if symbol:
+            default = symbol[:Editor.width - len(prompt) - 1]
         self.goto(Editor.height, 0)
         self.hilite(1)
         self.wr(prompt)
@@ -369,8 +372,9 @@ class Editor:
                     pos -= 1
                     push_msg(res[pos:] + ' ')
             elif key == KEY_PASTE:
-                res += self.getsymbol(self.content[self.cur_line], self.col, zap)[:Editor.width - pos - len(prompt) - 1]
-                push_msg(res[pos:])
+                if Editor.yank_buffer:
+                    res += Editor.yank_buffer[0][:self.width - len(prompt) - pos - 1]
+                    push_msg(res[pos:])
     def getsymbol(self, s, pos, zap):
         if pos < len(s) and zap is not None:
             start = self.skip_while(s, pos, zap, -1)
@@ -765,7 +769,7 @@ class Editor:
             count = 0
             pat = self.line_edit("Replace: ", Editor.find_pattern, "_")
             if pat:
-                rpat = self.line_edit("With: ", Editor.replc_pattern, "_")
+                rpat = self.line_edit("With: ", Editor.replc_pattern if Editor.replc_pattern else pat)
                 if rpat is not None:
                     Editor.replc_pattern = rpat
                     q = ''
@@ -824,7 +828,7 @@ class Editor:
                 Editor.yank_buffer[-1], Editor.yank_buffer[0] = tail, head
                 self.total_lines = len(self.content)
         elif key == KEY_WRITE:
-            fname = self.line_edit("Save File: ", self.fname, "_.-")
+            fname = self.line_edit("Save File: ", self.fname)
             if fname:
                 self.put_file(fname)
                 self.fname = fname

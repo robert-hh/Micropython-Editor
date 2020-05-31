@@ -58,7 +58,7 @@ shows most of the commands.:
 |Ctrl-L or Ctrl-Space|Start hightlighting at the current position, or clear the highlight. The highlight can then be extended by moving the cursor|
 |Ctrl-X|Cut the highlighted text|
 |Ctrl-C or Ctrl-D|Copy the highlighted text|
-|Ctrl-V|Insert the copied/cut text. In the line edit mode paste the item under the cursor of the active window. |
+|Ctrl-V|Insert the copied/cut text.|
 |Ctrl-Z|Undo the last change(s)|
 |Ctrl-Y|Redo the last undo(s), repeating what had been undone by undo|
 |Ctrl-P|Comment/Uncomment a line or highlighted area|
@@ -481,3 +481,5 @@ the list of files in the current dir
 **2.47** Move all terminal control strings into an list.
 
 **2.48** Split pye.py into a core file and port specific front-ends. If a single file is required, just put the core and the front-end into a single file.
+
+**2.49** Change the default search item behavior of find and replace
