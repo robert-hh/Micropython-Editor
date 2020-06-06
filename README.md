@@ -3,7 +3,7 @@
 ## Description
 
 A small text editor written in Python running on 
-- MicroPython.org modules like the PYBoards, ESP32, ESP8266, Teensy 3.5, 3.6 and 4.x
+- MicroPython.org modules like the PYBoards, ESP32, ESP8266, Teensy 3.5, 3.6 and 4.x, W60x
 - pycom.io modules like WipPy, Lopy, SiPy, FiPy, GPy
 - Adafruit Circuitpython modules,
 - SiPeed MaixPy modules,
@@ -67,10 +67,15 @@ shows most of the commands.:
 
 **Instead of Ctrl-letter (e.g. Ctrl-Q), Alt-letter (e.g. Alt-Q) can be used, avoiding conflicts with key binding of some terminal emulators.**
 
-The editor is contained in the file pye.py. Start pye from the REPL prompt
+The editor is contained in the files pye_gen.py pye.py. Start pye from the REPL prompt
 e.g. with  
 
-from pye import pye  
+from pye_gen import pye  
+res = pye(object_1, object_2, ..[, tabsize=n][, undo=n])  
+
+You may also use the combined version pye_mp.py:
+
+from pye_mp import pye  
 res = pye(object_1, object_2, ..[, tabsize=n][, undo=n])  
 
 If object_n is a string, it's considered as the name of a file to be edited
@@ -78,11 +83,11 @@ or a directory to be opened. If it’s a file, the content will be loaded,
 and the name of the file will be returned when pye is closed. If the
 file does not exist, an error is displayed, but the edit window is given that
 name. If it’s a directory, the list of file names will be loaded to the edit
-window. If object_n is a list of strings, these will be edited, and the edited
-list will be returned. If no object is named, pye() will give you an empty
-screen with the Linux versiom, or show the list of files in the micropython board versions, creating a list of strings, unless you save to a file. In that case,
-the file name will be returned. If object_n is neither a string nor a list of
-strings, a buffer with the list of the file names of the actula directory is opened.
+window. If object_n is a list of other items, they will be converted to strings 
+and edited, and the edited list if strings will be returned. 
+If no object is named, pye() will give show the list of files, 
+creating a list of strings, unless you save to a file. In that case,
+the file name will be returned. 
 It is always the last buffer closed, which determines the return value of pye().  
 
 Optional named parameters:
@@ -92,7 +97,11 @@ undo=n  Size of the undo stack (integer). The minimum size is 4.
 
 The Linux/Darwin version can be called from the command line with:
 
-python3 pye.py [filename(s)]
+python3 pye_ux.py [filename(s)]
+
+or using the combined exedcutable version pye:
+
+pye [filename(s)]
 
 Obviously, you may use micropython too. Using python3 (not micropython),
 content can also be redirected or pipe'd into the editor.
@@ -106,7 +115,7 @@ started, when the Redraw-key (Ctrl-E) is hit or on any file window change (Ctrl-
 
 The editor works also well in a Linux or MAC terminal environment (and also in some
 terminal apps of Android - tested with Termux), with both python3 and micropython.
-For that purpose, a small main() section is embedded, which when called with
+For that purpose, a small main() section is embedded in pye_ux.py, which when called with
 CPython also accepts data from a pipe or redirection.
 
 ## Files
@@ -482,4 +491,4 @@ the list of files in the current dir
 
 **2.48** Split pye.py into a core file and port specific front-ends. If a single file is required, just put the core and the front-end into a single file.
 
-**2.49** Change the default search item behavior of find and replace
+**2.49** Change the default search item behavior of find and replace as well as open file.
