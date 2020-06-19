@@ -333,6 +333,7 @@ class Editor:
         self.clear_to_eol()
         res = default
         pos = len(res)
+        del_all = True
         while True:
             key, char = self.get_input()
             if key == KEY_NONE:
@@ -362,9 +363,16 @@ class Editor:
                 self.wr(res[pos:])
                 pos = len(res)
             elif key == KEY_DELETE:
-                if pos < len(res):
-                    res = res[:pos] + res[pos+1:]
-                    push_msg(res[pos:] + ' ')
+                if del_all:
+                    self.wr(Editor.TERMCMD[13] * pos)
+                    self.wr(" " * pos)
+                    self.wr(Editor.TERMCMD[13] * pos)
+                    pos = 0
+                    res = ""
+                else:
+                    if pos < len(res):
+                        res = res[:pos] + res[pos+1:]
+                        push_msg(res[pos:] + ' ')
             elif key == KEY_BACKSPACE:
                 if pos > 0:
                     res = res[:pos-1] + res[pos:]
@@ -375,6 +383,7 @@ class Editor:
                 if Editor.yank_buffer:
                     res += Editor.yank_buffer[0][:self.width - len(prompt) - pos - 1]
                     push_msg(res[pos:])
+            del_all = False
     def getsymbol(self, s, pos, zap):
         if pos < len(s) and zap is not None:
             start = self.skip_while(s, pos, zap, -1)

@@ -41,7 +41,7 @@ shows most of the commands.:
 |End|Toggle the position between the end-of-the-code and end-of-line|
 |Enter|Enter a line break at the cursor position. Auto-indent is supported|
 |Backspace|Delete char left to the  cursor (The key must be set to ASCII-Del). If text are highlighted, delete the highlighted area|
-|Del|Delete the char under the cursor. At the end of the line join the next line. If autoindent is enabled, delete also the leading spaces of the joined line. If text are highlighted, delete the highlighted area|
+|Del|Delete the char under the cursor. At the end of the line join the next line. If autoindent is enabled, delete also the leading spaces of the joined line. If text are highlighted, delete the highlighted area. In line edit mode, Del as first keystroke will clear the entry.|
 |Ctrl-Del|Delete the word under the cursor or space up to the next non-space|
 |Ctrl-O|Open a new file. If the file name is left empty, an empty buffer is opened|
 |Ctrl-W|Toggle to the next file buffer|
