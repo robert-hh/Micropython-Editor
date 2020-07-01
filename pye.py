@@ -19,7 +19,7 @@
 ## - Added multi-file support
 ##
 
-PYE_VERSION   = " V2.49 "
+PYE_VERSION   = " V2.50 "
 
 import sys
 import gc
@@ -181,6 +181,7 @@ class Editor:
     replc_pattern = ""
     comment_char = "\x23 " ## for #
     word_char = "_\\" ## additional character in a word
+    match_span = 50  ## number of lines to search for a bracket match
 
     def __init__(self, tab_size, undo_limit, io_device):
         self.top_line = self.cur_line = self.row = self.vcol = self.col = self.margin = 0
@@ -748,24 +749,28 @@ class Editor:
                     way = 1 if i < 4 else -1  ## set direction up/down
                     i = self.cur_line  ## set starting point
                     c = self.col + way  ## one off the current position
-                    lstop = self.total_lines if way > 0 else -1
+                    lstop = (min(self.total_lines, i + self.match_span) 
+                             if way > 0 else 
+                             max(-1, i - self.match_span))
                     while i != lstop:
-                        cstop = len(self.content[i]) if way > 0 else -1
-                        while c != cstop:
-                            if self.content[i][c] == match:
-                                if level == 0:  ## match found
-                                    self.cur_line, self.col  = i, c
-                                    return  ## return here instead of ml-breaking
-                                else:
-                                    level -= 1
-                            elif self.content[i][c] == srch:
-                                level += 1
-                            c += way
+                        l = self.content[i]
+                        cstop = len(l) if way > 0 else -1
+                        if srch in l or match in l:
+                            while c != cstop:
+                                if l[c] == match:
+                                    if level == 0:  ## match found
+                                        self.cur_line, self.col  = i, c
+                                        return  ## return here instead of ml-breaking
+                                    else:
+                                        level -= 1
+                                elif l[c] == srch:
+                                    level += 1
+                                c += way
                         i += way
                         ## set starting point for the next line.
                         ## treatment for the first and last line is implicit.
                         c = 0 if way > 0 else len(self.content[i]) - 1
-                    self.message = "No match"
+                    self.message = "No match in {} lines".format(abs(lstop - self.cur_line))
         elif key == KEY_MARK:
             if self.mark is None:
                 self.mark = (self.cur_line, self.col)
