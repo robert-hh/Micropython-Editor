@@ -492,3 +492,5 @@ the list of files in the current dir
 **2.48** Split pye.py into a core file and port specific front-ends. If a single file is required, just put the core and the front-end into a single file.
 
 **2.49** Change the default search item behavior of find and replace as well as open file.
+
+**2.50** Limit the span for bracket match to 50 lines and improve the speed

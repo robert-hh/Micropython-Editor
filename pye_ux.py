@@ -65,6 +65,8 @@ if __name__ == "__main__":
     fd_tty = 0
     if len(sys.argv) > 1:
         name = sys.argv[1:]
+        io_device = IO_DEVICE(fd_tty)
+        pye_edit(*name, undo=500, io_device=io_device)
     else:
         name = "."
         if not is_micropython:
@@ -75,7 +77,7 @@ if __name__ == "__main__":
                 fd_tty = os.open("/dev/tty", os.O_RDONLY) ## memorized, if new fd
                 for i, l in enumerate(name):  ## strip and convert
                     name[i], tc = expandtabs(l.rstrip('\r\n\t '))
+        io_device = IO_DEVICE(fd_tty)
+        pye_edit(name, undo=500, io_device=io_device)
 
-    io_device = IO_DEVICE(fd_tty)
-    pye_edit(*name, undo=500, io_device=io_device)
     io_device.deinit_tty()
