@@ -1,4 +1,4 @@
-PYE_VERSION   = " V2.50 "
+PYE_VERSION   = " V2.51 "
 import sys
 import gc
 import os
@@ -324,9 +324,6 @@ class Editor:
         return (res[0], res[2]) if res[3] > 0 else (res[0], res[2] - 1)
     def line_edit(self, prompt, default, zap=None):
         push_msg = lambda msg: self.wr(msg + Editor.TERMCMD[13] * len(msg))
-        symbol = self.getsymbol(self.content[self.cur_line], self.col, zap)
-        if symbol:
-            default = symbol[:Editor.width - len(prompt) - 1]
         self.goto(Editor.height, 0)
         self.hilite(1)
         self.wr(prompt)
@@ -381,9 +378,8 @@ class Editor:
                     pos -= 1
                     push_msg(res[pos:] + ' ')
             elif key == KEY_PASTE:
-                if Editor.yank_buffer:
-                    res += Editor.yank_buffer[0][:self.width - len(prompt) - pos - 1]
-                    push_msg(res[pos:])
+                res += self.getsymbol(self.content[self.cur_line], self.col, zap)[:Editor.width - pos - len(prompt) - 1]
+                push_msg(res[pos:])
             del_all = False
     def getsymbol(self, s, pos, zap):
         if pos < len(s) and zap is not None:

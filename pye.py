@@ -19,7 +19,7 @@
 ## - Added multi-file support
 ##
 
-PYE_VERSION   = " V2.50 "
+PYE_VERSION   = " V2.51 "
 
 import sys
 import gc
@@ -378,9 +378,6 @@ class Editor:
 
     def line_edit(self, prompt, default, zap=None):  ## better one: added cursor keys and backsp, delete
         push_msg = lambda msg: self.wr(msg + Editor.TERMCMD[13] * len(msg)) ## Write a message and move cursor back
-        symbol = self.getsymbol(self.content[self.cur_line], self.col, zap)
-        if symbol:
-            default = symbol[:Editor.width - len(prompt) - 1]
         self.goto(Editor.height, 0)
         self.hilite(1)
         self.wr(prompt)
@@ -435,9 +432,8 @@ class Editor:
                     pos -= 1
                     push_msg(res[pos:] + ' ') ## update tail
             elif key == KEY_PASTE: ## Get from content
-                if Editor.yank_buffer:
-                    res += Editor.yank_buffer[0][:self.width - len(prompt) - pos - 1]
-                    push_msg(res[pos:]) ## update tail
+                res += self.getsymbol(self.content[self.cur_line], self.col, zap)[:Editor.width - pos - len(prompt) - 1]
+                push_msg(res[pos:])
             del_all = False
 
     def getsymbol(self, s, pos, zap):
