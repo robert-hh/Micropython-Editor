@@ -1,4 +1,4 @@
-PYE_VERSION   = " V2.51 "
+PYE_VERSION   = " V2.52 "
 import sys
 import gc
 import os
@@ -142,7 +142,6 @@ class Editor:
         "{chd}{file} Row: {row}/{total} Col: {col}  {msg}",
         "{chd}{file} {row}:{col}  {msg}",
     ]
-    
     yank_buffer = []
     find_pattern = ""
     case = "n"
@@ -221,8 +220,8 @@ class Editor:
                         break
                 if len(in_buffer) == 2 and c.isalpha():
                     in_buffer = chr(ord(in_buffer[1]) & 0x1f)
-            if in_buffer in self.KEYMAP:
-                c = self.KEYMAP[in_buffer]
+            if in_buffer in Editor.KEYMAP:
+                c = Editor.KEYMAP[in_buffer]
                 if c != KEY_MOUSE:
                     return c, None
                 else:
@@ -462,13 +461,12 @@ class Editor:
             return None
     def undo_add(self, lnum, text, key, span = 1, chain=False):
         self.changed = '*'
-        if (len(self.undo) == 0 or key == KEY_NONE or 
+        if (len(self.undo) == 0 or key == KEY_NONE or
             self.undo[-1][3] != key or self.undo[-1][0] != lnum):
             if len(self.undo) >= self.undo_limit:
                 del self.undo[0]
             self.undo.append([lnum, span, text, key, self.col, chain])
             self.redo = []
-    
     def undo_redo(self, undo, redo):
         chain = True
         redo_start = len(redo)
@@ -554,13 +552,13 @@ class Editor:
             self.col = self.vcol
             if self.skip_up():
                 l = self.content[self.cur_line]
-            pos = self.skip_until(l, self.col - 1, self.word_char, -1)
-            self.col = self.skip_while(l, pos, self.word_char, -1) + 1
+            pos = self.skip_until(l, self.col - 1, Editor.word_char, -1)
+            self.col = self.skip_while(l, pos, Editor.word_char, -1) + 1
         elif key == KEY_WORD_RIGHT:
             if self.skip_down(l):
                 l = self.content[self.cur_line]
-            pos = self.skip_until(l, self.col, self.word_char, 1)
-            self.col = self.skip_while(l, pos, self.word_char, 1)
+            pos = self.skip_until(l, self.col, Editor.word_char, 1)
+            self.col = self.skip_while(l, pos, Editor.word_char, 1)
         elif key == KEY_DELETE:
             self.col = self.vcol
             if self.mark is not None:
@@ -591,7 +589,7 @@ class Editor:
                 self.total_lines -= 1
         elif key == KEY_DEL_WORD:
             if self.col < len(l):
-                pos = self.skip_while(l, self.col, self.word_char, 1)
+                pos = self.skip_while(l, self.col, Editor.word_char, 1)
                 pos += self.spaces(l[pos:])
                 if self.col < pos:
                     self.undo_add(self.cur_line, [l], KEY_DEL_WORD)
@@ -667,9 +665,9 @@ class Editor:
                     way = 1 if i < 4 else -1
                     i = self.cur_line
                     c = self.col + way
-                    lstop = (min(self.total_lines, i + self.match_span) 
-                             if way > 0 else 
-                             max(-1, i - self.match_span))
+                    lstop = (min(self.total_lines, i + Editor.match_span)
+                             if way > 0 else
+                             max(-1, i - Editor.match_span))
                     while i != lstop:
                         l = self.content[i]
                         cstop = len(l) if way > 0 else -1
@@ -714,7 +712,7 @@ class Editor:
                 if start_line > 0:
                     self.mark = (self.mark[0] - 1, self.mark[1])
             if start_line > 0:
-                self.undo_add(start_line - 1, self.content[start_line - 1:end_line], 
+                self.undo_add(start_line - 1, self.content[start_line - 1:end_line],
                               KEY_NONE, end_line - start_line + 1)
                 self.content[start_line - 1:end_line - 1], self.content[end_line - 1] = (
                     self.content[start_line:end_line], self.content[start_line - 1])
@@ -730,7 +728,7 @@ class Editor:
                     if self.cur_line == end_line == (self.total_lines - 1):
                         self.move_left()
             if end_line < self.total_lines:
-                self.undo_add(start_line, self.content[start_line:end_line + 1], 
+                self.undo_add(start_line, self.content[start_line:end_line + 1],
                               KEY_NONE, end_line - start_line + 1)
                 self.content[start_line + 1:end_line + 1], self.content[start_line] = (
                     self.content[start_line:end_line], self.content[end_line])
@@ -838,12 +836,13 @@ class Editor:
                 Editor.yank_buffer[-1], Editor.yank_buffer[0] = tail, head
                 self.total_lines = len(self.content)
         elif key == KEY_WRITE:
-            fname = self.line_edit("Save File: ", self.fname)
+            fname = self.line_edit("Save File: ", self.fname if self.is_dir is False else "")
             if fname:
                 self.put_file(fname)
                 self.fname = fname
                 self.hash = self.hash_buffer()
                 self.changed = ''
+                self.is_dir = False
         elif key == KEY_UNDO:
             self.undo_redo(self.undo, self.redo)
         elif key == KEY_REDO:
@@ -918,6 +917,7 @@ class Editor:
                     self.work_dir = os.getcwd()
                     self.fname = "/" if self.work_dir == "/" else self.work_dir.split("/")[-1]
                     self.content = ["Directory '{}'".format(self.work_dir), ""] + sorted(os.listdir('.'))
+                    self.is_dir = True
                 else:
                     if is_micropython:
                         with open(fname) as f:
@@ -930,6 +930,7 @@ class Editor:
                         self.content[i], tf = expandtabs(l.rstrip('\r\n\t '))
                         tabs |= tf
                     self.write_tabs = "y" if tabs else "n"
+                    self.is_dir = False
             except OSError:
                 self.message = "Error: file '" + fname + "' may not exist"
         self.hash = self.hash_buffer()
