@@ -8,14 +8,14 @@ class IO_DEVICE:
         self.org_termios = termios.tcgetattr(device)
         tty.setraw(device)
         self.sdev = device
-        self.winch = False
+        IO_DEVICE.winch = False
 
     def wr(self, s):
         os.write(1, s.encode("utf-8"))
 
     def rd(self):
         while True:
-            try: ## WINCH causes interrupt
+            try: ## WINCH causes interrupt (not any more)
                 c = os.read(self.sdev,1)
                 flag = c[0]
                 while (flag & 0xc0) == 0xc0:  ## utf-8 char collection
@@ -23,8 +23,8 @@ class IO_DEVICE:
                     flag <<= 1
                 return c.decode("utf-8")
             except:
-                if self.winch: ## simulate REDRAW key
-                    self.winch = False
+                if IO_DEVICE.winch: ## simulate REDRAW key
+                    IO_DEVICE.winch = False
                     return chr(KEY_REDRAW)
 
     def rd_raw(self):
@@ -47,7 +47,7 @@ class IO_DEVICE:
     @staticmethod
     def signal_handler(sig, frame):
         signal.signal(signal.SIGWINCH, signal.SIG_IGN)
-        self.winch = True
+        IO_DEVICE.winch = True
         return True
 
 ## test, if the Editor class is already present
