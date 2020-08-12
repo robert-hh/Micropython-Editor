@@ -4,35 +4,36 @@
 import os, tty, signal, termios, sys
 
 class IO_DEVICE:
-    def __init__(self, device):
+    def __init__(self, device, key_redraw):
         self.org_termios = termios.tcgetattr(device)
         tty.setraw(device)
         self.sdev = device
         IO_DEVICE.winch = False
+        self.key_redraw = key_redraw
+        if hasattr(signal, "SIGWINCH"):
+            signal.signal(signal.SIGWINCH, IO_DEVICE.signal_handler)
 
     def wr(self, s):
         os.write(1, s.encode("utf-8"))
 
     def rd(self):
         while True:
-            try: ## WINCH causes interrupt (not any more)
-                c = os.read(self.sdev,1)
+            try: ## The Signal handler for WINCH forces an exception
+                c = os.read(self.sdev, 1)
                 flag = c[0]
                 while (flag & 0xc0) == 0xc0:  ## utf-8 char collection
-                    c += os.read(self.sdev,1)
+                    c += os.read(self.sdev, 1)
                     flag <<= 1
                 return c.decode("utf-8")
             except:
                 if IO_DEVICE.winch: ## simulate REDRAW key
                     IO_DEVICE.winch = False
-                    return chr(KEY_REDRAW)
+                    return chr(self.key_redraw)
 
     def rd_raw(self):
         return os.read(self.sdev,1)
 
     def get_screen_size(self):
-        if hasattr(signal, "SIGWINCH"):
-            signal.signal(signal.SIGWINCH, IO_DEVICE.signal_handler)
         self.wr('\x1b[999;999H\x1b[6n')
         pos = ''
         char = self.rd() ## expect ESC[yyy;xxxR
@@ -46,13 +47,12 @@ class IO_DEVICE:
 
     @staticmethod
     def signal_handler(sig, frame):
-        signal.signal(signal.SIGWINCH, signal.SIG_IGN)
         IO_DEVICE.winch = True
-        return True
+        raise   ## bad trick: force an exception, which in turn breaks os.read()
 
 ## test, if the Editor class is already present
 if "pye_edit" not in globals().keys():
-    from pye import pye_edit, is_micropython
+    from pye import pye_edit, is_micropython, KEY_REDRAW
 
 def pye(*args, tab_size=4, undo=500):
     io_device = IO_DEVICE(0)
@@ -65,7 +65,7 @@ if __name__ == "__main__":
     fd_tty = 0
     if len(sys.argv) > 1:
         name = sys.argv[1:]
-        io_device = IO_DEVICE(fd_tty)
+        io_device = IO_DEVICE(fd_tty, KEY_REDRAW)
         pye_edit(*name, undo=500, io_device=io_device)
     else:
         name = "."
@@ -77,7 +77,7 @@ if __name__ == "__main__":
                 fd_tty = os.open("/dev/tty", os.O_RDONLY) ## memorized, if new fd
                 for i, l in enumerate(name):  ## strip and convert
                     name[i], tc = expandtabs(l.rstrip('\r\n\t '))
-        io_device = IO_DEVICE(fd_tty)
+        io_device = IO_DEVICE(fd_tty, KEY_REDRAW)
         pye_edit(name, undo=500, io_device=io_device)
 
     io_device.deinit_tty()
