@@ -52,7 +52,7 @@ class IO_DEVICE:
 
 ## test, if the Editor class is already present
 if "pye_edit" not in globals().keys():
-    from pye import pye_edit, is_micropython, KEY_REDRAW
+    from pye import pye_edit, is_micropython, KEY_REDRAW, expandtabs
 
 def pye(*args, tab_size=4, undo=500):
     io_device = IO_DEVICE(0)
