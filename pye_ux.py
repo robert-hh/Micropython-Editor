@@ -3,43 +3,45 @@
 #
 import os, tty, signal, termios, sys
 
+class SignalWindowResize(Exception):
+    pass
+
 class IO_DEVICE:
     def __init__(self, device, key_redraw):
         self.org_termios = termios.tcgetattr(device)
         tty.setraw(device)
         self.sdev = device
-        IO_DEVICE.winch = False
         self.key_redraw = key_redraw
-        if hasattr(signal, "SIGWINCH"):
-            signal.signal(signal.SIGWINCH, IO_DEVICE.signal_handler)
 
     def wr(self, s):
         os.write(1, s.encode("utf-8"))
 
     def rd(self):
         while True:
-            try: ## The Signal handler for WINCH forces an exception
+            try: ## The signal handler for SIGWINCH raises an exception
                 c = os.read(self.sdev, 1)
                 flag = c[0]
                 while (flag & 0xc0) == 0xc0:  ## utf-8 char collection
                     c += os.read(self.sdev, 1)
                     flag <<= 1
                 return c.decode("utf-8")
-            except:
-                if IO_DEVICE.winch: ## simulate REDRAW key
-                    IO_DEVICE.winch = False
-                    return chr(self.key_redraw)
+            except SignalWindowResize:
+                return chr(self.key_redraw)
 
     def rd_raw(self):
         return os.read(self.sdev,1)
 
     def get_screen_size(self):
+        if hasattr(signal, "SIGWINCH"):
+            signal.signal(signal.SIGWINCH, signal.SIG_IGN)
         self.wr('\x1b[999;999H\x1b[6n')
         pos = ''
         char = self.rd() ## expect ESC[yyy;xxxR
         while char != 'R':
             pos += char
             char = self.rd()
+        if hasattr(signal, "SIGWINCH"):
+            signal.signal(signal.SIGWINCH, IO_DEVICE.signal_handler)
         return [int(i, 10) for i in pos.lstrip("\n\x1b[").split(';')]
 
     def deinit_tty(self):
@@ -47,8 +49,7 @@ class IO_DEVICE:
 
     @staticmethod
     def signal_handler(sig, frame):
-        IO_DEVICE.winch = True
-        raise   ## bad trick: force an exception, which in turn breaks os.read()
+        raise SignalWindowResize  ## raise the specific exception, which stops os.read()
 
 ## test, if the Editor class is already present
 if "pye_edit" not in globals().keys():
