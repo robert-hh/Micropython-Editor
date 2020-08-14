@@ -165,6 +165,7 @@ class Editor:
         self.work_dir = os.getcwd()
         self.io_device = io_device
         self.wr = io_device.wr
+        self.is_dir = False
     def goto(self, row, col):
         self.wr(Editor.TERMCMD[0].format(row=row + 1, col=col + 1))
     def clear_to_eol(self):
@@ -909,7 +910,6 @@ class Editor:
             res = ((res * 17 + 1) ^ hash(line)) & 0x3fffffff
         return res
     def get_file(self, fname):
-        self.is_dir = False
         if fname:
             try:
                 self.fname = fname

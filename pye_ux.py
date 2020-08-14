@@ -56,7 +56,7 @@ if "pye_edit" not in globals().keys():
     from pye import pye_edit, is_micropython, KEY_REDRAW, expandtabs
 
 def pye(*args, tab_size=4, undo=500):
-    io_device = IO_DEVICE(0)
+    io_device = IO_DEVICE(0, KEY_REDRAW)
     ret = pye_edit(*args, tab_size=tab_size, undo=undo, io_device=io_device)
     io_device.deinit_tty()
     return ret

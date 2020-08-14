@@ -200,6 +200,7 @@ class Editor:
         self.work_dir = os.getcwd()
         self.io_device = io_device
         self.wr = io_device.wr
+        self.is_dir = False
 
     def goto(self, row, col):
         self.wr(Editor.TERMCMD[0].format(row=row + 1, col=col + 1))
@@ -1005,7 +1006,6 @@ class Editor:
 
 ## Read file into content
     def get_file(self, fname):
-        self.is_dir = False
         if fname:
             try:
                 self.fname = fname
@@ -1174,7 +1174,7 @@ if "pye_edit" not in globals().keys():
     from pye import pye_edit, is_micropython, KEY_REDRAW, expandtabs
 
 def pye(*args, tab_size=4, undo=500):
-    io_device = IO_DEVICE(0)
+    io_device = IO_DEVICE(0, KEY_REDRAW)
     ret = pye_edit(*args, tab_size=tab_size, undo=undo, io_device=io_device)
     io_device.deinit_tty()
     return ret
