@@ -1,4 +1,4 @@
-PYE_VERSION   = " V2.52 "
+PYE_VERSION   = " V2.53 "
 import sys
 import gc
 import os
@@ -909,6 +909,7 @@ class Editor:
             res = ((res * 17 + 1) ^ hash(line)) & 0x3fffffff
         return res
     def get_file(self, fname):
+        self.is_dir = False
         if fname:
             try:
                 self.fname = fname
@@ -930,7 +931,6 @@ class Editor:
                         self.content[i], tf = expandtabs(l.rstrip('\r\n\t '))
                         tabs |= tf
                     self.write_tabs = "y" if tabs else "n"
-                    self.is_dir = False
             except OSError:
                 self.message = "Error: file '" + fname + "' may not exist"
         self.hash = self.hash_buffer()
