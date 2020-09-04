@@ -53,7 +53,9 @@ class IO_DEVICE:
 
 ## test, if the Editor class is already present
 if "pye_edit" not in globals().keys():
-    from pye import pye_edit, is_micropython, KEY_REDRAW, expandtabs
+    from pye import pye_edit, is_micropython, KEY_REDRAW, Editor
+
+Editor.match_span = 500
 
 def pye(*args, tab_size=4, undo=500):
     io_device = IO_DEVICE(0, KEY_REDRAW)
@@ -73,11 +75,9 @@ if __name__ == "__main__":
         if not is_micropython:
             mode = os.fstat(0).st_mode
             if stat.S_ISFIFO(mode) or stat.S_ISREG(mode):
-                name = sys.stdin.readlines()
+                name = [l.rstrip('\r\n\t ').expandtabs(8) for l in sys.stdin]
                 os.close(0) ## close and repopen /dev/tty
-                fd_tty = os.open("/dev/tty", os.O_RDONLY) ## memorized, if new fd
-                for i, l in enumerate(name):  ## strip and convert
-                    name[i], tc = expandtabs(l.rstrip('\r\n\t '))
+        fd_tty = os.open("/dev/tty", os.O_RDONLY) ## memorized, if new fd
         io_device = IO_DEVICE(fd_tty, KEY_REDRAW)
         pye_edit(name, undo=500, io_device=io_device)
 

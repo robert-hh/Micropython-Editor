@@ -1,4 +1,4 @@
-PYE_VERSION   = " V2.53 "
+PYE_VERSION   = " V2.54 "
 import sys
 import gc
 import os
@@ -926,11 +926,9 @@ class Editor:
                     else:
                         with open(fname, errors="ignore") as f:
                             self.content = f.readlines()
-                    tabs = False
+                    self.write_tabs = False
                     for i, l in enumerate(self.content):
-                        self.content[i], tf = expandtabs(l.rstrip('\r\n\t '))
-                        tabs |= tf
-                    self.write_tabs = "y" if tabs else "n"
+                        self.content[i] = self.expandtabs(l.rstrip())
             except OSError:
                 self.message = "Error: file '" + fname + "' may not exist"
         self.hash = self.hash_buffer()
@@ -947,20 +945,21 @@ class Editor:
         except:
             pass
         os.rename(tmpfile, fname)
-def expandtabs(s):
-    if '\t' in s:
-        sb = StringIO()
-        pos = 0
-        for c in s:
-            if c == '\t':
-                sb.write(" " * (8 - pos % 8))
-                pos += 8 - pos % 8
-            else:
-                sb.write(c)
-                pos += 1
-        return sb.getvalue(), True
-    else:
-        return s, False
+    def expandtabs(self, s):
+        if '\t' in s:
+            self.write_tabs = True
+            sb = StringIO()
+            pos = 0
+            for c in s:
+                if c == '\t':
+                    sb.write(" " * (8 - pos % 8))
+                    pos += 8 - pos % 8
+                else:
+                    sb.write(c)
+                    pos += 1
+            return sb.getvalue()
+        else:
+            return s
 def pye_edit(*content, tab_size=4, undo=50, io_device=None):
     if io_device is None:
         print("IO device not defined")
