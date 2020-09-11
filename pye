@@ -21,21 +21,25 @@
 ## - Added multi-file support
 ##
 
-PYE_VERSION   = " V2.54 "
-
-import sys
+PYE_VERSION   = " V2.55 "
+try:
+    import usys as sys
+except:
+    import sys
 import gc
-import os
 
 if sys.implementation.name == "micropython":
     is_micropython = True
+    import uos as os
     from uio import StringIO
 elif sys.implementation.name == "circuitpython":
     is_micropython = True
+    import uos as os
     from io import StringIO
 else:
     is_micropython = False
     const = lambda x:x
+    import os
     from _io import StringIO
 from re import compile as re_compile
 

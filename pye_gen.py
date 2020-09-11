@@ -1,7 +1,10 @@
 #
 # Front-end for Micropython standard console IO
 #
-import sys
+try:
+    import usys as sys
+except:
+    import sys
 
 class IO_DEVICE:
     def __init__(self):

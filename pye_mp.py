@@ -1,16 +1,21 @@
-PYE_VERSION   = " V2.54 "
-import sys
+PYE_VERSION   = " V2.55 "
+try:
+    import usys as sys
+except:
+    import sys
 import gc
-import os
 if sys.implementation.name == "micropython":
     is_micropython = True
+    import uos as os
     from uio import StringIO
 elif sys.implementation.name == "circuitpython":
     is_micropython = True
+    import uos as os
     from io import StringIO
 else:
     is_micropython = False
     const = lambda x:x
+    import os
     from _io import StringIO
 from re import compile as re_compile
 KEY_NONE      = const(0x00)
@@ -1007,7 +1012,10 @@ def pye_edit(*content, tab_size=4, undo=50, io_device=None):
     Editor.yank_buffer = []
     os.chdir(current_dir)
     return slot[0].content if (slot[0].fname == "") else slot[0].fname
-import sys
+try:
+    import usys as sys
+except:
+    import sys
 class IO_DEVICE:
     def __init__(self):
         try:
