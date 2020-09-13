@@ -7,7 +7,7 @@ A small text editor written in Python running on
 - pycom.io modules like WipPy, Lopy, SiPy, FiPy, GPy
 - Adafruit Circuitpython modules,
 - SiPeed MaixPy modules,
-- Linux and Android's terminal windows
+- Linux, OS X and Android's terminal windows
 
  It allows allows to edit files locally on the boards. The offsprong was the editor widget of pfalcon at
  <https://github.com/pfalcon/pyedit>. I ported it to PyBoard and the other modules
@@ -67,7 +67,7 @@ shows most of the commands.:
 
 **Instead of Ctrl-letter (e.g. Ctrl-Q), Alt-letter (e.g. Alt-Q) can be used, avoiding conflicts with key binding of some terminal emulators.**
 
-The editor is contained in the files pye_gen.py pye.py. Start pye from the REPL prompt
+The editor is contained in the files pye_gen.py and pye.py. Start pye from the REPL prompt
 e.g. with  
 
 from pye_gen import pye  
@@ -84,8 +84,8 @@ and the name of the file will be returned when pye is closed. If the
 file does not exist, an error is displayed, but the edit window is given that
 name. If it’s a directory, the list of file names will be loaded to the edit
 window. If object_n is a list of other items, they will be converted to strings 
-and edited, and the edited list if strings will be returned. 
-If no object is named, pye() will give show the list of files, 
+and edited, and the edited list will be returned as strings. 
+If no object is named, pye() will show the list of files, 
 creating a list of strings, unless you save to a file. In that case,
 the file name will be returned. 
 It is always the last buffer closed, which determines the return value of pye().  
@@ -99,7 +99,7 @@ The Linux/Darwin version can be called from the command line with:
 
 python3 pye_ux.py [filename(s)]
 
-or using the combined exedcutable version pye:
+or using the combined executable version pye:
 
 pye [filename(s)]
 
@@ -114,9 +114,9 @@ the file is written. The screen size is determined, when the editor is
 started, when the Redraw-key (Ctrl-E) is hit or on any file window change (Ctrl-W).
 
 The editor works also well in a Linux or MAC terminal environment (and also in some
-terminal apps of Android - tested with Termux), with both python3 and micropython.
-For that purpose, a small main() section is embedded in pye_ux.py, which when called with
-CPython also accepts data from a pipe or redirection.
+terminal apps of Android - tested with Termux) with both python3 and micropython.
+For that purpose, a small main() section is embedded in pye_ux.py, which 
+when called with CPython also accepts data from a pipe or redirection.
 
 ## Files
 
@@ -158,7 +158,8 @@ requires the SSD1963 drivers: https://github.com/robert-hh/SSD1963-TFT-Library-f
 |pye2|Similar to the linemode branch, but the column does not change during vertcal moves (stale)|
 |new_mark|Changed method of highlighting blocks, allowing to move away the cursor once a block is highlighted (stale)|
 
-## Short Version History
+
+## Version History
 
 **1.0** Initial release with all the basic functions
 
@@ -494,3 +495,13 @@ the list of files in the current dir
 **2.49** Change the default search item behavior of find and replace as well as open file.
 
 **2.50** Limit the span for bracket match to 50 lines and improve the speed
+
+**2.51** Re-establish automatic screen redrae on resize for Linux
+
+**2.52** Fix regression error on file creation
+
+**2.53** Fix regression error on handling dirs
+
+**2.54** Fix regression error in the Linux variant
+
+**2.55** Cope with the change from renaming the sys module to usys
