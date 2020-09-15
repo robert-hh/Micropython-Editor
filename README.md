@@ -505,3 +505,5 @@ the list of files in the current dir
 **2.54** Fix regression error in the Linux variant
 
 **2.55** Cope with the change from renaming the sys module to usys
+
+**2.56** Fix regression error when opening multiple files

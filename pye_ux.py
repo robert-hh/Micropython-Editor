@@ -69,7 +69,7 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         name = sys.argv[1:]
         io_device = IO_DEVICE(fd_tty, KEY_REDRAW)
-        pye_edit(*name, undo=500, io_device=io_device)
+        pye_edit(name, undo=500, io_device=io_device)
     else:
         name = "."
         if not is_micropython:

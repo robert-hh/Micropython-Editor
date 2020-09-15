@@ -19,7 +19,7 @@
 ## - Added multi-file support
 ##
 
-PYE_VERSION   = " V2.55 "
+PYE_VERSION   = " V2.56 "
 try:
     import usys as sys
 except:
@@ -1063,7 +1063,7 @@ class Editor:
         else:
             return s
 
-def pye_edit(*content, tab_size=4, undo=50, io_device=None):
+def pye_edit(content, tab_size=4, undo=50, io_device=None):
 ## prepare content
     ## test, if the IO class if provided
     if io_device is None:

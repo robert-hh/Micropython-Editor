@@ -1,4 +1,4 @@
-PYE_VERSION   = " V2.55 "
+PYE_VERSION   = " V2.56 "
 try:
     import usys as sys
 except:
@@ -965,7 +965,7 @@ class Editor:
             return sb.getvalue()
         else:
             return s
-def pye_edit(*content, tab_size=4, undo=50, io_device=None):
+def pye_edit(content, tab_size=4, undo=50, io_device=None):
     if io_device is None:
         print("IO device not defined")
         return
@@ -1051,6 +1051,6 @@ if "pye_edit" not in globals().keys():
     from pye import pye_edit
 def pye(*args, tab_size=4, undo=50):
     io_device = IO_DEVICE()
-    ret = pye_edit(*args, tab_size=tab_size, undo=undo, io_device=io_device)
+    ret = pye_edit(args, tab_size=tab_size, undo=undo, io_device=io_device)
     io_device.deinit_tty()
     return ret

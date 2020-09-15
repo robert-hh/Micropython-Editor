@@ -49,6 +49,6 @@ if "pye_edit" not in globals().keys():
 
 def pye(*args, tab_size=4, undo=50):
     io_device = IO_DEVICE()
-    ret = pye_edit(*args, tab_size=tab_size, undo=undo, io_device=io_device)
+    ret = pye_edit(args, tab_size=tab_size, undo=undo, io_device=io_device)
     io_device.deinit_tty()
     return ret

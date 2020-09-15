@@ -21,7 +21,7 @@
 ## - Added multi-file support
 ##
 
-PYE_VERSION   = " V2.55 "
+PYE_VERSION   = " V2.56 "
 try:
     import usys as sys
 except:
@@ -1065,7 +1065,7 @@ class Editor:
         else:
             return s
 
-def pye_edit(*content, tab_size=4, undo=50, io_device=None):
+def pye_edit(content, tab_size=4, undo=50, io_device=None):
 ## prepare content
     ## test, if the IO class if provided
     if io_device is None:
@@ -1190,7 +1190,7 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         name = sys.argv[1:]
         io_device = IO_DEVICE(fd_tty, KEY_REDRAW)
-        pye_edit(*name, undo=500, io_device=io_device)
+        pye_edit(name, undo=500, io_device=io_device)
     else:
         name = "."
         if not is_micropython:
