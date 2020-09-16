@@ -496,7 +496,7 @@ the list of files in the current dir
 
 **2.50** Limit the span for bracket match to 50 lines and improve the speed
 
-**2.51** Re-establish automatic screen redrae on resize for Linux
+**2.51** Re-establish automatic screen redraw on resize for Linux
 
 **2.52** Fix regression error on file creation
 
@@ -507,3 +507,5 @@ the list of files in the current dir
 **2.55** Cope with the change from renaming the sys module to usys
 
 **2.56** Fix regression error when opening multiple files
+
+**2.57** Slight speed improvement when pasting

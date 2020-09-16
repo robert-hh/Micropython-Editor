@@ -21,7 +21,7 @@
 ## - Added multi-file support
 ##
 
-PYE_VERSION   = " V2.56 "
+PYE_VERSION   = " V2.57 "
 try:
     import usys as sys
 except:
@@ -620,6 +620,7 @@ class Editor:
             self.undo_add(self.cur_line, [l], 0x20 if char == " " else 0x41, 1, chain)
             self.content[self.cur_line] = l[:self.col] + char + l[self.col:]
             self.col += len(char)
+            return  ## return here for a marginally faster paste
         elif key == KEY_SHIFT_CTRL_LEFT:
             self.set_mark()
             key = KEY_WORD_LEFT
@@ -1027,8 +1028,10 @@ class Editor:
                         with open(fname, errors="ignore") as f:
                             self.content = f.readlines()
                     self.write_tabs = False
-                    for i, l in enumerate(self.content):
+                    i = 0
+                    for l in self.content:
                         self.content[i] = self.expandtabs(l.rstrip())
+                        i += 1
             except OSError:
                 self.message = "Error: file '" + fname + "' may not exist"
         self.hash = self.hash_buffer()
@@ -1039,9 +1042,10 @@ class Editor:
         with open(tmpfile, "w") as f:
             for l in self.content:
                 if self.write_tabs == 'y':
-                    f.write(self.packtabs(l) + '\n')
+                    f.write(self.packtabs(l))
                 else:
-                    f.write(l + '\n')
+                    f.write(l)
+                f.write('\n')
         try:
             os.remove(fname)
         except:
