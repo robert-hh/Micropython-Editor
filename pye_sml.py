@@ -560,7 +560,8 @@ class Editor:
         tmpfile = fname + ".pyetmp"
         with open(tmpfile, "w") as f:
             for l in self.content:
-                f.write(l + '\n')
+                f.write(l)
+                f.write('\n')
         try:
             remove(fname)
         except:

@@ -24,10 +24,11 @@ import sys
 import gc
 import os
 
-if sys.implementation[0] == "micropython":
+si = sys.implementation
+if type(si) == tuple and si[0] == "micropython":
     is_micropython = True
     from uio import StringIO
-elif sys.implementation[0] == "circuitpython":
+elif type(si) == tuple and si[0] == "circuitpython":
     is_micropython = True
     from io import StringIO
 else:
@@ -786,7 +787,8 @@ class Editor:
         tmpfile = fname + ".pyetmp"
         with open(tmpfile, "w") as f:
             for l in self.content:
-                f.write(l + '\n')
+                f.write(l)
+                f.write('\n')
         try:
             os.remove(fname)
         except:

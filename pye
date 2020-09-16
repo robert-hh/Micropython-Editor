@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 ##
 ## Small python text editor based on the
 ## Very simple VT100 terminal text editor widget
@@ -20,10 +22,7 @@
 
 PYE_VERSION   = " V2.48m "
 
-try:
-    import usys as sys
-except:
-    import sys
+import sys
 import gc
 import os
 
@@ -762,21 +761,14 @@ class Editor:
             res = ((res * 17 + 1) ^ hash(line)) & 0x3fffffff
         return res
 
-## Get the filetype due to absence of os.stat
-    def filetype(self, name):
-        for t in os.ilistdir("."):
-            if t[0] == name:
-                return t[1]
-        raise OSError
-
 ## Read file into content
     def get_file(self, fname):
         if fname:
             try:
                 self.fname = fname
-                if fname in ('.', '..') or (self.filetype(fname) & 0x4000):
+                if fname in ('.', '..') or (os.stat(fname)[0] & 0x4000): ## Dir
                     os.chdir(fname)
-                    self.work_dir = os.getcwd()
+                    self.work_dir = os.getcwd()  # let the os module do the normalization
                     self.fname = "/" if self.work_dir == "/" else self.work_dir.split("/")[-1]
                     self.content = ["Directory '{}'".format(self.work_dir), ""] + sorted(os.listdir('.'))
                 else:
@@ -786,41 +778,40 @@ class Editor:
                     else:
                         with open(fname, errors="ignore") as f:
                             self.content = f.readlines()
-                    i = 0
-                    for l in self.content:
-                        self.content[i] = self.expandtabs(l.rstrip())
-                        i += 1
+                    for i, l in enumerate(self.content):
+                        self.content[i], tf = expandtabs(l.rstrip('\r\n\t '))
             except OSError:
                 self.message = "Error: file '" + fname + "' may not exist"
         self.hash = self.hash_buffer()
 
 ## write file
     def put_file(self, fname):
-        from os import remove
-        try:
-            remove(fname)
-        except:
-            pass
-        with open(fname, "w") as f:
+        tmpfile = fname + ".pyetmp"
+        with open(tmpfile, "w") as f:
             for l in self.content:
                 f.write(l)
                 f.write('\n')
+        try:
+            os.remove(fname)
+        except:
+            pass
+        os.rename(tmpfile, fname)
 
 ## expandtabs: hopefully sometimes replaced by the built-in function
-    def expandtabs(self, s):
-        if '\t' in s:
-            sb = StringIO()
-            pos = 0
-            for c in s:
-                if c == '\t':
-                    sb.write(" " * (8 - pos % 8))
-                    pos += 8 - pos % 8
-                else:
-                    sb.write(c)
-                    pos += 1
-            return sb.getvalue()
-        else:
-            return s
+def expandtabs(s):
+    if '\t' in s:
+        sb = StringIO()
+        pos = 0
+        for c in s:
+            if c == '\t': ## tab is seen
+                sb.write(" " * (8 - pos % 8)) ## replace by space
+                pos += 8 - pos % 8
+            else:
+                sb.write(c)
+                pos += 1
+        return sb.getvalue(), True
+    else:
+        return s, False
 
 def pye_edit(content, tab_size=4, undo=50, io_device=None):
 ## prepare content
@@ -876,3 +867,81 @@ def pye_edit(content, tab_size=4, undo=50, io_device=None):
 ## close
     os.chdir(current_dir)  ## restore dir
     return slot[0].content if (slot[0].fname == "") else slot[0].fname
+#
+# Front-end for Linux
+#
+import os, tty, signal, termios, sys
+
+class IO_DEVICE:
+    def __init__(self, device):
+        self.org_termios = termios.tcgetattr(device)
+        tty.setraw(device)
+        self.sdev = device
+        self.winch = False
+
+    def wr(self, s):
+        os.write(1, s.encode("utf-8"))
+
+    def rd(self):
+        while True:
+            try: ## WINCH causes interrupt
+                c = os.read(self.sdev,1)
+                flag = c[0]
+                while (flag & 0xc0) == 0xc0:  ## utf-8 char collection
+                    c += os.read(self.sdev,1)
+                    flag <<= 1
+                return c.decode("utf-8")
+            except:
+                if self.winch: ## simulate REDRAW key
+                    self.winch = False
+                    return chr(KEY_REDRAW)
+
+    def get_screen_size(self):
+        if hasattr(signal, "SIGWINCH"):
+            signal.signal(signal.SIGWINCH, IO_DEVICE.signal_handler)
+        self.wr('\x1b[999;999H\x1b[6n')
+        pos = ''
+        char = self.rd() ## expect ESC[yyy;xxxR
+        while char != 'R':
+            pos += char
+            char = self.rd()
+        return [int(i, 10) for i in pos.lstrip("\n\x1b[").split(';')]
+
+    def deinit_tty(self):
+        termios.tcsetattr(self.sdev, termios.TCSANOW, self.org_termios)
+
+    @staticmethod
+    def signal_handler(sig, frame):
+        signal.signal(signal.SIGWINCH, signal.SIG_IGN)
+        self.winch = True
+        return True
+
+## test, if the Editor class is already present
+if "pye_edit" not in globals().keys():
+    from pye import pye_edit, is_micropython
+
+def pye(*args, tab_size=4, undo=500):
+    io_device = IO_DEVICE(0)
+    ret = pye_edit(args, tab_size=tab_size, undo=undo, io_device=io_device)
+    io_device.deinit_tty()
+    return ret
+
+if __name__ == "__main__":
+    import stat
+    fd_tty = 0
+    if len(sys.argv) > 1:
+        name = sys.argv[1:]
+    else:
+        name = "."
+        if not is_micropython:
+            mode = os.fstat(0).st_mode
+            if stat.S_ISFIFO(mode) or stat.S_ISREG(mode):
+                name = sys.stdin.readlines()
+                os.close(0) ## close and repopen /dev/tty
+                fd_tty = os.open("/dev/tty", os.O_RDONLY) ## memorized, if new fd
+                for i, l in enumerate(name):  ## strip and convert
+                    name[i], tc = expandtabs(l.rstrip('\r\n\t '))
+
+    io_device = IO_DEVICE(fd_tty)
+    pye_edit(name, undo=500, io_device=io_device)
+    io_device.deinit_tty()

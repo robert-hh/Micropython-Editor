@@ -561,7 +561,8 @@ class Editor:
             pass
         with open(fname, "w") as f:
             for l in self.content:
-                f.write(l + '\n')
+                f.write(l)
+                f.write('\n')
 
 ## expandtabs: hopefully sometimes replaced by the built-in function
     def expandtabs(s):
