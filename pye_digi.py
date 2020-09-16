@@ -555,7 +555,10 @@ class Editor:
 ## write file
     def put_file(self, fname):
         from os import remove
-        remove(fname)
+        try:
+            remove(fname)
+        except:
+            pass
         with open(fname, "w") as f:
             for l in self.content:
                 f.write(l + '\n')
