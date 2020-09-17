@@ -18,7 +18,7 @@
 ## - Added multi-file support
 ##
 
-PYE_VERSION   = " V2.48m "
+PYE_VERSION   = " V2.49m "
 
 try:
     import usys as sys
@@ -389,6 +389,7 @@ class Editor:
                 self.scroll_up(1)
 
     def move_left(self):
+        self.col = self.vcol
         if self.col == 0 and self.cur_line > 0:
             self.col = len(self.content[self.cur_line - 1])
             self.move_up()
@@ -441,7 +442,7 @@ class Editor:
         redo_start = len(redo)
         while len(undo) > 0 and chain:
             action = undo.pop() ## get action from stack
-            if not action[3] in (KEY_INDENT, KEY_DEDENT, KEY_COMMENT):
+            if not action[3] in (KEY_INDENT, KEY_DEDENT):
                 self.cur_line = action[0] ## wrong for Bkspc of BOL
             self.col = action[4]
             if len(redo) >= self.undo_limit: ## mybe not enough
@@ -470,7 +471,7 @@ class Editor:
 
     def set_mark(self):  ## start the highlighting if not done yet
         if self.mark is None:
-            self.mark = (self.cur_line, self.col)
+            self.mark = (self.cur_line, self.vcol)
 
     def yank_mark(self): # Copy marked area to the yank buffer
         start_row, start_col, end_row, end_col = self.mark_range()
@@ -550,9 +551,7 @@ class Editor:
         elif key == KEY_HOME:
             self.col = self.spaces(l) if self.col == 0 else 0
         elif key == KEY_END:
-            ni = len(l.split('\x23')[0].rstrip()) ## '\x23' is '#'
-            ns = self.spaces(l)
-            self.col = ni if self.col >= len(l) and ni > ns else len(l)
+            self.col = len(l)
         elif key == KEY_PGUP:
             self.cur_line -= Editor.height
         elif key == KEY_PGDN:
