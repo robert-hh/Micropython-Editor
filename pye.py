@@ -19,7 +19,7 @@
 ## - Added multi-file support
 ##
 
-PYE_VERSION   = " V2.57 "
+PYE_VERSION   = " V2.58 "
 try:
     import usys as sys
 except:
@@ -536,6 +536,7 @@ class Editor:
 
     def undo_add(self, lnum, text, key, span = 1, chain=False):
         self.changed = '*'
+        if span == 0: self.message = "Added undo with span 0"
         if (len(self.undo) == 0 or key == KEY_NONE or
             self.undo[-1][3] != key or self.undo[-1][0] != lnum):
             if len(self.undo) >= self.undo_limit: ## drop oldest undo(s), if full
@@ -554,19 +555,17 @@ class Editor:
             if len(redo) >= self.undo_limit: ## mybe not enough
                 del redo[0]
             if action[1] >= 0: ## insert or replace line
-                if action[1] == 0: ## undo inserts, redo deletes
-                    redo.append(action[0:1] + [-len(action[2]), None] + action[3:])
-                else: ## undo replaces, and so does redo
-                    redo.append(action[0:1] + [len(action[2])] +  ## safe to redo stack
-                        [self.content[action[0]:action[0] + action[1]]] + action[3:])
+                redo.append(action[0:1] + [len(action[2])] +  ## safe to redo stack
+                    [self.content[action[0]:action[0] + action[1]]] + action[3:])
                 if action[0] < self.total_lines:
                     self.content[action[0]:action[0] + action[1]] = action[2] # insert lines
                 else:
                     self.content += action[2]
-            else: ## delete lines
-                redo.append(action[0:1] + [0] +   ## undo deletes, redo inserts
-                    [self.content[action[0]:action[0] - action[1]]] + action[3:])
+            else: ## delete lines, restore the current line
+                redo.append(action[0:1] + [1] +   ## undo deletes, redo inserts
+                    [self.content[action[0]:action[0] - action[1] + 1]] + action[3:])
                 del self.content[action[0]:action[0] - action[1]]
+                self.content[action[0]] = action[2][0] # replace current line with save content
             chain = action[5]
         if (len(redo) - redo_start) > 0: ## Performed at least one action
             redo[-1][5] = True ## fix the chaining flags for reversed action order.
@@ -918,10 +917,8 @@ class Editor:
                 head, tail = Editor.yank_buffer[0], Editor.yank_buffer[-1] ## save the buffer
                 Editor.yank_buffer[0] = self.content[self.cur_line][:self.col] + Editor.yank_buffer[0]
                 Editor.yank_buffer[-1] += self.content[self.cur_line][self.col:]
-                if len(Editor.yank_buffer) > 1:
-                    self.undo_add(self.cur_line, None, KEY_NONE, -len(Editor.yank_buffer) + 1, chain) # remove
-                else:
-                    self.undo_add(self.cur_line, [self.content[self.cur_line]], KEY_NONE, 1, chain) # replace
+                ni = 1 if len(Editor.yank_buffer) <= 1 else 1 - len(Editor.yank_buffer)
+                self.undo_add(self.cur_line, [self.content[self.cur_line]], KEY_NONE, ni, chain) # replace
                 self.content[self.cur_line:self.cur_line + 1] = Editor.yank_buffer # insert lines
                 Editor.yank_buffer[-1], Editor.yank_buffer[0] = tail, head ## restore the buffer
 
@@ -1115,7 +1112,7 @@ def pye_edit(content, tab_size=4, undo=50, io_device=None):
                 index += 1
         except Exception as err:
             slot[index].message = "{!r}".format(err)
-            ## raise
+            ## raise  ## remove the comment to trace bugs
 ## All windows closed, clean up
     Editor.yank_buffer = []
 ## close

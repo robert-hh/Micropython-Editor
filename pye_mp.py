@@ -1,4 +1,4 @@
-PYE_VERSION   = " V2.57 "
+PYE_VERSION   = " V2.58 "
 try:
     import usys as sys
 except:
@@ -467,6 +467,7 @@ class Editor:
             return None
     def undo_add(self, lnum, text, key, span = 1, chain=False):
         self.changed = '*'
+        if span == 0: self.message = "Added undo with span 0"
         if (len(self.undo) == 0 or key == KEY_NONE or
             self.undo[-1][3] != key or self.undo[-1][0] != lnum):
             if len(self.undo) >= self.undo_limit:
@@ -484,19 +485,17 @@ class Editor:
             if len(redo) >= self.undo_limit:
                 del redo[0]
             if action[1] >= 0:
-                if action[1] == 0:
-                    redo.append(action[0:1] + [-len(action[2]), None] + action[3:])
-                else:
-                    redo.append(action[0:1] + [len(action[2])] +
-                        [self.content[action[0]:action[0] + action[1]]] + action[3:])
+                redo.append(action[0:1] + [len(action[2])] +
+                    [self.content[action[0]:action[0] + action[1]]] + action[3:])
                 if action[0] < self.total_lines:
                     self.content[action[0]:action[0] + action[1]] = action[2]
                 else:
                     self.content += action[2]
             else:
-                redo.append(action[0:1] + [0] +
-                    [self.content[action[0]:action[0] - action[1]]] + action[3:])
+                redo.append(action[0:1] + [1] +
+                    [self.content[action[0]:action[0] - action[1] + 1]] + action[3:])
                 del self.content[action[0]:action[0] - action[1]]
+                self.content[action[0]] = action[2][0]
             chain = action[5]
         if (len(redo) - redo_start) > 0:
             redo[-1][5] = True
@@ -835,10 +834,8 @@ class Editor:
                 head, tail = Editor.yank_buffer[0], Editor.yank_buffer[-1]
                 Editor.yank_buffer[0] = self.content[self.cur_line][:self.col] + Editor.yank_buffer[0]
                 Editor.yank_buffer[-1] += self.content[self.cur_line][self.col:]
-                if len(Editor.yank_buffer) > 1:
-                    self.undo_add(self.cur_line, None, KEY_NONE, -len(Editor.yank_buffer) + 1, chain)
-                else:
-                    self.undo_add(self.cur_line, [self.content[self.cur_line]], KEY_NONE, 1, chain)
+                ni = 1 if len(Editor.yank_buffer) <= 1 else 1 - len(Editor.yank_buffer)
+                self.undo_add(self.cur_line, [self.content[self.cur_line]], KEY_NONE, ni, chain)
                 self.content[self.cur_line:self.cur_line + 1] = Editor.yank_buffer
                 Editor.yank_buffer[-1], Editor.yank_buffer[0] = tail, head
                 self.total_lines = len(self.content)
