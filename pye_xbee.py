@@ -20,26 +20,11 @@
 ##
 
 PYE_VERSION   = " V2.58 "
-try:
-    import usys as sys
-except:
-    import sys
-import gc
 
-si = sys.implementation
-if type(si) == tuple and si[0] == "micropython":
-    is_micropython = True
-    import uos as os
-    from uio import StringIO
-elif type(si) == tuple and si[0] == "circuitpython":
-    is_micropython = True
-    import uos as os
-    from io import StringIO
-else:
-    is_micropython = False
-    const = lambda x:x
-    import os
-    from _io import StringIO
+import sys
+import gc
+import uos as os
+from uio import StringIO
 
 KEY_NONE      = const(0x00)
 KEY_UP        = const(0x0b)
@@ -251,10 +236,9 @@ class Editor:
         self.mouse_reporting(True) ## enable mouse reporting
         if flag:
             self.message = PYE_VERSION
-        if is_micropython:
-            gc.collect()
-            if flag:
-                self.message += "{} Bytes Memory available".format(gc.mem_free())
+        gc.collect()
+        if flag:
+            self.message += "{} Bytes Memory available".format(gc.mem_free())
         self.changed = '' if self.hash == self.hash_buffer() else '*'
 
     def get_input(self):  ## read from interface/keyboard one byte each and match against function keys
@@ -1009,12 +993,8 @@ class Editor:
                     self.content = ["Directory '{}'".format(self.work_dir), ""] + sorted(os.listdir('.'))
                     self.is_dir = True
                 else:
-                    if is_micropython:
-                        with open(fname) as f:
-                            self.content = f.readlines()
-                    else:
-                        with open(fname, errors="ignore") as f:
-                            self.content = f.readlines()
+                    with open(fname) as f:
+                        self.content = f.readlines()
                     self.write_tabs = False
                     i = 0
                     for l in self.content:
