@@ -128,6 +128,7 @@ sys.stdout and sys.stdin.
 - peteensy.py: A front-end for teensy 3.5 and 3.6 .
 - pye_win.py: an experimental version for the cmd window of Windows 10. It requires
 enabling the VT100 support, as detailed e.g. here: https://stackoverflow.com/questions/51680709/colored-text-output-in-powershell-console-using-ansi-vt100-codes
+- pye_xbee.py: Core file for XBEE 3 devices. 
 - Pyboard Editor.pdf: A short documentation
 - strip.sh: sample Shell script which creates the different derived files out of pye.py and
 the front-end files, using cat and sed.
@@ -139,6 +140,9 @@ all MicroPython boards. In order to use it on an board with small memory
 like the esp8266, you have to put pye_mp.py into the directory esp8266/modules,
 esp32/modules or smt32/modules (micropython.org) or esp32/frozen (pycom.io) and
 rebuild micropython.  A cross-compiled version may executed from the file system.
+- pye_x3.py, pye_x3.mpy: Condensed file for XBEE 3 devices. The .mpy file can
+be imported from the file system, but it should be better bundled into flash with
+uos.bundle().
 - pye: Executable single file for Linux
 
 ### Further front-ends
@@ -509,3 +513,5 @@ the list of files in the current dir
 **2.56** Fix regression error when opening multiple files
 
 **2.57** Slight speed improvement when pasting
+
+**2.58** Fix a glitch in redo after undo after pasting a full line.
