@@ -64,6 +64,8 @@ shows most of the commands.:
 |Ctrl-P|Comment/Uncomment a line or highlighted area|
 |Ctrl-A|Change settings for tab size, search case sensitivity, auto-indent, comment string and writing tabs (opt)|
 |Ctrl-E|Redraw the screen. On the Micro devices it shows the amount of free memory|
+|Mouse click|Click twice at the same position to start highlighting at the current position, or clear the highlight. The click speed does not matter. The highlight can then be extended by moving the cursor clicking at different positions.|
+|Mouse scroll wheel|Move the cursor up and down, scrolling the content as needed.|
 
 **Instead of Ctrl-letter (e.g. Ctrl-Q), Alt-letter (e.g. Alt-Q) can be used, avoiding conflicts with key binding of some terminal emulators.**
 
@@ -515,3 +517,5 @@ the list of files in the current dir
 **2.57** Slight speed improvement when pasting
 
 **2.58** Fix a glitch in redo after undo after pasting a full line.
+
+**2.59** Change mouse support. Clicking twice at the same position enables/disables marking. Marking is indicated by the <> characters at the start of the status line.

@@ -1,4 +1,4 @@
-PYE_VERSION   = " V2.58 "
+PYE_VERSION   = " V2.59 "
 try:
     import usys as sys
 except:
@@ -144,8 +144,8 @@ class Editor:
         '\x1b[1;{stop}r',
         '\x1b[r',
         "\b",
-        "{chd}{file} Row: {row}/{total} Col: {col}  {msg}",
-        "{chd}{file} {row}:{col}  {msg}",
+        "{flg}{chd}{file} Row: {row}/{total} Col: {col}  {msg}",
+        "{flg}{chd}{file} {row}:{col}  {msg}",
     ]
     yank_buffer = []
     find_pattern = ""
@@ -165,7 +165,7 @@ class Editor:
         self.undo = []
         self.undo_limit = undo_limit
         self.redo = []
-        self.mark = None
+        self.clear_mark()
         self.write_tabs = "n"
         self.work_dir = os.getcwd()
         self.io_device = io_device
@@ -229,6 +229,7 @@ class Editor:
             if in_buffer in Editor.KEYMAP:
                 c = Editor.KEYMAP[in_buffer]
                 if c != KEY_MOUSE:
+                    self.mouse_last = None
                     return c, None
                 else:
                     mouse_fct = ord(self.io_device.rd_raw())
@@ -306,8 +307,8 @@ class Editor:
         self.goto(Editor.height, 0)
         self.hilite(1)
         self.wr(Editor.TERMCMD[14 if Editor.width > 40 else 15].format(
-            chd=self.changed, file=self.fname, row=self.cur_line + 1, total=self.total_lines,
-            col=self.vcol + 1, msg=self.message)[:self.width - 1])
+            flg="<> " if self.mark else "", chd=self.changed, file=self.fname, row=self.cur_line + 1,
+            total=self.total_lines, col=self.vcol + 1, msg=self.message)[:self.width - 1])
         self.clear_to_eol()
         self.hilite(0)
         self.goto(self.row, self.vcol - self.margin)
@@ -502,10 +503,14 @@ class Editor:
             redo[redo_start][5] = False
             self.total_lines = len(self.content)
             self.changed = '' if self.hash == self.hash_buffer() else '*'
-            self.mark = None
+            self.clear_mark()
     def set_mark(self):
         if self.mark is None:
             self.mark = (self.cur_line, self.col)
+            self.mouse_last = None
+    def clear_mark(self):
+        self.mark = None
+        self.mouse_last = None
     def yank_mark(self):
         start_row, start_col, end_row, end_col = self.mark_range()
         Editor.yank_buffer = self.content[start_row:end_row]
@@ -525,7 +530,7 @@ class Editor:
             self.undo[-1][1] = 1
         self.total_lines = len(self.content)
         self.cur_line = start_row
-        self.mark = None
+        self.clear_mark()
     def handle_edit_keys(self, key, char):
         l = self.content[self.cur_line]
         if key == KEY_NONE:
@@ -646,8 +651,13 @@ class Editor:
             if char[1] < Editor.height:
                 self.col = char[0] + self.margin
                 self.cur_line = char[1] + self.top_line
-                if char[2] in (0x22, 0x30):
-                    self.mark = (self.cur_line, self.col) if self.mark is None else None
+                if (self.col, self.cur_line) == self.mouse_last:
+                    if self.mark is None: 
+                        self.set_mark()
+                    else:
+                        self.clear_mark()
+                else:
+                    self.mouse_last = (self.col, self.cur_line)
         elif key == KEY_SCRLUP:
             ni = 1 if char is None else 3
             if self.top_line > 0:
@@ -692,11 +702,10 @@ class Editor:
                         c = 0 if way > 0 else len(self.content[i]) - 1
                     self.message = "No match in {} lines".format(abs(lstop - self.cur_line))
         elif key == KEY_MARK:
-            if self.mark is None:
-                self.mark = (self.cur_line, self.col)
-                self.move_right(l)
+            if self.mark is None: 
+                self.set_mark()
             else:
-                self.mark = None
+                self.clear_mark()
         elif key == KEY_SHIFT_DOWN:
             self.set_mark()
             self.move_down()
@@ -741,7 +750,7 @@ class Editor:
                 self.move_down()
         elif key == KEY_ENTER:
             self.col = self.vcol
-            self.mark = None
+            self.clear_mark()
             self.undo_add(self.cur_line, [l], KEY_NONE, 2)
             self.content[self.cur_line] = l[:self.col]
             ni = 0
@@ -822,7 +831,7 @@ class Editor:
         elif key == KEY_COPY:
             if self.mark is not None:
                 self.yank_mark()
-                self.mark = None
+                self.clear_mark()
         elif key == KEY_PASTE:
             if Editor.yank_buffer:
                 self.col = self.vcol
@@ -892,7 +901,7 @@ class Editor:
                 return key
             elif key == KEY_GET:
                 if self.mark is not None:
-                    self.mark = None
+                    self.clear_mark()
                     self.display_window()
                 return key
             else:
