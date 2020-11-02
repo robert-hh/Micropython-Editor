@@ -1,4 +1,4 @@
-PYE_VERSION   = " V2.59 "
+PYE_VERSION   = " V2.60 "
 try:
     import usys as sys
 except:
@@ -144,8 +144,8 @@ class Editor:
         '\x1b[1;{stop}r',
         '\x1b[r',
         "\b",
-        "{flg}{chd}{file} Row: {row}/{total} Col: {col}  {msg}",
-        "{flg}{chd}{file} {row}:{col}  {msg}",
+        "{chd}{file} Row: {row}/{total} Col: {col}  {msg}",
+        "{chd}{file} {row}:{col}  {msg}",
     ]
     yank_buffer = []
     find_pattern = ""
@@ -307,7 +307,7 @@ class Editor:
         self.goto(Editor.height, 0)
         self.hilite(1)
         self.wr(Editor.TERMCMD[14 if Editor.width > 40 else 15].format(
-            flg="<> " if self.mark else "", chd=self.changed, file=self.fname, row=self.cur_line + 1,
+            chd=self.changed, file=self.fname, row=self.cur_line + 1,
             total=self.total_lines, col=self.vcol + 1, msg=self.message)[:self.width - 1])
         self.clear_to_eol()
         self.hilite(0)
@@ -338,6 +338,7 @@ class Editor:
         res = default
         pos = len(res)
         del_all = True
+        mouse_last = None
         while True:
             key, char = self.get_input()
             if key == KEY_NONE:
@@ -369,8 +370,8 @@ class Editor:
             elif key == KEY_DELETE:
                 if del_all:
                     self.wr(Editor.TERMCMD[13] * pos)
-                    self.wr(" " * pos)
-                    self.wr(Editor.TERMCMD[13] * pos)
+                    self.wr(" " * len(res))
+                    self.wr(Editor.TERMCMD[13] * len(res))
                     pos = 0
                     res = ""
                 else:
@@ -386,6 +387,21 @@ class Editor:
             elif key == KEY_PASTE:
                 res += self.getsymbol(self.content[self.cur_line], self.col, zap)[:Editor.width - pos - len(prompt) - 1]
                 push_msg(res[pos:])
+            elif key == KEY_MOUSE:
+                if char[1] < Editor.height:
+                    self.col = char[0] + self.margin
+                    self.cur_line = char[1] + self.top_line
+                    if (self.col, self.cur_line) != mouse_last:
+                        self.wr(Editor.TERMCMD[13] * pos)
+                        self.wr(" " * len(res))
+                        self.wr(Editor.TERMCMD[13] * len(res))
+                        pos = 0
+                        res = self.getsymbol(self.content[self.cur_line], self.col, zap)
+                        push_msg(res)
+                    else:
+                        self.hilite(0)
+                        return res
+                    mouse_last = (self.col, self.cur_line)
             del_all = False
     def getsymbol(self, s, pos, zap):
         if pos < len(s) and zap is not None:
@@ -544,13 +560,32 @@ class Editor:
             self.undo_add(self.cur_line, [l], 0x20 if char == " " else 0x41, 1, chain)
             self.content[self.cur_line] = l[:self.col] + char + l[self.col:]
             self.col += len(char)
-            return
+            return key
         elif key == KEY_SHIFT_CTRL_LEFT:
             self.set_mark()
             key = KEY_WORD_LEFT
         elif key == KEY_SHIFT_CTRL_RIGHT:
             self.set_mark()
             key = KEY_WORD_RIGHT
+        elif key == KEY_MOUSE:
+            if char[1] < Editor.height:
+                if self.mark is not None and char[2] == 0x22:
+                    key = KEY_COPY
+                else:
+                    self.col = char[0] + self.margin
+                    self.cur_line = char[1] + self.top_line
+                    if (self.col, self.cur_line) == self.mouse_last:
+                        if self.mark is None and self.col < len(l) and self.issymbol(l[self.col], Editor.word_char): 
+                                self.col = self.vcol
+                                self.col = self.skip_while(l, self.col, Editor.word_char, -1) + 1
+                                self.set_mark()
+                                self.col = self.skip_while(l, self.col, Editor.word_char, 1)
+                        else:
+                            key = KEY_MARK
+                    else:
+                        self.mouse_last = (self.col, self.cur_line)
+            else:
+                key = KEY_GET if self.is_dir else KEY_FIND
         if key == KEY_DOWN:
              self.move_down()
         elif key == KEY_UP:
@@ -618,6 +653,7 @@ class Editor:
         elif key == KEY_FIND:
             pat = self.line_edit("Find: ", Editor.find_pattern, "_")
             if pat:
+                self.clear_mark()
                 self.find_in_file(pat, self.col, self.total_lines)
                 self.row = Editor.height >> 1
         elif key == KEY_FIND_AGAIN:
@@ -647,17 +683,6 @@ class Editor:
                 if res[4]: self.write_tabs = 'y' if res[4][0] == 'y' else 'n'
             except:
                 pass
-        elif key == KEY_MOUSE:
-            if char[1] < Editor.height:
-                self.col = char[0] + self.margin
-                self.cur_line = char[1] + self.top_line
-                if (self.col, self.cur_line) == self.mouse_last:
-                    if self.mark is None: 
-                        self.set_mark()
-                    else:
-                        self.clear_mark()
-                else:
-                    self.mouse_last = (self.col, self.cur_line)
         elif key == KEY_SCRLUP:
             ni = 1 if char is None else 3
             if self.top_line > 0:
@@ -692,7 +717,7 @@ class Editor:
                                 if l[c] == match:
                                     if level == 0:
                                         self.cur_line, self.col  = i, c
-                                        return
+                                        return key
                                     else:
                                         level -= 1
                                 elif l[c] == srch:
@@ -704,6 +729,7 @@ class Editor:
         elif key == KEY_MARK:
             if self.mark is None: 
                 self.set_mark()
+                self.move_right(l)
             else:
                 self.clear_mark()
         elif key == KEY_SHIFT_DOWN:
@@ -876,6 +902,7 @@ class Editor:
                         self.content[i] = ns * " " + Editor.comment_char + self.content[i][ns:]
         elif key == KEY_REDRAW:
             self.redraw(True)
+        return key
     def edit_loop(self):
         if not self.content:
             self.content = [""]
@@ -886,6 +913,7 @@ class Editor:
             self.display_window()
             key, char = self.get_input()
             self.message = ''
+            key = self.handle_edit_keys(key, char)
             if key == KEY_QUIT:
                 if self.hash != self.hash_buffer():
                     res = self.line_edit("File changed! Quit (y/N)? ", "N")
@@ -904,8 +932,6 @@ class Editor:
                     self.clear_mark()
                     self.display_window()
                 return key
-            else:
-                self.handle_edit_keys(key, char)
     def packtabs(self, s):
         sb = StringIO()
         for i in range(0, len(s), 8):

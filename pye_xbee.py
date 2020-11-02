@@ -19,7 +19,7 @@
 ## - Added multi-file support
 ##
 
-PYE_VERSION   = " V2.59 "
+PYE_VERSION   = " V2.60x "
 
 import sys
 import gc
@@ -157,9 +157,9 @@ class Editor:
         '\x1b[r',               ## 12: Scroll the full screen
         "\b",                   ## 13: backspace one character, used in line_edit
                                 ## 14: Long status line format string.
-        "{flg}{chd}{file} Row: {row}/{total} Col: {col}  {msg}",
+        "{chd}{file} Row: {row}/{total} Col: {col}  {msg}",
                                 ## 15: Shorter status line format string.
-        "{flg}{chd}{file} {row}:{col}  {msg}",
+        "{chd}{file} {row}:{col}  {msg}",
     ]
 
 ## symbols that are shared between instances of Editor
@@ -341,7 +341,7 @@ class Editor:
         self.goto(Editor.height, 0)
         self.hilite(1)
         self.wr(Editor.TERMCMD[14 if Editor.width > 40 else 15].format(
-            flg="<> " if self.mark else "", chd=self.changed, file=self.fname, row=self.cur_line + 1,
+            chd=self.changed, file=self.fname, row=self.cur_line + 1,
             total=self.total_lines, col=self.vcol + 1, msg=self.message)[:self.width - 1])
         self.clear_to_eol() ## once moved up for mate/xfce4-terminal issue with scroll region
         self.hilite(0)
@@ -376,6 +376,7 @@ class Editor:
         res = default
         pos = len(res)
         del_all = True
+        mouse_last = None
         while True:
             key, char = self.get_input()  ## Get Char of Fct.
             if key == KEY_NONE: ## char to be inserted
@@ -407,8 +408,8 @@ class Editor:
             elif key == KEY_DELETE: ## Delete
                 if del_all:
                     self.wr(Editor.TERMCMD[13] * pos)
-                    self.wr(" " * pos)
-                    self.wr(Editor.TERMCMD[13] * pos)
+                    self.wr(" " * len(res))
+                    self.wr(Editor.TERMCMD[13] * len(res))
                     pos = 0
                     res = ""
                 else:
@@ -424,6 +425,21 @@ class Editor:
             elif key == KEY_PASTE: ## Get from content
                 res += self.getsymbol(self.content[self.cur_line], self.col, zap)[:Editor.width - pos - len(prompt) - 1]
                 push_msg(res[pos:])
+            elif key == KEY_MOUSE:
+                if char[1] < Editor.height:
+                    self.col = char[0] + self.margin
+                    self.cur_line = char[1] + self.top_line
+                    if (self.col, self.cur_line) != mouse_last:
+                        self.wr(Editor.TERMCMD[13] * pos)
+                        self.wr(" " * len(res))
+                        self.wr(Editor.TERMCMD[13] * len(res))
+                        pos = 0
+                        res = self.getsymbol(self.content[self.cur_line], self.col, zap)
+                        push_msg(res)
+                    else: ## double click at the same place. 
+                        self.hilite(0)
+                        return res
+                    mouse_last = (self.col, self.cur_line)
             del_all = False
 
     def getsymbol(self, s, pos, zap):
@@ -593,13 +609,32 @@ class Editor:
             self.undo_add(self.cur_line, [l], 0x20 if char == " " else 0x41, 1, chain)
             self.content[self.cur_line] = l[:self.col] + char + l[self.col:]
             self.col += len(char)
-            return  ## return here for a marginally faster paste
+            return key ## return here for a marginally faster paste
         elif key == KEY_SHIFT_CTRL_LEFT:
             self.set_mark()
             key = KEY_WORD_LEFT
         elif key == KEY_SHIFT_CTRL_RIGHT:
             self.set_mark()
             key = KEY_WORD_RIGHT
+        elif key == KEY_MOUSE: ## Set Cursor or open file/find
+            if char[1] < Editor.height:
+                if self.mark is not None and char[2] == 0x22:  ## right click copies
+                    key = KEY_COPY
+                else:
+                    self.col = char[0] + self.margin
+                    self.cur_line = char[1] + self.top_line
+                    if (self.col, self.cur_line) == self.mouse_last:
+                        if self.mark is None and self.col < len(l) and self.issymbol(l[self.col], Editor.word_char): 
+                                self.col = self.vcol
+                                self.col = self.skip_while(l, self.col, Editor.word_char, -1) + 1
+                                self.set_mark()
+                                self.col = self.skip_while(l, self.col, Editor.word_char, 1)
+                        else:
+                            key = KEY_MARK
+                    else:
+                        self.mouse_last = (self.col, self.cur_line)
+            else:
+                key = KEY_GET if self.is_dir else KEY_FIND
 ## start new if/elif sequence, since the value of key might have changed
         if key == KEY_DOWN:
              self.move_down()
@@ -697,17 +732,6 @@ class Editor:
                 if res[4]: self.write_tabs = 'y' if res[4][0] == 'y' else 'n'
             except:
                 pass
-        elif key == KEY_MOUSE: ## Set Cursor
-            if char[1] < Editor.height:
-                self.col = char[0] + self.margin
-                self.cur_line = char[1] + self.top_line
-                if (self.col, self.cur_line) == self.mouse_last:
-                    if self.mark is None: 
-                        self.set_mark()
-                    else:
-                        self.clear_mark()
-                else:
-                    self.mouse_last = (self.col, self.cur_line)
         elif key == KEY_SCRLUP: ##
             ni = 1 if char is None else 3
             if self.top_line > 0:
@@ -742,7 +766,7 @@ class Editor:
                                 if l[c] == match:
                                     if level == 0:  ## match found
                                         self.cur_line, self.col  = i, c
-                                        return  ## return here instead of ml-breaking
+                                        return key ## return here instead of ml-breaking
                                     else:
                                         level -= 1
                                 elif l[c] == srch:
@@ -931,6 +955,7 @@ class Editor:
                         self.content[i] = ns * " " + Editor.comment_char + self.content[i][ns:]
         elif key == KEY_REDRAW:
             self.redraw(True)
+        return key
 
     def edit_loop(self): ## main editing loop
         if not self.content: ## ensure content
@@ -944,6 +969,7 @@ class Editor:
             key, char = self.get_input()  ## Get Char of Fct-key code
             self.message = '' ## clear message
 
+            key = self.handle_edit_keys(key, char)
             if key == KEY_QUIT:
                 if self.hash != self.hash_buffer():
                     res = self.line_edit("File changed! Quit (y/N)? ", "N")
@@ -962,8 +988,6 @@ class Editor:
                     self.clear_mark()
                     self.display_window()  ## Update & display window
                 return key
-            else:
-                self.handle_edit_keys(key, char)
 
 ## packtabs: replace sequence of space by tab
     def packtabs(self, s):
