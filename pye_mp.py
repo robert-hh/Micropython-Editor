@@ -1,4 +1,4 @@
-PYE_VERSION   = " V2.60 "
+PYE_VERSION   = " V2.61 "
 try:
     import usys as sys
 except:
@@ -165,7 +165,7 @@ class Editor:
         self.undo = []
         self.undo_limit = undo_limit
         self.redo = []
-        self.clear_mark()
+        self.mark = None
         self.write_tabs = "n"
         self.work_dir = os.getcwd()
         self.io_device = io_device
@@ -229,7 +229,6 @@ class Editor:
             if in_buffer in Editor.KEYMAP:
                 c = Editor.KEYMAP[in_buffer]
                 if c != KEY_MOUSE:
-                    self.mouse_last = None
                     return c, None
                 else:
                     mouse_fct = ord(self.io_device.rd_raw())
@@ -317,14 +316,12 @@ class Editor:
         return (len(line) - len(line.lstrip(" ")) if pos is None else
                 len(line[:pos]) - len(line[:pos].rstrip(" ")))
     def mark_range(self):
-        if self.mark[0] == self.cur_line:
-            return ((self.cur_line, self.mark[1], self.cur_line + 1, self.col)
-                    if self.mark[1] < self.col else
-                    (self.cur_line, self.col, self.cur_line + 1, self.mark[1]))
+        if self.mark_order(self.cur_line, self.col) >= 0:
+            return (self.mark[0], self.mark[1], self.cur_line + 1, self.col)
         else:
-            return ((self.mark[0], self.mark[1], self.cur_line + 1, self.col)
-                    if self.mark[0] < self.cur_line else
-                    (self.cur_line, self.col, self.mark[0] + 1, self.mark[1]))
+            return (self.cur_line, self.col, self.mark[0] + 1, self.mark[1])
+    def mark_order(self, line, col):
+        return col - self.mark[1] if self.mark[0] == line else line - self.mark[0]
     def line_range(self):
         res = self.mark_range()
         return (res[0], res[2]) if res[3] > 0 else (res[0], res[2] - 1)
@@ -519,14 +516,10 @@ class Editor:
             redo[redo_start][5] = False
             self.total_lines = len(self.content)
             self.changed = '' if self.hash == self.hash_buffer() else '*'
-            self.clear_mark()
+            self.mark = None
     def set_mark(self):
         if self.mark is None:
             self.mark = (self.cur_line, self.col)
-            self.mouse_last = None
-    def clear_mark(self):
-        self.mark = None
-        self.mouse_last = None
     def yank_mark(self):
         start_row, start_col, end_row, end_col = self.mark_range()
         Editor.yank_buffer = self.content[start_row:end_row]
@@ -546,7 +539,7 @@ class Editor:
             self.undo[-1][1] = 1
         self.total_lines = len(self.content)
         self.cur_line = start_row
-        self.clear_mark()
+        self.mark = None
     def handle_edit_keys(self, key, char):
         l = self.content[self.cur_line]
         if key == KEY_NONE:
@@ -572,18 +565,20 @@ class Editor:
                 if self.mark is not None and char[2] == 0x22:
                     key = KEY_COPY
                 else:
-                    self.col = char[0] + self.margin
-                    self.cur_line = char[1] + self.top_line
-                    if (self.col, self.cur_line) == self.mouse_last:
-                        if self.mark is None and self.col < len(l) and self.issymbol(l[self.col], Editor.word_char): 
-                                self.col = self.vcol
-                                self.col = self.skip_while(l, self.col, Editor.word_char, -1) + 1
+                    col = char[0] + self.margin
+                    line = char[1] + self.top_line
+                    if (col, line) == (self.col, self.cur_line):
+                        if self.mark is None and col < len(l) and self.issymbol(l[col], Editor.word_char): 
+                                self.col = self.skip_while(l, col, Editor.word_char, -1) + 1
                                 self.set_mark()
                                 self.col = self.skip_while(l, self.col, Editor.word_char, 1)
                         else:
                             key = KEY_MARK
                     else:
-                        self.mouse_last = (self.col, self.cur_line)
+                        if self.mark is not None:
+                            if self.mark_order(self.cur_line, self.col) * self.mark_order(line, col) < 0:
+                                self.mark = self.cur_line, self.col
+                        self.cur_line, self.col = line, col
             else:
                 key = KEY_GET if self.is_dir else KEY_FIND
         if key == KEY_DOWN:
@@ -653,7 +648,7 @@ class Editor:
         elif key == KEY_FIND:
             pat = self.line_edit("Find: ", Editor.find_pattern, "_")
             if pat:
-                self.clear_mark()
+                self.mark = None
                 self.find_in_file(pat, self.col, self.total_lines)
                 self.row = Editor.height >> 1
         elif key == KEY_FIND_AGAIN:
@@ -731,7 +726,7 @@ class Editor:
                 self.set_mark()
                 self.move_right(l)
             else:
-                self.clear_mark()
+                self.mark = None
         elif key == KEY_SHIFT_DOWN:
             self.set_mark()
             self.move_down()
@@ -776,7 +771,7 @@ class Editor:
                 self.move_down()
         elif key == KEY_ENTER:
             self.col = self.vcol
-            self.clear_mark()
+            self.mark = None
             self.undo_add(self.cur_line, [l], KEY_NONE, 2)
             self.content[self.cur_line] = l[:self.col]
             ni = 0
@@ -857,7 +852,7 @@ class Editor:
         elif key == KEY_COPY:
             if self.mark is not None:
                 self.yank_mark()
-                self.clear_mark()
+                self.mark = None
         elif key == KEY_PASTE:
             if Editor.yank_buffer:
                 self.col = self.vcol
@@ -929,7 +924,7 @@ class Editor:
                 return key
             elif key == KEY_GET:
                 if self.mark is not None:
-                    self.clear_mark()
+                    self.mark = None
                     self.display_window()
                 return key
     def packtabs(self, s):

@@ -72,7 +72,7 @@ shows most of the commands.:
 |Mouse click|In line edit mode: Clicking on a word copies it to the edit line. Clicking a second time at the same place acts as enter.|
 |Mouse scroll wheel|Move the cursor up and down, scrolling the content as needed.|
 
-**Instead of Ctrl-letter (e.g. Ctrl-Q), Alt-letter (e.g. Alt-Q) can be used, avoiding conflicts with key binding of some terminal emulators.**
+**Instead of Ctrl-letter (e.g. Ctrl-Q), Alt-letter (e.g. Alt-Q) or ESC-letter (e.g. ESC followed by Q) can be used, avoiding conflicts with key binding of some terminal emulators.**
 
 The editor is contained in the files pye_gen.py and pye.py. Start pye from the REPL prompt
 e.g. with  
@@ -526,3 +526,5 @@ the list of files in the current dir
 **2.59** Change mouse support. Clicking twice at the same position enables/disables marking.
 
 **2.60** Extend mouse support
+
+**2.61** Further straighten mouse support. Double Click is click at the cursor position, and the mark can be extended to both sides with the mouse without affecting what was already marked.
