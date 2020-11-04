@@ -46,7 +46,7 @@ shows most of the commands.:
 |Ctrl-O|Open a new file. If the file name is left empty, an empty buffer is opened|
 |Ctrl-W|Toggle to the next file buffer|
 |Ctrl-Q|Close a file buffer or end line-edit|
-|Ctrl-S|Save to file with the option to change the file name|
+|Ctrl-S|Save to file with the option to change the file name. If a new name is given and that file already exists, ask for confirmation.|
 |Ctrl-F|Find|
 |Ctrl-N|Repeat the last find|
 |Ctrl-H or Ctrl-R|Find and Replace|
@@ -67,10 +67,10 @@ shows most of the commands.:
 ||
 ||Mouse support|
 ||
-|Mouse click|Within the text: Click twice at the same position to start highlighting at the current position, or clear the highlight. The click speed does not matter. If the cursor is on a word, thw whole word will be highlighted. if not, just the caracter under the cursor. The highlight can then be extended by moving the cursor clicking at different positions. Right click then copies the highlighted text.|
-|Mouse click|At the status line: Opens the find dialogue in a text file and the open file dialogue in a directory listing.|
-|Mouse click|In line edit mode: Clicking on a word copies it to the edit line. Clicking a second time at the same place acts as enter.|
 |Mouse scroll wheel|Move the cursor up and down, scrolling the content as needed.|
+|Mouse left click|Within the text: Click at the cursor position (double click) to start highlighting at the current position, or clear the highlight. The click speed does not matter. If the cursor is on a word, thw whole word will be highlighted. If not, just the caracter under the cursor. The highlight can then be extended by moving the cursor clicking at different positions.|
+|Mouse right click|Or left click at the status line: Opens the "find" dialogue in a text file and the "open file" dialogue in a directory listing.|
+|Mouse left click|In line edit mode: Clicking on a word copies it to the edit line. Clicking a second time at the same place acts as enter.|
 
 **Instead of Ctrl-letter (e.g. Ctrl-Q), Alt-letter (e.g. Alt-Q) or ESC-letter (e.g. ESC followed by Q) can be used, avoiding conflicts with key binding of some terminal emulators.**
 
@@ -528,3 +528,7 @@ the list of files in the current dir
 **2.60** Extend mouse support
 
 **2.61** Further straighten mouse support. Double Click is click at the cursor position, and the mark can be extended to both sides with the mouse without affecting what was already marked.
+
+**2.62** Ask for conirmation before overwriting an existing file other than the one initially opened.
+
+**2.63** Change mouse behaviour again. Right click opens the "find" dialogue in a text window or "open file" dialogue in a directory listing. 

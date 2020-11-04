@@ -19,7 +19,7 @@
 ## - Added multi-file support
 ##
 
-PYE_VERSION   = " V2.61 "
+PYE_VERSION   = " V2.63 "
 try:
     import usys as sys
 except:
@@ -640,26 +640,23 @@ class Editor:
             self.set_mark()
             key = KEY_WORD_RIGHT
         elif key == KEY_MOUSE: ## Set Cursor or open file/find
-            if char[1] < Editor.height:
-                if self.mark is not None and char[2] == 0x22:  ## right click copies
-                    key = KEY_COPY
-                else:
-                    col = char[0] + self.margin
-                    line = char[1] + self.top_line
-                    if (col, line) == (self.col, self.cur_line): ## click at the cursor -> double blick
-                        if self.mark is None and col < len(l) and self.issymbol(l[col], Editor.word_char): 
-                                self.col = self.skip_while(l, col, Editor.word_char, -1) + 1
-                                self.set_mark()
-                                self.col = self.skip_while(l, self.col, Editor.word_char, 1)
-                        else:  ## toggle single char mark
-                            key = KEY_MARK
-                    else:
-                        if self.mark is not None:
-                            if self.mark_order(self.cur_line, self.col) * self.mark_order(line, col) < 0:
-                                self.mark = self.cur_line, self.col
-                        self.cur_line, self.col = line, col
-            else:
+            if char[1] >= Editor.height or char[2] == 0x22:  ## right click opens find or get
                 key = KEY_GET if self.is_dir else KEY_FIND
+            else:
+                col = char[0] + self.margin
+                line = char[1] + self.top_line
+                if (col, line) == (self.col, self.cur_line): ## click at the cursor -> double blick
+                    if self.mark is None and col < len(l) and self.issymbol(l[col], Editor.word_char): 
+                            self.col = self.skip_while(l, col, Editor.word_char, -1) + 1
+                            self.set_mark()
+                            self.col = self.skip_while(l, self.col, Editor.word_char, 1)
+                    else:  ## toggle single char mark
+                        key = KEY_MARK
+                else:
+                    if self.mark is not None:
+                        if self.mark_order(self.cur_line, self.col) * self.mark_order(line, col) < 0:
+                            self.mark = self.cur_line, self.col
+                    self.cur_line, self.col = line, col
 ## start new if/elif sequence, since the value of key might have changed
         if key == KEY_DOWN:
              self.move_down()
@@ -957,6 +954,14 @@ class Editor:
         elif key == KEY_WRITE:
             fname = self.line_edit("Save File: ", self.fname if self.is_dir is False else "")
             if fname:
+                if fname != self.fname:  ## save to a different name, confirm evtl. overwrite
+                    try:
+                        open(fname).close()  ## if that succeeds, the file exists
+                        res = self.line_edit("The file exists! Overwrite (y/N)? ", "N")
+                        if not res or res[0].upper() != 'Y':
+                            return
+                    except:
+                        pass
                 self.put_file(fname)
                 self.fname = fname ## remember (new) name
                 self.hash = self.hash_buffer()

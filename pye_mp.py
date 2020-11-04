@@ -1,4 +1,4 @@
-PYE_VERSION   = " V2.61 "
+PYE_VERSION   = " V2.63 "
 try:
     import usys as sys
 except:
@@ -561,26 +561,23 @@ class Editor:
             self.set_mark()
             key = KEY_WORD_RIGHT
         elif key == KEY_MOUSE:
-            if char[1] < Editor.height:
-                if self.mark is not None and char[2] == 0x22:
-                    key = KEY_COPY
-                else:
-                    col = char[0] + self.margin
-                    line = char[1] + self.top_line
-                    if (col, line) == (self.col, self.cur_line):
-                        if self.mark is None and col < len(l) and self.issymbol(l[col], Editor.word_char): 
-                                self.col = self.skip_while(l, col, Editor.word_char, -1) + 1
-                                self.set_mark()
-                                self.col = self.skip_while(l, self.col, Editor.word_char, 1)
-                        else:
-                            key = KEY_MARK
-                    else:
-                        if self.mark is not None:
-                            if self.mark_order(self.cur_line, self.col) * self.mark_order(line, col) < 0:
-                                self.mark = self.cur_line, self.col
-                        self.cur_line, self.col = line, col
-            else:
+            if char[1] >= Editor.height or char[2] == 0x22:
                 key = KEY_GET if self.is_dir else KEY_FIND
+            else:
+                col = char[0] + self.margin
+                line = char[1] + self.top_line
+                if (col, line) == (self.col, self.cur_line):
+                    if self.mark is None and col < len(l) and self.issymbol(l[col], Editor.word_char): 
+                            self.col = self.skip_while(l, col, Editor.word_char, -1) + 1
+                            self.set_mark()
+                            self.col = self.skip_while(l, self.col, Editor.word_char, 1)
+                    else:
+                        key = KEY_MARK
+                else:
+                    if self.mark is not None:
+                        if self.mark_order(self.cur_line, self.col) * self.mark_order(line, col) < 0:
+                            self.mark = self.cur_line, self.col
+                    self.cur_line, self.col = line, col
         if key == KEY_DOWN:
              self.move_down()
         elif key == KEY_UP:
@@ -872,6 +869,14 @@ class Editor:
         elif key == KEY_WRITE:
             fname = self.line_edit("Save File: ", self.fname if self.is_dir is False else "")
             if fname:
+                if fname != self.fname:
+                    try:
+                        open(fname).close()
+                        res = self.line_edit("The file exists! Overwrite (y/N)? ", "N")
+                        if not res or res[0].upper() != 'Y':
+                            return
+                    except:
+                        pass
                 self.put_file(fname)
                 self.fname = fname
                 self.hash = self.hash_buffer()
