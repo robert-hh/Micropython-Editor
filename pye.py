@@ -19,7 +19,7 @@
 ## - Added multi-file support
 ##
 
-PYE_VERSION   = " V2.63 "
+PYE_VERSION   = " V2.64 "
 try:
     import usys as sys
 except:
@@ -184,7 +184,8 @@ class Editor:
     autoindent = "y"
     replc_pattern = ""
     comment_char = "\x23 " ## for #
-    word_char = "_\\" ## additional character in a word
+    word_char = "_\\" ## additional characters in a word
+    file_char = "_.-"  # additional characters in a file name
     match_span = 50  ## number of lines to search for a bracket match
 
     def __init__(self, tab_size, undo_limit, io_device):
@@ -952,7 +953,7 @@ class Editor:
 
                 self.total_lines = len(self.content)
         elif key == KEY_WRITE:
-            fname = self.line_edit("Save File: ", self.fname if self.is_dir is False else "")
+            fname = self.line_edit("Save File: ", self.fname if self.is_dir is False else "", Editor.file_char)
             if fname:
                 if fname != self.fname:  ## save to a different name, confirm evtl. overwrite
                     try:
@@ -1139,7 +1140,7 @@ def pye_edit(content, tab_size=4, undo=50, io_device=None):
                     break
                 del slot[index]
             elif key == KEY_GET:
-                f = slot[index].line_edit("Open file: ", "", "_.-")
+                f = slot[index].line_edit("Open file: ", "", Editor.file_char)
                 if f is not None:
                     slot.append(Editor(tab_size, undo,io_device))
                     index = len(slot) - 1

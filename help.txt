@@ -22,17 +22,12 @@ PgDn                Move the cursor down by one screen height.
 Home                Go to start-of-line, if the Cursor is at start-of-text.
                     Otherwise go to start-of-text.
 End                 Move to the end-of-line.
-Mouse Button 1      Set the cursor.
-Mouse Button 2      Set/Clear the line mark.
-Mouse Scroll Wheel  Scroll Up/Down the screen content by 3 lines per tick.
-                    The cursor stays visible and will be moved in the content
-                    if required.
 Enter   \n          Insert a line break at the cursor position.
                     Auto-indent is supported.
 Backspc.            Delete the char left hand to the cursor. If the mark
                     is set, delete the marked line range.
                     At the beginning of the line Backspace joins the
-                    previous line. (*)
+                    previous line.
 Del                 Delete char under cursor. At the end of the line join the
                     next line. If the mark is set, delete the marked line range.
                     If Autoindent is enabled, Del at the line's end also removes
@@ -65,8 +60,8 @@ Ctrl-N              Repeat find starting at the column right to the cursor.
 Ctrl-H  Ctrl-R      Find and replace. If the mark is set, it affects the marked
                     region only.
 Ctrl-G              Go to Line. It prompts for the line number.
-Ctrl-B  Ctrl-End    Go to the last line (*)
-Ctrl-T  Ctrl-Home   Go to the first line (*)
+Ctrl-B  Ctrl-End    Go to the last line 
+Ctrl-T  Ctrl-Home   Go to the first line 
 Ctrl-K              Go to the matching bracket, if any. The cursor has to be on
                     a bracket symbol. Bracket pairs are (), [], {} and <>.
                     Brackets in comments and strings are not discarded.
@@ -76,10 +71,10 @@ Ctrl-A              Settings. Sets the state of auto-indent, search case
                     fields (e.g. n,y,4,# ,n). An empty field leaves the respective value
                     unchanged. The default values are auto-indent: y,
                     case sensitive: n, tab-size: 4, Comment string: #, Write Tabs: n
-Ctrl-L              Mark/Unmark the current line. The mark affects Delete,
+Ctrl-L  Ctrl-Space  Mark/Unmark the current line. The mark affects Delete,
                     Backspace, Cut lines, Copy lines, Insert lines, Tab,
                     Backtab, Save and Replace.
-Ctrl-X  Ctrl-Y      Delete the area between the mark and the current line and
+Ctrl-X              Delete the area between the mark and the current line and
                     keep it in the paste buffer. Together with the Ctrl-V this
                     implements the Cut & Paste feature. The mark is cleared.
 Ctrl-C  Ctrl-D      Copy the area between the mark and the current line to the
@@ -105,12 +100,19 @@ Ctrl-Z              Undo the last change(s). Every char add sequence/deleted
                     single change. The default for the undo stack size per
                     buffer is 50 with PyBoard/WiPy and 500 with Linux/Darwin
                     systems. It can be changed in the call to pye().
+Ctrl-Y              Redo the last Undo actions      
+Mouse Scroll Wheel  Scroll Up/Down the screen content by 3 lines per tick.
+                    The cursor stays visible and will be moved in the content
+                    if required.
+Mouse Button 1      Set the cursor.
+Mouse Button 2      Set/Clear the line mark.
+
 ---------------------------------------------------------------------------------
-Functions denoted with (*) are not supported in the minimal version.
+
 The editor is contained in the file pye.py. Start pye from the REPL
 prompt e.g. with
 
-        from pye import pye
+        from pye_mp import pye
         res = pye(object_1, object_2, ..[, tabsize][, undo])
 
 If object_n is a string, it's considered as the name of a file to be edited,
@@ -129,7 +131,7 @@ undo=n      Size of the undo stack (integer). A value of 0 or False disables
 
 The Linux/Darwin version can be called from the command line with:
 
-        python3 pye.py [filename(s)]
+        python3 pye_ux.py [filename(s)]
 
 Obviously, you may use micropython too. Using python3 (not micropython),
 content can also be redirected or pipe'd into the editor.

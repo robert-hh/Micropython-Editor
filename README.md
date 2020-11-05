@@ -532,3 +532,5 @@ the list of files in the current dir
 **2.62** Ask for conirmation before overwriting an existing file other than the one initially opened.
 
 **2.63** Change mouse behaviour again. Right click opens the "find" dialogue in a text window or "open file" dialogue in a directory listing. 
+
+**2.64** Enable additional file name chars in the file save dialogue (was omitted)

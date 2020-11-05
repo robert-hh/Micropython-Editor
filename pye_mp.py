@@ -1,4 +1,4 @@
-PYE_VERSION   = " V2.63 "
+PYE_VERSION   = " V2.64 "
 try:
     import usys as sys
 except:
@@ -154,6 +154,7 @@ class Editor:
     replc_pattern = ""
     comment_char = "\x23 "
     word_char = "_\\"
+    file_char = "_.-"
     match_span = 50
     def __init__(self, tab_size, undo_limit, io_device):
         self.top_line = self.cur_line = self.row = self.vcol = self.col = self.margin = 0
@@ -867,7 +868,7 @@ class Editor:
                 Editor.yank_buffer[-1], Editor.yank_buffer[0] = tail, head
                 self.total_lines = len(self.content)
         elif key == KEY_WRITE:
-            fname = self.line_edit("Save File: ", self.fname if self.is_dir is False else "")
+            fname = self.line_edit("Save File: ", self.fname if self.is_dir is False else "", Editor.file_char)
             if fname:
                 if fname != self.fname:
                     try:
@@ -1036,7 +1037,7 @@ def pye_edit(content, tab_size=4, undo=50, io_device=None):
                     break
                 del slot[index]
             elif key == KEY_GET:
-                f = slot[index].line_edit("Open file: ", "", "_.-")
+                f = slot[index].line_edit("Open file: ", "", Editor.file_char)
                 if f is not None:
                     slot.append(Editor(tab_size, undo,io_device))
                     index = len(slot) - 1
