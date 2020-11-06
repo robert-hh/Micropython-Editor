@@ -3,17 +3,17 @@
 ## Description
 
 A small text editor written in Python running on 
-- MicroPython.org modules like the PYBoards, ESP32, ESP8266, Teensy 3.5, 3.6 and 4.x, W60x
+- MicroPython.org modules like the PyBoards, ESP32, ESP8266, Teensy 3.5, 3.6 and 4.x, W60x
 - pycom.io modules like WipPy, Lopy, SiPy, FiPy, GPy
 - Adafruit Circuitpython modules,
 - SiPeed MaixPy modules,
 - Linux, OS X and Android's terminal windows
 
- It allows allows to edit files locally on the boards. The offsprong was the editor widget of pfalcon at
- <https://github.com/pfalcon/pyedit>. I ported it to PyBoard and the other modules
- and added a lot of functions:
+It allows allows to edit files locally on the boards. The offspring was the editor widget of pfalcon at
+<https://github.com/pfalcon/pyedit>. I ported it to PyBoard and the other modules
+and added a lot of functions:
 
-- Use sys.stdin.read() and sys.stdout.write() for input and output of the Micropython version.
+- Use sys.stdin.read() and sys.stdout.write() for input and output of the MicroPython version.
 - Changed the read keyboard function to comply with byte-by-byte input on serial lines.
 - Added support for Tab, BackTab, Save, Del and Backspace joining lines, Find,
 Replace, Goto Line, Undo, Redo, Open file, Auto-Indent, Set Flags, Copy/Delete & Paste,
@@ -40,7 +40,7 @@ shows most of the commands.:
 |Home|Toggle the position between the start-of-code and the start of line|
 |End|Toggle the position between the end-of-the-code and end-of-line|
 |Enter|Enter a line break at the cursor position. Auto-indent is supported|
-|Backspace|Delete char left to the  cursor (The key must be set to ASCII-Del). If text are highlighted, delete the highlighted area|
+|Backspace|Delete char left to the cursor (The key must be set to ASCII-Del). If text are highlighted, delete the highlighted area|
 |Del|Delete the char under the cursor. At the end of the line join the next line. If autoindent is enabled, delete also the leading spaces of the joined line. If text are highlighted, delete the highlighted area. In line edit mode, Del as first keystroke will clear the entry.|
 |Ctrl-Del|Delete the word under the cursor or space up to the next non-space|
 |Ctrl-O|Open a new file. If the file name is left empty, an empty buffer is opened|
@@ -55,7 +55,7 @@ shows most of the commands.:
 |Ctrl-B|Go to the last line|
 |Ctrl-K|Goto the bracket matching the one under the cursor|
 |Ctrl-Home & Ctr-End|Got to the first/last line|
-|Ctrl-L or Ctrl-Space|Start hightlighting at the current position, or clear the highlight. The highlight can then be extended by moving the cursor|
+|Ctrl-L or Ctrl-Space|Start highlighting at the current position, or clear the highlight. The highlight can then be extended by moving the cursor|
 |Ctrl-X|Cut the highlighted text|
 |Ctrl-C or Ctrl-D|Copy the highlighted text|
 |Ctrl-V|Insert the copied/cut text.|
@@ -68,22 +68,22 @@ shows most of the commands.:
 ||Mouse support|
 ||
 |Mouse scroll wheel|Move the cursor up and down, scrolling the content as needed.|
-|Mouse left click|Within the text: Click at the cursor position (double click) to start highlighting at the current position, or clear the highlight. The click speed does not matter. If the cursor is on a word, thw whole word will be highlighted. If not, just the caracter under the cursor. The highlight can then be extended by moving the cursor clicking at different positions.|
+|Mouse left click|Within the text: Click at the cursor position (double click) to start highlighting at the current position, or clear the highlight. The click speed does not matter. If the cursor is on a word, the whole word will be highlighted. If not, just the character under the cursor. The highlight can then be extended by moving the cursor clicking at different positions.|
 |Mouse right click|Or left click at the status line: Opens the "find" dialogue in a text file and the "open file" dialogue in a directory listing.|
 |Mouse left click|In line edit mode: Clicking on a word copies it to the edit line. Clicking a second time at the same place acts as enter.|
 
 **Instead of Ctrl-letter (e.g. Ctrl-Q), Alt-letter (e.g. Alt-Q) or ESC-letter (e.g. ESC followed by Q) can be used, avoiding conflicts with key binding of some terminal emulators.**
 
 The editor is contained in the files pye_gen.py and pye.py. Start pye from the REPL prompt
-e.g. with  
+e.g. with 
 
-from pye_gen import pye  
-res = pye(object_1, object_2, ..[, tabsize=n][, undo=n])  
+from pye_gen import pye 
+res = pye(object_1, object_2, ..[, tabsize=n][, undo=n]) 
 
 You may also use the combined version pye_mp.py:
 
-from pye_mp import pye  
-res = pye(object_1, object_2, ..[, tabsize=n][, undo=n])  
+from pye_mp import pye 
+res = pye(object_1, object_2, ..[, tabsize=n][, undo=n]) 
 
 If object_n is a string, it's considered as the name of a file to be edited
 or a directory to be opened. If it’s a file, the content will be loaded,
@@ -95,12 +95,12 @@ and edited, and the edited list will be returned as strings.
 If no object is named, pye() will show the list of files, 
 creating a list of strings, unless you save to a file. In that case,
 the file name will be returned. 
-It is always the last buffer closed, which determines the return value of pye().  
+It is always the last buffer closed, which determines the return value of pye(). 
 
 Optional named parameters:
 
-tabsize=n    Tab step (integer). The default is 4  
-undo=n  Size of the undo stack (integer). The minimum size is 4.  
+tabsize=n Tab step (integer). The default is 4 
+undo=n Size of the undo stack (integer). The minimum size is 4. 
 
 The Linux/Darwin version can be called from the command line with:
 
@@ -132,7 +132,7 @@ when called with CPython also accepts data from a pipe or redirection.
 - pye_ux.py: Front-end for Linux CPython and Linux MicroPython
 - pye_gen.py: Front-end for Micropython and Circuitpython modules with I/O through
 sys.stdout and sys.stdin.
-- peteensy.py: A front-end for teensy 3.5 and 3.6 .
+- peteensy.py: A front-end for Teensy 3.5 and 3.6 .
 - pye_win.py: an experimental version for the cmd window of Windows 10. It requires
 enabling the VT100 support, as detailed e.g. here: https://stackoverflow.com/questions/51680709/colored-text-output-in-powershell-console-using-ansi-vt100-codes
 - pye_xbee.py: Core file for XBEE 3 devices. 
@@ -146,7 +146,7 @@ the front-end files, using cat and sed.
 all MicroPython boards. In order to use it on an board with small memory
 like the esp8266, you have to put pye_mp.py into the directory esp8266/modules,
 esp32/modules or smt32/modules (micropython.org) or esp32/frozen (pycom.io) and
-rebuild micropython.  A cross-compiled version may executed from the file system.
+rebuild micropython. A cross-compiled version may executed from the file system.
 - pye_x3.py, pye_x3.mpy: Condensed file for XBEE 3 devices. The .mpy file can
 be imported from the file system, but it should be better bundled into flash with
 uos.bundle().
@@ -159,16 +159,13 @@ device and UART as input device. The port requires further python scripts.
 - pye_tft.py: Sample front-end using a tft with a SSD1963 controller as output device. The port
 requires the SSD1963 drivers: https://github.com/robert-hh/SSD1963-TFT-Library-for-PyBoard
 
-
 ## Branches
 
 |Branch|Features|
 |:---|:---|
-|master|Actual main line with slowly changing features|
-|modules| Split pye.py into a core editor and port specific front-ends|
-|pye2|Similar to the linemode branch, but the column does not change during vertcal moves (stale)|
-|new_mark|Changed method of highlighting blocks, allowing to move away the cursor once a block is highlighted (stale)|
-
+|master|Actual main line with slowly changing features.|
+|pye2|Similar to the master branch, but the column does not change during vertical moves (stale).|
+|pye_min|Feature-reduced version, which is somewhat smaller.|
 
 ## Version History
 
@@ -222,7 +219,7 @@ the screen content. The REDRAW key (Ctrl-E) stays functional and is required
 for all other use cases, when the window size is changed.
 - HOME toggles again between start-of-line and start-of-text. END moves always
 to end-of-line
-- Dropped context sensitive behaviour of Tab, Backtab, Backspace and Delete. Too confusing.
+- Dropped context sensitive behavior of Tab, Backtab, Backspace and Delete. Too confusing.
 - Dropped the line number column, and made the status line permanent in all modes.
 - Rearranged the code such that any platform related sections are grouped together.
 
@@ -249,7 +246,7 @@ to end-of-line
 - Reduced KEYMAP in the WiPy version by omitting entries, where the function
 code is identical to the key value (e.g. \x08 -> 8). Not fool proof, but it helps
 reducing the size.
-- Adding a "Tabbify" behaviour for the full version. Tab/Backtab with the cursor
+- Adding a "Tabbify" behavior for the full version. Tab/Backtab with the cursor
 at col 1 indents/unindents the line and moves the cursor one line down.
 
 **1.7b** Further size reduction for WiPy
@@ -294,7 +291,7 @@ just the line with the highlight.
 - Paste, Delete and Backspace now also take notice of the line Highlight. You can Highlight
 a line range and delete it (or cut it). Implicit deleting highlighted lines when
 pressing the Enter or character key was considered but rejected (easy - just 3
-    lines of code).
+lines of code).
 - Except for Delete, Backspace, Cut and Paste, Highlight has to be toggled off when
 not needed any more.
 - Right click (Button 2) or Ctrl-Click on the mouse sets/unsets the Highlight, left
@@ -346,7 +343,7 @@ handling the keyboard input.
 repeats are checked for earlier.
 - Some editorial changes
 
-**2.0** Edit muliple files
+**2.0** Edit multiple files
 
 - Support for editing multiple files at once and copy/paste between them
 - Ctrl-W steps through the list of files/buffers
@@ -422,7 +419,7 @@ the lower levels of sys.stdin.
 
 **2.10** Support for esp32; simplified mouse handling
 
-- The only change was adding the esp32  name to the platform detection
+- The only change was adding the esp32 name to the platform detection
 - Do not use global symbols for mouse parameters
 
 **2.11** Small changes to the esp8266 version
@@ -436,7 +433,7 @@ This method is supported by (almost) all micropython.org ports and maybe
 sometime also supported by the pycom.io ports. The method of trying to catch
 KeyboardInterrupt is still present.
 
-**2.13** Reduce the numer of derived variants and make the full version the
+**2.13** Reduce the number of derived variants and make the full version the
 default one. Update the documentation.
 
 **2.14** Remove the PyBoard support using an UART as keyboard/display interface.
@@ -453,7 +450,7 @@ remaining are Linux/CPython vs. MicroPython
 **2.18** On deleting the end of a line, remove space characters from the joined line, if autoindent is active. This behavior mirrors autoindent.
 
 **2.19** Add a toggle key for commenting/uncommenting a line or highlighted area. The
- default comment string is '#', but can be changed through the settings command.
+default comment string is '#', but can be changed through the settings command.
 
 **2.20** Change the End-Key to toggle between EOL and last non-space char.
 
@@ -470,7 +467,7 @@ window change
 
 **2.26** Better separation of port-specific and OS-specific flags
 
-**2.27** Change Homw/End key behavior. Py w/o filename will open a window with
+**2.27** Change Home/End key behavior. Py w/o filename will open a window with
 the list of files in the current dir
 
 **2.28** Add word left & right with ctrl-left and ctrl-right
@@ -481,13 +478,13 @@ the list of files in the current dir
 
 **2.31** Re-Map Ctrl-Up and Ctrl-Down for scrolling
 
-**2.32** Comment toggle ignores emty lines
+**2.32** Comment toggle ignores empty lines
 
 **2.33** Scroll step is 1 for keyboard and 3 for mouse
 
 **2.34** Added a branch with character mode highlight/cut/paste/delete. Intended to be the new master
 
-**2.35** Change behaviour of the column position durign vertical moves, in that it tries to keep the position
+**2.35** Change behavior of the column position during vertical moves, in that it tries to keep the position
 
 **2.36** Add the redo function, which restates changes undone by undo.
 
@@ -511,7 +508,7 @@ the list of files in the current dir
 
 **2.52** Fix regression error on file creation
 
-**2.53** Fix regression error on handling dirs
+**2.53** Fix regression error on handling directories
 
 **2.54** Fix regression error in the Linux variant
 
@@ -529,8 +526,8 @@ the list of files in the current dir
 
 **2.61** Further straighten mouse support. Double Click is click at the cursor position, and the mark can be extended to both sides with the mouse without affecting what was already marked.
 
-**2.62** Ask for conirmation before overwriting an existing file other than the one initially opened.
+**2.62** Ask for confirmation before overwriting an existing file other than the one initially opened.
 
-**2.63** Change mouse behaviour again. Right click opens the "find" dialogue in a text window or "open file" dialogue in a directory listing. 
+**2.63** Change mouse behavior again. Right click opens the "find" dialogue in a text window or "open file" dialogue in a directory listing. 
 
 **2.64** Enable additional file name chars in the file save dialogue (was omitted)
