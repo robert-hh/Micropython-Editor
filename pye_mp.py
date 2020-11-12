@@ -1,4 +1,4 @@
-PYE_VERSION   = " V2.64 "
+PYE_VERSION   = " V2.65 "
 try:
     import usys as sys
 except:
@@ -172,6 +172,9 @@ class Editor:
         self.io_device = io_device
         self.wr = io_device.wr
         self.is_dir = False
+        self.key_max = 0
+        for _ in Editor.KEYMAP.keys():
+            self.key_max = max(self.key_max, len(_))
     def goto(self, row, col):
         self.wr(Editor.TERMCMD[0].format(row=row + 1, col=col + 1))
     def clear_to_eol(self):
@@ -224,6 +227,8 @@ class Editor:
                     in_buffer += self.io_device.rd()
                     c = in_buffer[-1]
                     if c == '~' or (c.isalpha() and c != 'O'):
+                        break
+                    if len(in_buffer) >= self.key_max:
                         break
                 if len(in_buffer) == 2 and c.isalpha():
                     in_buffer = chr(ord(in_buffer[1]) & 0x1f)
@@ -390,6 +395,7 @@ class Editor:
                     self.col = char[0] + self.margin
                     self.cur_line = char[1] + self.top_line
                     if (self.col, self.cur_line) != mouse_last:
+                        mouse_last = (self.col, self.cur_line)
                         self.wr(Editor.TERMCMD[13] * pos)
                         self.wr(" " * len(res))
                         self.wr(Editor.TERMCMD[13] * len(res))
@@ -399,7 +405,6 @@ class Editor:
                     else:
                         self.hilite(0)
                         return res
-                    mouse_last = (self.col, self.cur_line)
             del_all = False
     def getsymbol(self, s, pos, zap):
         if pos < len(s) and zap is not None:
