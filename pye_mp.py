@@ -483,7 +483,7 @@ class Editor:
                 return len(match.group(0))
             col = 0
         else:
-            self.message = pattern + " not found (again)"
+            self.message = Editor.find_pattern + " not found (again)"
             return None
     def undo_add(self, lnum, text, key, span = 1, chain=False):
         self.changed = '*'
@@ -567,9 +567,9 @@ class Editor:
             self.set_mark()
             key = KEY_WORD_RIGHT
         elif key == KEY_MOUSE:
-            if char[1] >= Editor.height or char[2] == 0x22:
+            if char[2] == 0x22:
                 key = KEY_GET if self.is_dir else KEY_FIND
-            else:
+            elif char[1] < Editor.height:
                 col = char[0] + self.margin
                 line = char[1] + self.top_line
                 if (col, line) == (self.col, self.cur_line):
@@ -652,7 +652,7 @@ class Editor:
             pat = self.line_edit("Find: ", Editor.find_pattern, "_")
             if pat:
                 self.mark = None
-                self.find_in_file(pat, self.col, self.total_lines)
+                self.find_in_file(pat, self.col + 1, self.total_lines)
                 self.row = Editor.height >> 1
         elif key == KEY_FIND_AGAIN:
             if Editor.find_pattern:
