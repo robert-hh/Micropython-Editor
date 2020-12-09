@@ -69,7 +69,7 @@ shows most of the commands.:
 ||
 |Mouse scroll wheel|Move the cursor up and down, scrolling the content as needed.|
 |Mouse left click|Within the text: Click at the cursor position (double click) to start highlighting at the current position, or clear the highlight. The click speed does not matter. If the cursor is on a word, the whole word will be highlighted. If not, just the character under the cursor. The highlight can then be extended by moving the cursor clicking at different positions.|
-|Mouse right click|Or left click at the status line: Opens the "find" dialogue in a text file and the "open file" dialogue in a directory listing.|
+|Mouse right click|Opens the "find" dialogue in a text file and the "open file" dialogue in a directory listing.|
 |Mouse left click|In line edit mode: Clicking on a word copies it to the edit line. Clicking a second time at the same place acts as enter.|
 
 **Instead of Ctrl-letter (e.g. Ctrl-Q), Alt-letter (e.g. Alt-Q) or ESC-letter (e.g. ESC followed by Q) can be used, avoiding conflicts with key binding of some terminal emulators.**
