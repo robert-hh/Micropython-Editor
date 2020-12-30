@@ -531,3 +531,7 @@ the list of files in the current dir
 **2.63** Change mouse behavior again. Right click opens the "find" dialogue in a text window or "open file" dialogue in a directory listing. 
 
 **2.64** Enable additional file name chars in the file save dialogue (was omitted)
+
+**2.65** Check for invalid key sequence. Show the search item in "not found" messages
+
+**2.66** Fix an display error when doing a left click beyond the end of text durin line edit

@@ -19,7 +19,7 @@
 ## - Added multi-file support
 ##
 
-PYE_VERSION   = " V2.65 "
+PYE_VERSION   = " V2.66 "
 try:
     import usys as sys
 except:
@@ -446,7 +446,7 @@ class Editor:
                 res += self.getsymbol(self.content[self.cur_line], self.col, zap)[:Editor.width - pos - len(prompt) - 1]
                 push_msg(res[pos:])
             elif key == KEY_MOUSE:
-                if char[1] < Editor.height:
+                if char[1] < Editor.height and (char[1] + self.top_line) < self.total_lines:
                     self.col = char[0] + self.margin
                     self.cur_line = char[1] + self.top_line
                     if (self.col, self.cur_line) != mouse_last:  ## first click: copy
