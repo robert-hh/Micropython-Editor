@@ -1,4 +1,4 @@
-PYE_VERSION   = " V2.67 "
+PYE_VERSION   = " V2.68 "
 try:
     import usys as sys
 except:
@@ -18,6 +18,7 @@ else:
     import os
     from _io import StringIO
 from re import compile as re_compile
+import time
 KEY_NONE      = const(0x00)
 KEY_UP        = const(0x0b)
 KEY_DOWN      = const(0x0d)
@@ -173,7 +174,6 @@ class Editor:
         self.wr = io_device.wr
         self.is_dir = False
         self.key_max = 0
-        self.mouse_last = None
         for _ in Editor.KEYMAP.keys():
             self.key_max = max(self.key_max, len(_))
     def goto(self, row, col):
@@ -529,7 +529,7 @@ class Editor:
             self.mark = (self.cur_line, self.col)
     def clear_mark(self):
         self.mark = None
-        self.mouse_last = None
+        self.mouse_last = (0, 0, 0)
     def yank_mark(self):
         start_row, start_col, end_row, end_col = self.mark_range()
         Editor.yank_buffer = self.content[start_row:end_row]
@@ -576,8 +576,8 @@ class Editor:
             elif char[1] < Editor.height:
                 col = char[0] + self.margin
                 line = char[1] + self.top_line
-                if (col, line) == self.mouse_last:
-                    self.mouse_last = None              
+                if (col, line) == self.mouse_last[:2] and (time.time() - self.mouse_last[2]) < 2:
+                    self.mouse_last = (0, 0, 0)
                     if self.mark is None and col < len(l) and self.issymbol(l[col], Editor.word_char): 
                             self.col = self.skip_while(l, col, Editor.word_char, -1) + 1
                             self.set_mark()
@@ -589,7 +589,7 @@ class Editor:
                         if self.mark_order(self.cur_line, self.col) * self.mark_order(line, col) < 0:
                             self.mark = self.cur_line, self.col
                     self.cur_line, self.col = line, col
-                    self.mouse_last = (col, line)
+                    self.mouse_last = (col, line, time.time())
         if key == KEY_DOWN:
              self.move_down()
         elif key == KEY_UP:

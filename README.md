@@ -537,3 +537,5 @@ the list of files in the current dir
 **2.66** Fix an display error when doing a left click beyond the end of text durin line edit
 
 **2.67** Make double click in the text more consistent. Mark/Unmark always requires a double click.
+
+**2.68** Make double click timed. Time is < 2 seconds
