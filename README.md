@@ -68,7 +68,7 @@ shows most of the commands.:
 ||Mouse support|
 ||
 |Mouse scroll wheel|Move the cursor up and down, scrolling the content as needed.|
-|Mouse left click|Within the text: Click at the cursor position (double click) to start highlighting at the current position, or clear the highlight. The click speed does not matter. If the cursor is on a word, the whole word will be highlighted. If not, just the character under the cursor. The highlight can then be extended by moving the cursor clicking at different positions.|
+|Mouse left click|Within the text: Double click starts highlighting at the current position, or clears the highlight. The click speed does not matter. If the cursor is on a word, the whole word will be highlighted. If not, just the character under the cursor. The highlight can then be extended by moving the cursor clicking at different positions.|
 |Mouse right click|Opens the "find" dialogue in a text file and the "open file" dialogue in a directory listing.|
 |Mouse left click|In line edit mode: Clicking on a word copies it to the edit line. Clicking a second time at the same place acts as enter.|
 
@@ -535,3 +535,5 @@ the list of files in the current dir
 **2.65** Check for invalid key sequence. Show the search item in "not found" messages
 
 **2.66** Fix an display error when doing a left click beyond the end of text durin line edit
+
+**2.67** Make double click in the text more consistent. Mark/Unmark always requires a double click.

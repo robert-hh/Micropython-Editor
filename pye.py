@@ -19,7 +19,7 @@
 ## - Added multi-file support
 ##
 
-PYE_VERSION   = " V2.66 "
+PYE_VERSION   = " V2.67 "
 try:
     import usys as sys
 except:
@@ -198,13 +198,14 @@ class Editor:
         self.undo = []
         self.undo_limit = undo_limit
         self.redo = []
-        self.mark = None
+        self.clear_mark()
         self.write_tabs = "n"
         self.work_dir = os.getcwd()
         self.io_device = io_device
         self.wr = io_device.wr
         self.is_dir = False
         self.key_max = 0
+        self.mouse_last = None
         for _ in Editor.KEYMAP.keys():
             self.key_max = max(self.key_max, len(_))
 
@@ -593,11 +594,15 @@ class Editor:
             redo[redo_start][5] = False
             self.total_lines = len(self.content) ## Reset the length and change indicator
             self.changed = '' if self.hash == self.hash_buffer() else '*'
-            self.mark = None
+            self.clear_mark()
 
     def set_mark(self):  ## start the highlighting if not done yet
         if self.mark is None:
             self.mark = (self.cur_line, self.col)
+
+    def clear_mark(self):
+        self.mark = None
+        self.mouse_last = None
 
     def yank_mark(self): # Copy marked area to the yank buffer
         start_row, start_col, end_row, end_col = self.mark_range()
@@ -623,7 +628,7 @@ class Editor:
             self.undo[-1][1] = 1 ## tell undo to overwrite this single line
         self.total_lines = len(self.content)
         self.cur_line = start_row
-        self.mark = None ## unset line mark
+        self.clear_mark() ## unset line mark
 
     def handle_edit_keys(self, key, char): ## keys which change content
         l = self.content[self.cur_line]
@@ -651,7 +656,8 @@ class Editor:
             elif char[1] < Editor.height:
                 col = char[0] + self.margin
                 line = char[1] + self.top_line
-                if (col, line) == (self.col, self.cur_line): ## click at the cursor -> double blick
+                if (col, line) == self.mouse_last:
+                    self.mouse_last = None              
                     if self.mark is None and col < len(l) and self.issymbol(l[col], Editor.word_char): 
                             self.col = self.skip_while(l, col, Editor.word_char, -1) + 1
                             self.set_mark()
@@ -663,6 +669,7 @@ class Editor:
                         if self.mark_order(self.cur_line, self.col) * self.mark_order(line, col) < 0:
                             self.mark = self.cur_line, self.col
                     self.cur_line, self.col = line, col
+                    self.mouse_last = (col, line)
 ## start new if/elif sequence, since the value of key might have changed
         if key == KEY_DOWN:
              self.move_down()
@@ -731,7 +738,7 @@ class Editor:
         elif key == KEY_FIND:
             pat = self.line_edit("Find: ", Editor.find_pattern, "_")
             if pat:
-                self.mark = None
+                self.clear_mark()
                 self.find_in_file(pat, self.col + 1, self.total_lines)
                 self.row = Editor.height >> 1
         elif key == KEY_FIND_AGAIN:
@@ -811,7 +818,7 @@ class Editor:
                 self.set_mark()
                 self.move_right(l)
             else:
-                self.mark = None
+                self.clear_mark()
         elif key == KEY_SHIFT_DOWN:
             self.set_mark()
             self.move_down()
@@ -857,7 +864,7 @@ class Editor:
                 self.move_down()
         elif key == KEY_ENTER:
             self.col = self.vcol
-            self.mark = None
+            self.clear_mark()
             self.undo_add(self.cur_line, [l], KEY_NONE, 2)
             self.content[self.cur_line] = l[:self.col]
             ni = 0
@@ -938,7 +945,7 @@ class Editor:
         elif key == KEY_COPY:  # copy line(s) into buffer
             if self.mark is not None:
                 self.yank_mark()
-                self.mark = None
+                self.clear_mark()
         elif key == KEY_PASTE: ## insert buffer
             if Editor.yank_buffer:
                 self.col = self.vcol
@@ -1023,7 +1030,7 @@ class Editor:
                 return key
             elif key == KEY_GET:
                 if self.mark is not None:
-                    self.mark = None
+                    self.clear_mark()
                     self.display_window()  ## Update & display window
                 return key
 
