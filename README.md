@@ -3,7 +3,7 @@
 ## Description
 
 A small text editor written in Python running on 
-- MicroPython.org modules like the PyBoards, ESP32, ESP8266, Teensy 3.5, 3.6 and 4.x, W60x
+- MicroPython.org modules like the PyBoards, ESP32, ESP8266, Teensy 3.5, 3.6 and 4.x, RP2040, W60x
 - pycom.io modules like WipPy, Lopy, SiPy, FiPy, GPy
 - Adafruit Circuitpython modules,
 - SiPeed MaixPy modules,
@@ -77,13 +77,13 @@ shows most of the commands.:
 The editor is contained in the files pye_gen.py and pye.py. Start pye from the REPL prompt
 e.g. with 
 
-from pye_gen import pye 
-res = pye(object_1, object_2, ..[, tabsize=n][, undo=n]) 
+    from pye_gen import pye 
+    res = pye(object_1, object_2, ..[, tabsize=n][, undo=n]) 
 
-You may also use the combined version pye_mp.py:
+You may also use the combined version pye_mp.py resp. pye_mp.mpy:
 
-from pye_mp import pye 
-res = pye(object_1, object_2, ..[, tabsize=n][, undo=n]) 
+    from pye_mp import pye  
+    res = pye(object_1, object_2, ..[, tabsize=n][, undo=n]) 
 
 If object_n is a string, it's considered as the name of a file to be edited
 or a directory to be opened. If it’s a file, the content will be loaded,
@@ -92,26 +92,25 @@ file does not exist, an error is displayed, but the edit window is given that
 name. If it’s a directory, the list of file names will be loaded to the edit
 window. If object_n is a list of other items, they will be converted to strings 
 and edited, and the edited list will be returned as strings. 
-If no object is named, pye() will show the list of files, 
+If no object is named, pye() will show the list of files in the current directory, 
 creating a list of strings, unless you save to a file. In that case,
 the file name will be returned. 
 It is always the last buffer closed, which determines the return value of pye(). 
 
 Optional named parameters:
 
-tabsize=n Tab step (integer). The default is 4 
-undo=n Size of the undo stack (integer). The minimum size is 4. 
+    tabsize=n     Tab step (integer). The default is 4 
+    undo=n        Size of the undo stack (integer). The minimal size is 4. 
 
 The Linux/Darwin version can be called from the command line with:
 
-python3 pye_ux.py [filename(s)]
+    python3 pye_ux.py [filename(s)]
 
 or using the combined executable version pye:
 
-pye [filename(s)]
+    pye [filename(s)]
 
-Obviously, you may use micropython too. Using python3 (not micropython),
-content can also be redirected or pipe'd into the editor.
+Obviously, you may use micropython too.
 
 More details can be found in the doc file. On reading files, tab characters
 are expanded to spaces with a tab size of 8, and trailing white space on a
@@ -145,7 +144,7 @@ the front-end files, using cat and sed.
 - pye_mp.py, pye_mp.mpy: Condensed source files of pye.py + pye_gen.py for
 all MicroPython boards. In order to use it on an board with small memory
 like the esp8266, you have to put pye_mp.py into the directory esp8266/modules,
-esp32/modules or smt32/modules (micropython.org) or esp32/frozen (pycom.io) and
+esp32/modules or stm32/modules (micropython.org) or esp32/frozen (pycom.io) and
 rebuild micropython. A cross-compiled version may executed from the file system.
 - pye_x3.py, pye_x3.mpy: Condensed file for XBEE 3 devices. The .mpy file can
 be imported from the file system, but it should be better bundled into flash with
@@ -165,7 +164,7 @@ requires the SSD1963 drivers: https://github.com/robert-hh/SSD1963-TFT-Library-f
 |:---|:---|
 |master|Actual main line with slowly changing features.|
 |pye2|Similar to the master branch, but the column does not change during vertical moves (stale).|
-|pye_min|Feature-reduced version, which is somewhat smaller.|
+|pye_min|Feature-reduced version, which is somewhat smaller (stale).|
 
 ## Version History
 
