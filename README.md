@@ -132,7 +132,7 @@ when called with CPython also accepts data from a pipe or redirection.
 - pye_gen.py: Front-end for Micropython and Circuitpython modules with I/O through
 sys.stdout and sys.stdin.
 - peteensy.py: A front-end for Teensy 3.5 and 3.6 .
-- pye_win.py: an experimental version for the cmd window of Windows 10. It requires
+- pye_win.py: an experimental front end for the cmd window of Windows 10. It requires
 enabling the VT100 support, as detailed e.g. here: https://stackoverflow.com/questions/51680709/colored-text-output-in-powershell-console-using-ansi-vt100-codes
 - pye_xbee.py: Core file for XBEE 3 devices. 
 - Pyboard Editor.pdf: A short documentation
@@ -150,6 +150,7 @@ rebuild micropython. A cross-compiled version may executed from the file system.
 be imported from the file system, but it should be better bundled into flash with
 uos.bundle().
 - pye: Executable single file for Linux
+- pye_win: Executable single file for Windows 10
 
 ### Further front-ends
 - pye_lcd.py: Front-end provided by user @kmatch98 for Circuitpython using a LCD as output

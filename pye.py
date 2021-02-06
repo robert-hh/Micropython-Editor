@@ -19,7 +19,7 @@
 ## - Added multi-file support
 ##
 
-PYE_VERSION   = " V2.68 "
+PYE_VERSION   = " V2.69 "
 try:
     import usys as sys
 except:
@@ -265,16 +265,19 @@ class Editor:
     def get_input(self):  ## read from interface/keyboard one byte each and match against function keys
         while True:
             in_buffer = self.io_device.rd()
-            if in_buffer == '\x1b': ## starting with ESC, must be fct
+            if in_buffer[0] == '\x1b': ## starting with ESC, must be fct
                 while True:
                     in_buffer += self.io_device.rd()
                     c = in_buffer[-1]
-                    if c == '~' or (c.isalpha() and c != 'O'):
+                    if c == '~' or (c.isalpha() and len(in_buffer) > 2):
                         break
+                    ## map alt-chr aka ESC-char onto ctrl-chr, except for ESC-O
+                    if len(in_buffer) == 2 and c.isalpha() and c != 'O':
+                        in_buffer = chr(ord(in_buffer[1]) & 0x1f)
+                        break
+                    ## stop if sequence cannot be found
                     if len(in_buffer) >= self.key_max:
                         break
-                if len(in_buffer) == 2 and c.isalpha():  ## map alt-chr onto ctrl-chr
-                    in_buffer = chr(ord(in_buffer[1]) & 0x1f)
             if in_buffer in Editor.KEYMAP:
                 c = Editor.KEYMAP[in_buffer]
                 if c != KEY_MOUSE:
