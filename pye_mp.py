@@ -1,4 +1,4 @@
-PYE_VERSION   = " V2.69 "
+PYE_VERSION   = " V2.70 "
 try:
     import usys as sys
 except:
@@ -35,8 +35,10 @@ KEY_ALT_UP    = const(0xffea)
 KEY_SHIFT_DOWN= const(0xfff6)
 KEY_ALT_DOWN  = const(0xffeb)
 KEY_SHIFT_LEFT= const(0xfff0)
-KEY_SHIFT_RIGHT= const(0xffef)
+KEY_ALT_LEFT  = const(0xffe9)
 KEY_SHIFT_CTRL_LEFT= const(0xffed)
+KEY_SHIFT_RIGHT= const(0xffef)
+KEY_ALT_RIGHT = const(0xffe8)
 KEY_SHIFT_CTRL_RIGHT= const(0xffec)
 KEY_QUIT      = const(0x11)
 KEY_ENTER     = const(0x0a)
@@ -80,9 +82,11 @@ class Editor:
     "\x1b[D" : KEY_LEFT,
     "\x1b[1;2D": KEY_SHIFT_LEFT,
     "\x1b[1;6D": KEY_SHIFT_CTRL_LEFT,
+    "\x1b[1;3D": KEY_ALT_LEFT,
     "\x1b[C" : KEY_RIGHT,
     "\x1b[1;2C": KEY_SHIFT_RIGHT,
     "\x1b[1;6C": KEY_SHIFT_CTRL_RIGHT,
+    "\x1b[1;3C": KEY_ALT_RIGHT,
     "\x1b[H" : KEY_HOME,
     "\x1bOH" : KEY_HOME,
     "\x1b[1~": KEY_HOME,
@@ -749,6 +753,18 @@ class Editor:
         elif key == KEY_SHIFT_RIGHT:
             self.set_mark()
             self.move_right(l)
+        elif key == KEY_ALT_LEFT:
+            if self.col > 0:
+                self.undo_add(self.cur_line, [l], KEY_ALT_LEFT)
+                i = self.col
+                self.content[self.cur_line] = l[:i - 1] + l[i] + l[i - 1] + l[i + 1:]
+                self.move_left()
+        elif key == KEY_ALT_RIGHT:
+            if self.col < len(l):
+                self.undo_add(self.cur_line, [l], KEY_ALT_RIGHT)
+                i = self.col
+                self.content[self.cur_line] = l[:i] + l[i + 1] + l[i] + l[i + 2:]
+                self.move_right(l)
         elif key == KEY_ALT_UP:
             if self.mark is None:
                 start_line = self.cur_line

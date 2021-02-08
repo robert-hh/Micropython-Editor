@@ -36,6 +36,7 @@ shows most of the commands.:
 |Ctrl-Shift-Left -Right|Highlight the next or previous word or extend the highlighted area|
 |Ctrl-Up Ctr-Down|Scroll the windows down/up|
 |Alt-Up Alt-Down|Move the current line or highlighted area up/down by one line|
+|Alt-Left Alt-Right|Move the character under the cursor left/right|
 |PgUp & PgDd|Page up/down|
 |Home|Toggle the position between the start-of-code and the start of line|
 |End|Toggle the position between the end-of-the-code and end-of-line|
@@ -534,8 +535,12 @@ the list of files in the current dir
 
 **2.65** Check for invalid key sequence. Show the search item in "not found" messages
 
-**2.66** Fix an display error when doing a left click beyond the end of text durin line edit
+**2.66** Fix an display error when doing a left click beyond the end of text during line edit
 
 **2.67** Make double click in the text more consistent. Mark/Unmark always requires a double click.
 
 **2.68** Make double click timed. Time is < 2 seconds
+
+**2.69** Minor reorganisation in the function get_input. Firt version of a Window 10 front-end.
+
+**2.70** Move character under the cursor left/right with the Alt-Left/Alt-Right key.
