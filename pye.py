@@ -32,7 +32,7 @@ if sys.implementation.name == "micropython":
     from uio import StringIO
 elif sys.implementation.name == "circuitpython":
     is_micropython = True
-    import uos as os
+    import os
     from io import StringIO
 else:
     is_micropython = False
