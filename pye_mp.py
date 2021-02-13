@@ -974,7 +974,7 @@ class Editor:
     def hash_buffer(self):
         res = 0
         for line in self.content:
-            res = ((res * 17 + 1) ^ hash(line)) & 0x3fffffff
+            res = ((res * 227 + 1) ^ hash(line)) & 0x3fffffff
         return res
     def get_file(self, fname):
         if fname:
