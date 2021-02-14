@@ -106,6 +106,7 @@ class Editor:
     "\x08"   : KEY_REPLC,
     "\x12"   : KEY_REPLC,
     "\x11"   : KEY_QUIT,
+    "\x1b"   : KEY_QUIT,
     "\n"     : KEY_ENTER,
     "\x13"   : KEY_WRITE,
     "\x06"   : KEY_FIND,
@@ -126,6 +127,7 @@ class Editor:
     "\x17"   : KEY_NEXT,
     "\x0f"   : KEY_GET,
     "\x10"   : KEY_COMMENT,
+    "\x1f"   : KEY_COMMENT,
     "\x1b[1;5A": KEY_SCRLUP,
     "\x1b[1;5B": KEY_SCRLDN,
     "\x1b[1;5H": KEY_FIRST,
@@ -237,6 +239,9 @@ class Editor:
                         in_buffer = chr(ord(in_buffer[1]) & 0x1f)
                         break
                     if len(in_buffer) >= self.key_max:
+                        break
+                    if in_buffer == '\x1b\x1b':
+                        in_buffer = '\x1b'
                         break
             if in_buffer in Editor.KEYMAP:
                 c = Editor.KEYMAP[in_buffer]
@@ -492,10 +497,9 @@ class Editor:
             self.message = Editor.find_pattern + " not found (again)"
             return None
     def undo_add(self, lnum, text, key, span = 1, chain=False):
-        self.changed = '*'
-        if span == 0: self.message = "Added undo with span 0"
         if (len(self.undo) == 0 or key == KEY_NONE or
             self.undo[-1][3] != key or self.undo[-1][0] != lnum):
+            self.changed = '*'
             if len(self.undo) >= self.undo_limit:
                 del self.undo[0]
             self.undo.append([lnum, span, text, key, self.col, chain])
