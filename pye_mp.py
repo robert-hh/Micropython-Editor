@@ -1,4 +1,4 @@
-PYE_VERSION   = " V2.70 "
+PYE_VERSION   = " V2.71 "
 try:
     import usys as sys
 except:
@@ -45,6 +45,7 @@ KEY_ENTER     = const(0x0a)
 KEY_BACKSPACE = const(0x08)
 KEY_DELETE    = const(0x7f)
 KEY_DEL_WORD  = const(0xfff7)
+KEY_DEL_LINE  = const(0xffe7)
 KEY_WRITE     = const(0x13)
 KEY_TAB       = const(0x09)
 KEY_BACKTAB   = const(0x15)
@@ -95,6 +96,8 @@ class Editor:
     "\x1b[4~": KEY_END,
     "\x1b[5~": KEY_PGUP,
     "\x1b[6~": KEY_PGDN,
+    "\x1b[5;5~": KEY_PGUP,
+    "\x1b[6;5~": KEY_PGDN,
     "\x1b[1;5D": KEY_WORD_LEFT,
     "\x1b[1;5C": KEY_WORD_RIGHT,
     "\x03"   : KEY_COPY,
@@ -133,6 +136,7 @@ class Editor:
     "\x1b[1;5H": KEY_FIRST,
     "\x1b[1;5F": KEY_LAST,
     "\x1b[3;5~": KEY_DEL_WORD,
+    "\x1b[3;2~": KEY_DEL_LINE,
     "\x0b"   : KEY_MATCH,
     "\x1b[M" : KEY_MOUSE,
     }
@@ -533,11 +537,19 @@ class Editor:
             self.total_lines = len(self.content)
             self.changed = '' if self.hash == self.hash_buffer() else '*'
             self.clear_mark()
-    def set_mark(self):
+    def set_mark(self, flag=999999999):
         if self.mark is None:
             self.mark = (self.cur_line, self.col)
+        if self.mark_flag < flag:
+            self.mark_flag = flag
+    def check_mark(self):
+        if self.mark is not None:
+            self.mark_flag -= 1
+            if self.mark_flag <= 0:
+                self.clear_mark()
     def clear_mark(self):
         self.mark = None
+        self.mark_flag = 0
         self.mouse_last = (0, 0, 0)
     def yank_mark(self):
         start_row, start_col, end_row, end_col = self.mark_range()
@@ -574,10 +586,10 @@ class Editor:
             self.col += len(char)
             return key
         elif key == KEY_SHIFT_CTRL_LEFT:
-            self.set_mark()
+            self.set_mark(2)
             key = KEY_WORD_LEFT
         elif key == KEY_SHIFT_CTRL_RIGHT:
-            self.set_mark()
+            self.set_mark(2)
             key = KEY_WORD_RIGHT
         elif key == KEY_MOUSE:
             if char[2] == 0x22:
@@ -600,20 +612,26 @@ class Editor:
                     self.cur_line, self.col = line, col
                     self.mouse_last = (col, line, time.time())
         if key == KEY_DOWN:
-             self.move_down()
+            self.check_mark()
+            self.move_down()
         elif key == KEY_UP:
+            self.check_mark()
             self.move_up()
         elif key == KEY_LEFT:
+            self.check_mark()
             self.move_left()
         elif key == KEY_RIGHT:
+            self.check_mark()
             self.move_right(l)
         elif key == KEY_WORD_LEFT:
+            self.check_mark()
             self.col = self.vcol
             if self.skip_up():
                 l = self.content[self.cur_line]
             pos = self.skip_until(l, self.col - 1, Editor.word_char, -1)
             self.col = self.skip_while(l, pos, Editor.word_char, -1) + 1
         elif key == KEY_WORD_RIGHT:
+            self.check_mark()
             if self.skip_down(l):
                 l = self.content[self.cur_line]
             pos = self.skip_until(l, self.col, Editor.word_char, 1)
@@ -653,6 +671,14 @@ class Editor:
                 if self.col < pos:
                     self.undo_add(self.cur_line, [l], KEY_DEL_WORD)
                     self.content[self.cur_line] = l[:self.col] + l[pos:]
+        elif key == KEY_DEL_LINE:
+            if self.cur_line < (self.total_lines - 1):
+                self.undo_add(self.cur_line, [l, self.content[self.cur_line + 1]], KEY_NONE, 1)
+            else:
+                self.undo_add(self.cur_line, [l], KEY_NONE, 1)
+            self.content.pop(self.cur_line)
+            if self.content == []:
+                self.content = [""]
         elif key == KEY_HOME:
             self.col = self.spaces(l) if self.col == 0 else 0
         elif key == KEY_END:
@@ -671,16 +697,20 @@ class Editor:
                 self.row = Editor.height >> 1
         elif key == KEY_FIND_AGAIN:
             if Editor.find_pattern:
+                self.clear_mark()
                 self.find_in_file(Editor.find_pattern, self.col + 1, self.total_lines)
                 self.row = Editor.height >> 1
         elif key == KEY_GOTO:
             line = self.line_edit("Goto Line: ", "")
             if line:
+                self.clear_mark()
                 self.cur_line = int(line) - 1
                 self.row = Editor.height >> 1
         elif key == KEY_FIRST:
+            self.check_mark()
             self.cur_line = 0
         elif key == KEY_LAST:
+            self.check_mark()
             self.cur_line = self.total_lines - 1
             self.row = Editor.height - 1
         elif key == KEY_TOGGLE:
@@ -746,16 +776,16 @@ class Editor:
             else:
                 self.clear_mark()
         elif key == KEY_SHIFT_DOWN:
-            self.set_mark()
+            self.set_mark(1)
             self.move_down()
         elif key == KEY_SHIFT_UP:
-            self.set_mark()
+            self.set_mark(1)
             self.move_up()
         elif key == KEY_SHIFT_LEFT:
-            self.set_mark()
+            self.set_mark(1)
             self.move_left()
         elif key == KEY_SHIFT_RIGHT:
-            self.set_mark()
+            self.set_mark(1)
             self.move_right(l)
         elif key == KEY_ALT_LEFT:
             if self.col > 0:
@@ -900,6 +930,7 @@ class Editor:
                 Editor.yank_buffer[-1], Editor.yank_buffer[0] = tail, head
                 self.total_lines = len(self.content)
         elif key == KEY_WRITE:
+            self.clear_mark()
             fname = self.line_edit("Save File: ", self.fname if self.is_dir is False else "", Editor.file_char)
             if fname:
                 if fname != self.fname:
@@ -916,8 +947,10 @@ class Editor:
                 self.changed = ''
                 self.is_dir = False
         elif key == KEY_UNDO:
+            self.clear_mark()
             self.undo_redo(self.undo, self.redo)
         elif key == KEY_REDO:
+            self.clear_mark()
             self.undo_redo(self.redo, self.undo)
         elif key == KEY_COMMENT:
             if self.mark is None:
