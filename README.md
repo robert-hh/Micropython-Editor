@@ -128,7 +128,7 @@ when called with CPython also accepts data from a pipe or redirection.
 ## Files
 
 ### Base files
-- pye.py: Core file with comments, intended to ebtha same for all platforms 
+- pye.py: Core file with comments, intended to be the same for all platforms 
 - pye_ux.py: Front-end for Linux CPython and Linux MicroPython
 - pye_gen.py: Front-end for Micropython and Circuitpython modules with I/O through
 sys.stdout and sys.stdin.
