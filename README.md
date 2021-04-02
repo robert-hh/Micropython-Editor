@@ -44,6 +44,7 @@ shows most of the commands.:
 |Backspace|Delete char left to the cursor (The key must be set to ASCII-Del). If text are highlighted, delete the highlighted area|
 |Del|Delete the char under the cursor. At the end of the line join the next line. If autoindent is enabled, delete also the leading spaces of the joined line. If text are highlighted, delete the highlighted area. In line edit mode, Del as first keystroke will clear the entry.|
 |Ctrl-Del|Delete the word under the cursor or space up to the next non-space|
+|Shift-Del|Delete the actual line|
 |Ctrl-O|Open a new file. If the file name is left empty, an empty buffer is opened|
 |Ctrl-W|Toggle to the next file buffer|
 |Ctrl-Q|Close a file buffer or end line-edit|
@@ -167,6 +168,7 @@ requires the SSD1963 drivers: https://github.com/robert-hh/SSD1963-TFT-Library-f
 |master|Actual main line with slowly changing features.|
 |pye2|Similar to the master branch, but the column does not change during vertical moves (stale).|
 |pye_min|Feature-reduced version, which is somewhat smaller (stale).|
+|pye_shift|Slightly changed behavior with respect to setting the mark and cursor keys. If the mark was set using Shift-cursor keys, using plain cursor keys will clear the mark. This branch also implements Shift-Del for deleting a line.|
 
 ## Version History
 
