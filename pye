@@ -21,7 +21,7 @@
 ## - Added multi-file support
 ##
 
-PYE_VERSION   = " V2.70 "
+PYE_VERSION   = " V2.72 "
 try:
     import usys as sys
 except:
@@ -66,6 +66,7 @@ KEY_SHIFT_RIGHT= const(0xffef)
 KEY_ALT_RIGHT = const(0xffe8)
 KEY_SHIFT_CTRL_RIGHT= const(0xffec)
 KEY_QUIT      = const(0x11)
+KEY_FORCE_QUIT = const(0xffe6)
 KEY_ENTER     = const(0x0a)
 KEY_BACKSPACE = const(0x08)
 KEY_DELETE    = const(0x7f)
@@ -1043,9 +1044,11 @@ class Editor:
             key = self.handle_edit_keys(key, char)
             if key == KEY_QUIT:
                 if self.hash != self.hash_buffer():
-                    res = self.line_edit("File changed! Quit (y/N)? ", "N")
-                    if not res or res[0].upper() != 'Y':
+                    res = self.line_edit("File changed! Quit (y/N/f)? ", "N")
+                    if not res or res[0].upper() == 'N':
                         continue
+                    if res[0].upper() == 'F':
+                        key = KEY_FORCE_QUIT
                 self.scroll_region(0)
                 self.mouse_reporting(False) ## disable mouse reporting
                 self.goto(Editor.height, 0)
@@ -1185,6 +1188,8 @@ def pye_edit(content, tab_size=4, undo=50, io_device=None):
                     slot[index].get_file(f)
             elif key == KEY_NEXT:
                 index += 1
+            elif key == KEY_FORCE_QUIT:
+                break
         except Exception as err:
             slot[index].message = "{!r}".format(err)
             ## raise  ## remove the comment to trace bugs
