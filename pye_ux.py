@@ -75,7 +75,7 @@ if __name__ == "__main__":
         if not is_micropython:
             mode = os.fstat(0).st_mode
             if stat.S_ISFIFO(mode) or stat.S_ISREG(mode):
-                name = [l.rstrip('\r\n\t ').expandtabs(8) for l in sys.stdin]
+                name = [[l.rstrip('\r\n\t ').expandtabs(8) for l in sys.stdin]]
                 os.close(0) ## close and repopen /dev/tty
         fd_tty = os.open("/dev/tty", os.O_RDONLY) ## memorized, if new fd
         io_device = IO_DEVICE(fd_tty, KEY_REDRAW)
