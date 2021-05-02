@@ -44,6 +44,7 @@ shows most of the commands.:
 |Backspace|Delete char left to the cursor (The key must be set to ASCII-Del). If text are highlighted, delete the highlighted area|
 |Del|Delete the char under the cursor. At the end of the line join the next line. If autoindent is enabled, delete also the leading spaces of the joined line. If text are highlighted, delete the highlighted area. In line edit mode, Del as first keystroke will clear the entry.|
 |Ctrl-Del|Delete the word under the cursor or space up to the next non-space|
+|Shift-Del|Delete the actual line|
 |Ctrl-O|Open a new file. If the file name is left empty, an empty buffer is opened|
 |Ctrl-W|Toggle to the next file buffer|
 |Ctrl-Q|Close a file buffer or end line-edit|
@@ -544,3 +545,5 @@ the list of files in the current dir
 **2.69** Minor reorganisation in the function get_input. Firt version of a Window 10 front-end.
 
 **2.70** Move character under the cursor left/right with the Alt-Left/Alt-Right key.
+
+**2.72** Add delete line and force quit
