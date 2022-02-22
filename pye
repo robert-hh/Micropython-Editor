@@ -4,7 +4,7 @@
 ## Small python text editor based on the
 ## Very simple VT100 terminal text editor widget
 ## Copyright (c) 2015 Paul Sokolovsky (initial code)
-## Copyright (c) 2015-2020 Robert Hammelrath (additional code)
+## Copyright (c) 2015-2021 Robert Hammelrath (additional code)
 ## Distributed under MIT License
 ## Changes:
 ## - Ported the code to boards from micropython.org, Pycom Boards,
@@ -124,6 +124,8 @@ class Editor:
     "\x1b[4~": KEY_END,  ## Putty
     "\x1b[5~": KEY_PGUP,
     "\x1b[6~": KEY_PGDN,
+    "\x1b[5;5~": KEY_PGUP,  ## Ctrl-PgUp
+    "\x1b[6;5~": KEY_PGDN,  ## Ctr-PgDn
     "\x1b[1;5D": KEY_WORD_LEFT,
     "\x1b[1;5C": KEY_WORD_RIGHT,
     "\x03"   : KEY_COPY, ## Ctrl-C
@@ -613,12 +615,21 @@ class Editor:
             self.changed = '' if self.hash == self.hash_buffer() else '*'
             self.clear_mark()
 
-    def set_mark(self):  ## start the highlighting if not done yet
+    def set_mark(self, flag=999999999):  ## start the highlighting if not done yet
         if self.mark is None:
             self.mark = (self.cur_line, self.col)
+        if self.mark_flag < flag:
+            self.mark_flag = flag
+
+    def check_mark(self):  ## Check whether to auto-unmark
+        if self.mark is not None:
+            self.mark_flag -= 1
+            if self.mark_flag <= 0:
+                self.clear_mark()
 
     def clear_mark(self):
         self.mark = None
+        self.mark_flag = 0
         self.mouse_last = (0, 0, 0)
 
     def yank_mark(self): # Copy marked area to the yank buffer
@@ -776,8 +787,10 @@ class Editor:
                 self.cur_line = int(line) - 1
                 self.row = Editor.height >> 1
         elif key == KEY_FIRST: ## first line
+            self.check_mark()
             self.cur_line = 0
         elif key == KEY_LAST: ## last line
+            self.check_mark()
             self.cur_line = self.total_lines - 1
             self.row = Editor.height - 1 ## will be fixed if required
         elif key == KEY_TOGGLE: ## Toggle Autoindent/Search case/ Tab Size, TAB write
