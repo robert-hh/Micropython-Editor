@@ -174,7 +174,7 @@ class Editor:
         "\x1b[?25h",            ## 2: Cursor ON
         "\x1b[?25l",            ## 3: Cursor OFF
         "\x1b[0m",              ## 4: Hilite 0 - normal text
-        "\x1b[1;37;46m",        ## 5: Hilite 1 - Entering the status line
+        "\x1b[1;37;44m",        ## 5: Hilite 1 - Entering the status line
         "\x1b[43m",             ## 6: Hilite 2 - Highligthing Text
         '\x1b[?9h',             ## 7: Mouse reporting on
         '\x1b[?9l',             ## 8: Mouse reporting off
