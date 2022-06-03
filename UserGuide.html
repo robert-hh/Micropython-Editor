@@ -1,0 +1,460 @@
+<html>
+<head>
+<meta http-equiv=Content-Type content="text/html; charset=windows-1252">
+<title>Phemto  -pye - a tiny editor for a tiny environment written in python</title>
+<style>
+h1,h2,h3 {margin:2 0 8 0}
+body     {margin-left:15}
+ul       {margin:1}
+pre      {margin:1}
+sup.h    {color:green;cursor:help;font-weight:bold;font-family:serif}
+i        {font-style:normal;font-weight:bold;font-family:courier}
+#topBtn {
+    display: none;          /* Hidden by default */
+    position: fixed;        /* Fixed/sticky position */
+    bottom: 55px;           /* Place the button from the bottom */
+    right: 10px;            /* Place the button from the right */
+    z-index: 99;            /* Make sure it does not overlap */
+    border: none;
+    outline: none;
+    background-color: lightYellow;
+    color: navy; 
+    cursor: pointer;        /* Add a mouse pointer on hover */
+    padding: 10px;          /* Some padding */
+    border-radius: 10px;    /* Rounded corners */
+}
+
+#topBtn:hover { background-color: yellow /* Add a darker background on hover */
+}
+
+</style>
+</head>
+
+<body bgcolor=white style=font-size:120%>
+
+<center>
+<h2 style=font-family:sans-serif>Phemto</h2>
+<small><small style=font-family:serif;>A python editor that's tiny for tiny environments</small></small>
+<h1 style=font-family:sans-serif>pye</h1>
+<h2 style=font-family:serif>User's Guide</h2>
+</center>
+
+<p>
+Allows editing files directly on python based target boards, using a
+terminal emulator such as MSWindows putty, Mac os terminal or linux terminal.
+
+<h3> Operations include:</h3>
+<ul >
+<li>open (existing or new file), save, quit<br>
+<li>goto <var>line</var>, find, replace, <br>
+<li>cut, copy, paste, redraw, undo, redo,<br>
+<li>indent, dedent(remove leading whitespace), comment,<br>
+<li>tab, backtab</i> and scrolling.
+</ul>
+
+<p>
+<h3>Features</h3>
+
+<ul>
+<li>Action keys include: <i>^f</i>  find,  <i>^n</i> next, <i>^z</i> undo, <i> ^c</i> copy, <i> ^v</i> paste &hellip; 
+<li>Special keys, include: <i>HOME, END, PageDown</i>
+<li>Lines can be joined with cursor at the end of the line using <i>Delete</i> or<br>
+with cursor at the beginning with  <i>Backspace</i>.
+<li><i>Enter</i> key inserts or splits a line with  automatic indentation.
+<li>Command history permits multiple undo and redo.
+<li>Status line shows row, column, etc.
+<li>Multiple files can be edited simultaneously with multiple windows.
+<li>Mouse scrolling and setting the cursor.
+<li>Can be used with data files or program code.
+<li>Online help
+</ul>
+
+<p>
+The editor operates in insert mode, that is, characters typed are inserted, control+key and esc+key are commands.
+Cursor Keys, Home, End, PgUp and PgDn work as you would expect.
+
+
+<h3>Installation</h3>
+Transfer to the target board
+<ul>
+<li> <i>pye.mpy</i> (frozen bytecode for Pyboard, ESP8266, ESP32, PyCom devices, Maixpy &hellip;) or 
+<li> compiled byte code which reduces start-up time and saves memory and file space or
+<li> source <i>pye.py</i> 
+</ul>
+Transfer to the target board the file  <i>h</i> for online help in an alternate window(optional).
+<p>
+
+<h3 id=st>Starting pye</h3>
+From python <i>REPL</i> prompt:<br>
+<i>
+>>>> from pye import pye<br>
+>>>> result = pye(<span style=color:silver>[</span><var> object_1, object_2, &hellip;</var><span style=color:silver>[</span>,
+tabsize=<var>n</var><span style=color:silver>][</span>, undo=<var>n</var> <span style=color:silver>][</span>, backup=y<span style=color:silver>]]</span>)</b>
+</i>
+
+<ul>
+<li>If <i>object_<var>n</var></i> is a string ( example "<i>main.py"</i> it's a file or a directory (example <i>"/flash"</i>) .
+
+<ul>
+<li> For a <b>file</b>, the content will be loaded. <br>
+If the file does not exist an empty edit window is opened and it is given that name. 
+
+<li> For a <b>directory</b>, the list of file names will be loaded to the edit window. 
+
+<pre><i> Directory
+          /flash
+          boot.py
+          main.py</i></pre>
+
+<li>For <i>pye()</i> the list of files in current directory is used.  <p>
+
+<li>For a <b><var>list</var></b> of strings, (example ( <i>["start","stuff","end"]</i>) they will be loaded into the editing window <p>
+
+</ul>
+<li>If <b><var>object_n</var ></b> is not a string nor a list of strings, for example:<i> pye( var )</i>, an empty window is opened. 
+</ul>
+
+<p>
+Optional named parameters:<br>
+<ul>
+<li>tabsize =<var>n</var> Tab step (integer). The default is 4.
+<li>undo=<var>n</var> history size (integer). The minimum size is 4.
+<!-- <li>backup=y/n Adds a  '~' (tilde) to original filename before saving changes.      2.73 -->
+</ul>
+
+<!-- /* 
+When the user scrolls down from the top of the document, show the button
+When user clicks on button go to id=top
+uses  <link rel=stylesheet href=top.css type=text/css>
+*/ -->
+<script>
+window.onscroll = function () { scrollFunction() };
+function scrollFunction() {     // hide or show button    ADD to EVERY page so only shows up on big pages!
+    if    ( document.body.scrollTop > 400 || document.documentElement.scrollTop > 400)  // Safari? firefox? chrome? Ms explorer?
+          { document.getElementById("topBtn").style.display="block"; }
+     else { document.getElementById("topBtn").style.display="none"; }      <!-- DGG -->
+                                    }
+function topFunction() {
+    var scroll_element = document.getElementById("top");
+    scroll_element.scrollIntoView();
+                                }
+document.write('<button onclick="topFunction()" id=topBtn title="Go to top "><b>top</b></button> <a id=top>');
+
+</script>
+<h3>Keystroke commands</h3>
+
+<ul><i>^</i> indicates:<li>
+ hold the ctrl key while pressing the next key or
+<li>press the esc key then then next key.</em></ul>
+
+<table border=1 cellpadding=5 cellspacing=0 style=font-size:120%>
+<tr><th>Function<th>Keys
+
+ <tr><td><b>Open</b> a new file to a window<th> ^o
+<tr><td><b>Save</b> <th>^s
+<tr><td><b>Quit</b> a file window
+or the line edit mode.<th> ^q <br>esc esc<BR>
+<tr><td><b>Next window</b><th> ^W
+
+<tr><th colspan=2> Inserting<br>
+ <tr><td>Characters typed are inserted<td>
+<tr><td><b>spaces</b> up to the next tab position.<th>BackTab
+<tr><td><b>Tab</b> If text is selected indent the selection. <th> Tab
+<tr><td>line <b>break</b> at the cursor position.  Auto-indent is supported.  <th>Enter</b>
+
+<tbody bgcolor=azure>
+
+<tr><th colspan=2 > Movement <br> go to:
+<tr><td><b>Top</b> of the file<th> ^t <br> ^Home</b>
+<tr><td><b>left</b>
+to the start of the actual or previous symbol
+skipping over to the previous line.  <th valign=top>^&larr;
+
+<tr><td><b>Start-of-line</b> if the Cursor is at <b>start-of-text</b>.<th>  Home
+<tr><td><b>right</b> behind the next symbol or line end,
+skipping over to the next line.<th valign=top> ^&rarr;
+
+
+<tr><td><b>Line #</b><th> ^g
+<tr><td><b>Bottom</b> of the file <th> ^b <br> ^End</b><b>
+
+<tr><td><b>Matching</b> bracket</b>.  The cursor must be on the  bracket.  <br>
+Bracket pairs are ( ), [ ], { } and &lt; ><th valign=top> ^k<br>
+
+<tr><td><b>Current line or selected </b> up/down with the cursor <th>Alt-Up Alt-Down</b>
+<tr><td><b>Cursor up / down </b> a screen <th> PgUp PgDn
+
+<tr><td><b>Scroll</b> the window</b> Up/Down</b> <th>^&uarr; <small>/</small>  ^&darr;
+
+
+
+
+
+<tbody bgcolor=mistyrose>
+<tr ><th colspan=2>Deleting</h3>
+<tr><td><b>Selection </b><th> Del <br> backspace
+
+<tr><td><b>Char left</b> of the cursor.  <br>
+Join</b> to the previous line if cursor is at the beginning of the line. <br>
+<th valign=top> Backspace
+
+
+<tr><td><b>Char</b> under (<b>before)</b> the cursor. <i>?</i> <br>
+join with the next line if cursor is at the end of the line 
+If auto-indent is enabled, delete the leading spaces of the line. <br>
+
+<tr><td><b>Word</b> under the cursor or spaces up to the next non-space.<tH> ^Del
+<tr><td><b>spaces left</b> of the cursor up to the next tab 
+or the next non-space char, <br>
+and move the cursor.                <td> ^u
+
+<tbody>
+<tr><th colspan=2>Finding
+<tr><td><b>Find</b> text across multiple windows Stops at the end i.e. does not wrap.<br>
+ <i>^xyz</i><sup class=h title=" the ^ here is not CTRL 
+rather it is the regular expression anchor 
+to beginning of the line">&dagger;</sup> finds <i>xyz </i>at the beginning; <i>xxx</i>$ at the end<br>
+The search string is saved.<br>
+Case sensitivity is set by <a href=#a><i>^a</i></a> .<th>^f
+
+<tr><td>Next<b> find</b><th> ^n
+
+<tr><td><b>Find and replace</b><br>
+ If text is selected, it affects only the selected region.<th >^R
+
+<tbody bgcolor=gainsboro>
+<tr><th colspan=2>Selecting text
+
+<tr><td><b>Start selection </b> and move the cursor to the right <br>
+Once selecting has begun it can be extended by moving the cursor. <br>
+The selection is effected by:<br>
+ Delete, Backspace, Cut lines, Copy lines, Insert lines, Tab,<br>
+Backtab, Save and Replace. <br>
+<b>End selecting</b> by pressing  <i>^l</i> again or an operation on that area. <th>^space
+
+<tr><td><b>Select and extend and move</b>  up / down / left / right<th> Shift-&uarr; &darr; &larr; &rarr; 
+<tr><td><b>Select previous/next</b> word or extend the Selection. <th> ^Shift- &larr; <small>/</small> &rarr;
+<tr><td><b>Copy selection </b> to the clipboard<th> ^c
+<tr><td><b>Cut selection</b>  to the clipboard.
+The selection is cleared.  <br>
+This implements the "Cut &amp; Paste" feature.  <th valign=top> ^x
+
+<tr><td><b>Paste </b> the <b>clipboard</b> at the cursor position.  <br>
+If text is selected, it is replaced. <br>
+In the line edit mode: paste the item under the cursor.<th> ^v
+<tbody>
+<tr><th colspan=2>Additional Commands
+
+<tr><td><b>Redraw</b> the screen<th>^e
+<tr><td><b> Undo</b> the last change(s).<th> ^z
+<tr><td><b> Redo</b>  the operation undone by Undo
+immediately after Undo(s). <br>
+Any change to the text invalidates the redo history.  <th> ^y
+
+<tbody>
+<tr><td><b>Toggle</b> <b>end-of-line</b> and <b>end-of-code</b>. <th> End
+<tr><td><b>Comment / Uncomment</b> a line or selected area.  <br>
+That is, insert / remove the comment character(s) (default '<i>#</i>') <th>^p
+<tr id=a ><td>Adjust <b>Attributes</b> that is those provided when <i>pye</i> was <a href=#st>started</a>. <br>
+Enter 'y' or 'n' or a number in comma separated fields (example:<i>n,y,4,n</i>) <br>
+Empty field leaves the value unchanged. <p>
+
+<ul>The defaults are :<br>
+<li>auto-indent: y <br>
+<li>search case sensitive: n<br>
+<li>tab-size: 4<br>
+<li>comment string #<br>
+<li>write-tabs: n <br>
+<li>positioning of the cursor during vertical moves <br>
+(straight vs.  following line ends).<th>^a
+</ul>
+
+
+<tbody bgcolor=linen>
+<tr><th colspan=3> Mouse actions
+<tr><td>Set the cursor.<th>Button 1
+<tr><td>Set / Clear highlighting.<th>Button 2
+<tr><td>Scroll Up / Down the screen content by 3 lines per tick. <th>Scroll Wheel
+
+</table>
+<p>
+
+
+
+
+
+<h2>Additional notes</h2>
+
+<p>
+<h3>Status line</h3>
+<table><tr><td>
+<i style=background-color:aqua>*main.py Row: 5/116 Col: 30 V2.73 2524KB Memory free. 213 KB File sapce available. updated 22:03:04</i><br>
+^- Astrix indicates window contents have been changed.</i>
+</table>
+<p>
+For online help use <i>^oh</i> to open the file <i>h</i> in a new window and use <i>^w</i>
+to toggle between helpfile and editing window.
+
+<p>
+
+When opening a new window the file name will be prompted for. <br>
+If the name is empty, an empty window will be opened. <br>
+If the file cannot be loaded (for example it does not exist),<br>
+&nbsp;&nbsp;an empty window with that name will be opened. <br>
+If the name is a directory a list of file names will be loaded.
+
+<p>
+
+<h3>Exiting</h3>
+
+<p>
+
+The last window closed, determines the return value. 
+
+<p >When saving an unnamed window, the file name will be prompted for. <br>
+The content is written to a temporary file (basename + “.pyetmp”) then it is
+renamed to the specified filename. If the target file name is invalid, the
+temporary file will have the content. After saving the window be named as the
+saved file, which acts as Save-as.
+
+<p>
+For quit if the edited text was changed, ask for confirmation. <br>
+If the last buffer is closed, the editor terminates.
+<p>
+For save:
+The name of the file will be returned when pye exits. <br>
+
+The option to replace <b>all</b> sequences of spaces <b>by
+tabs</b>, tab size 8. If the initial file contained tab characters, this is the default. 
+
+<p >When editing a list, the list is returned when pye exits.
+
+<p When editing a directory the name of the directory will be returned when pye exits . 
+<p> When reading files, tabs are replaced by spaces, tab size 8, and white space at the end of a line is discarded. <br>
+
+<p>
+The undo stack size per window is set on the call to <i>pye()</i> default:<br>
+ PyBoard/WiPy 50<br>
+ Linux/Darwin systems. 500
+
+
+<p>
+The Linux/Darwin version can be called from the command line with:<br>
+<i>python3<br>
+pye.py [<var>filename(s</var>)]</i>
+
+<p>
+Using python3 (not micropython), content can be redirected or pipe'd into the editor.
+
+<p>
+
+<h3>Internals</h3>
+
+<p >
+Uses stdin/stdout on the MicroPython boards.
+<p>
+For WiPy1, <b>only</b> the Pre-Compiled version fits, unless using Telnet with the UART session closed. 
+<p>
+The size of a file is limited by the memory of the target. <br>
+REDRAW determines how much space is left and displays it. In addition to the
+file, clipboard and especially undo consume memory. <br>
+The undo stack can be limited in the call to <i>pye</i> using <i>undo =<var>n</var></i>. <br>
+The clipboard size can be reduced by copying a single line into it. <br>
+Up to about 150 lines on ESP8266 and 600 lines on PyBoard should be safe to edit. <br>
+The largest suitable file size is in the same order of what can be handled as source file.
+
+<p>
+When saving a file on PyBoard, these changes may not
+be visible in the file system of a connected PC until you disconnect and
+reconnect the Pyboard drive. <br>
+See also the related discussion in the MicroPython Forum.
+
+<p >
+Saving to the internal flash file system of PyBoard is slow.
+<p>
+
+In some cases, Escape seems to lock the keyboard, it unlocks by typing any alpha character.
+
+<h2 >Terminal Emulators</h2>
+<!-- see the Pyboard_Editor.7.2.doc for interals:
+
+The keyboard mapping and screen commands expect ANSI (aka VT100) codes.  <br>
+
+
+The <u>delete</u> key must be set to ASCII-Del.
+
+<p >Empty cells are the same as puttyVT100 &amp; Xterm
+
+<table border=1 cellspacing=0 cellpadding=3>
+  
+<tr> <th ><b>  Key <th align=center><b> Putty VT100 <br>&amp;<br> Xterm <th><b> Putty esc-[~ <th><b>Putty Linux <th><b>Minicom <th><b> GtkTerm <th><b> Picocom <th><b>Linux Terminal<br> TERM=ANSI 
+<tr> <th> Up <th> \e[A <th> <th> <th> <th> <th> <th> 
+<tr> <th> Down <th> \e[B <th> <th> <th> <th> <th> <th>
+<tr> <th> Left <th> \e[D <th> <th> <th> <th> <th> <th>
+<tr> <th> Right <th> \e[C <th> <th> <th> <th> <th> <th>
+<tr> <th> Home <th> \e[1~ <th> <th> <th> <th> \eOH <th> \eOH <th> \e[H 
+<tr> <th> End <th> \e[4~ <th> <th> <th> \eOF <th> \eOF <th> \eOF <th> \e[F 
+<tr> <th> Ins <th> \e[2~ <th> <th> <th> <th> <th> <th>
+<tr> <th> Del <th> \e[3~ <th> <th> <th> <th> <th> <th>
+<tr> <th> PgUp <th> \e[5~ <th> <th> <th> <th> <th> <th>
+<tr> <th> PgDn <th> \e[6~ <th> <th> <th> <th> <th> <th>
+<tr> <th> Backspace <th> \x7f <th> <th> <th> <th> \x08 <th> <th> 
+<tr> <th> Ctrl-Home <th> <th> <th> <th> \e[1;5H <th> &nbsp; <th> \e[1;5H <th> \e[1;5H 
+<tr> <th> Ctrl-End <th> <th> <th> <th> \e[1;5F <th> &nbsp; <th> \e[1;5F <th> \e[1;5F 
+<tr> <th> Ctrl-Del <th> <th> <th> <th> \e[3;5~ <th> \e[3;5~ <th> \e[3;5~ <th> \e[3;5~ 
+<tr> <th>Tab <th> \x09 <th> <th> <th> <th> <th> <th> 
+<tr> <th>BackTab <th>\e[Z <th> <th> <th> <th> <th> <th>
+</table>
+
+
+<br>
+If the KEYMAP is too large, and you know which terminal you are working on,
+delete or comment out the unneeded lines. If your terminal is different change
+the control codes.
+
+-->
+
+<ul >
+<li><b>Windows</b>
+<ul>
+Terminal emulators behave inconsistently.<br>
+Best choices are <b>Putty, TeraTerm  or Xsh20 </u></b><br>
+<li><b>Putty</b> does not report mouse actions, and does not return code for shift-arrow keys. <br>
+<li><b>TeraTerm, IVT terminal and Xsh20</b> report the mouse click, but not the scroll wheel actions.<br>
+<li><b>ZOC</b> reports mouse positions constantly, and <br>
+sends no key codes for Home, End, PgUp, PGDn and Del. <br>
+<li><b>PowerVT</b> sends no key codes for Home, End, PgUp, PGDn and Del. <br>
+<li><b>Hyperterminal's</b> VT100
+emulation is poor.
+</ul>
+<li><b>Linux</b>
+
+<ul>
+<li><b>Gnome</b>
+terminal sometimes does not send the first mouse wheel code, after the pointer
+was moved into the window. <br>
+<li><b>Mate and XFCE4</b> have slightly different keyboard mappings.<br>
+<li><b> Picocom</b> sometimes sends Linux Terminal codes. 
+</ul>
+
+</ul>
+
+
+<p >
+
+<h3> Planned additional feature </h3>
+<ol>
+<li> Show line numbers
+<li> Invoke directory utility
+</ol>
+
+<p>
+See <i>Pyboard_Editor.doc</i> for additional details.
+
+
+<p>
+<small><small>DGerman&#x40Real-World-Systems.com version 1.0, 6/01/22 for pye version 2.73</small></small>
+
+</body>
+
+</html>
