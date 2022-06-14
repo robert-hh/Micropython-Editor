@@ -1,21 +1,21 @@
-  _xxx_   xxx is a key.  ^ is control or esc   | This file 'h' is 99 characters wide.   ---------->
-Go to first line  ^_home_                      |
-Go to top of file ^t                           | ^open file ^w next window  ^e redraw  ^save  ^quit
-Scroll up         ^_up_                        | ^find    ^next  ^R find & replace
-                                               |
-Go to line #      ^g   matching bracket   ^k   | Start / End select ^l. Move cursor selects more
-                                               | Select text or extend selection Shift-Up -Dn -L -R
-                                               | Select next or prior WORD    ^Shift<- / ->
-                                               | Extend the selection         ^Shift<- / ->
-Move current line          Alt-Up Alt-Down     | Move selection up/down       Alt-Up Alt-Down
-Move to before/after WORD   ^<-  ^->           | Copy / Cut  selection to clipboard ^c / ^x,
-                                               | paste clipboard ^v
-                                               |
-Move character under cursor left/right Alt<-/->| Comment toggle i.e. add/remove #  ^p
-Enter      Insert a line break                 | Change pye attributes ^a
-                                               |  (indent, ^f case, tab size,
-                                               |   comment string, write tabs)
-                                               | Undo  ^z Redo ^y                    Redraw ^e
+  _xxx_   xxx is a key.  ^ is control or esc    | This file 'h' is 99 characters wide.   --------->
+Go to first line  ^_home_                       |
+Go to top of file ^t                            | ^open file ^w next window  ^e redraw  ^save ^quit
+Scroll up         ^_up_                         | ^find    ^next  ^R find & replace
+                                                |
+Go to line #      ^g   matching bracket   ^k    | Start / End select ^L. Move cursor selects more
+                                                | Select text or extend selection Shift-Up/Dn -L/R
+                                                | Select next or prior WORD    ^Shift<- / ->
+                                                | Extend the selection         ^Shift<- / ->
+Move current line          ^-Up ^-Down          | Move selection up/down       Alt-Up Alt-Down
+Move to before/after WORD   ^<-  ^->            | Copy / Cut  selection to clipboard ^c / ^x,
+                                                | paste clipboard ^v
+                                                |
+Move character under cursor left/right ^<- / ^-> | Comment toggle i.e. add/remove #  ^p
+Insert a line break        Enter                | Change pye attributes ^a
+                                                |  (indent, ^f case, tab size,
+                                                |   comment string, write tabs)
+                                                | Undo  ^z Redo ^y                    Redraw ^e
 Delete char left to the cursor     _BackSpace_   Delete selected  _delete_
 At the beginning of a line, delete previous line-break & merge with previous line   _BackSpace_
 Delete the char under the cursor    _delete_
