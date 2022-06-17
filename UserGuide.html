@@ -9,6 +9,7 @@ ul       {margin:1}
 pre      {margin:1}
 th       {font-family:monospace}
 sup.h    {color:green;cursor:help;font-weight:bold;font-family:serif}
+a.h      {color:green;font-weight:bold;font-family:serif;text-decoration:none}
 i        {font-style:normal;font-weight:bold;font-family:courier}
 #topBtn {
     display: none;          /* Hidden by default */
@@ -58,10 +59,10 @@ terminal emulator such as MSWindows putty, Mac os terminal or Linux terminal.
 
 <ul>
 <li>Action keys include: <i>^f</i>  find,  <i>^n</i> next, <i>^z</i> undo, <i> ^c</i> copy, <i> ^v</i> paste, &hellip; 
-<li>Special keys, include: <i>HOME, END, PageDown</i>, &hellip;</i>
-<li>Lines can be joined with cursor at the end of the line using <i>Delete</i> or<br>
-with cursor at the beginning with  <i>Backspace</i>.
-<li><i>Enter</i> key inserts or splits a line with  automatic indentation.
+<li>Special keys, include: <i>home, end, page^</i>, &hellip;</i>
+<li>Lines can be joined with cursor at the end of the line using <i>delete</i> or<br>
+with cursor at the beginning with  <i>backspace</i>.
+<li><i>enter</i> key inserts or splits a line with  automatic indentation.
 <li>Command history permits multiple undo and redo.
 <li>Status line shows row, column, etc.
 <li>Multiple files can be edited simultaneously with multiple windows.
@@ -72,7 +73,7 @@ with cursor at the beginning with  <i>Backspace</i>.
 
 <p>
 The editor operates in insert mode, that is, characters typed are inserted, control+key and <span style=font-size:180%;vertical-align:middle;>&#x241B;</span>+key are commands.<br>
-Cursor Keys, Home, End, PgUp and PgDn work as you would expect.
+Cursor Keys, home, end, page^ &hellip; work as you would expect.
 
 
 <h3>Installation</h3>
@@ -155,40 +156,41 @@ document.write('<button onclick="topFunction()" id=topBtn title="Go to top "><b>
 <tr><th style=font-family:serif>Function<th style=font-family:serif>Keys
 
  <tr><td><b>Open</b> a new file to a window                                 <th> ^o
-<tr><td><b>Save</b>                                                         <th>^s
+<tr><td><b>Save</b>                                       <th> <span style=font-size:180%;vertical-align:middle;>&#x241B;</span>s
 <tr><td><b>Quit</b> a file window
 or the line edit mode.                                                      <th> ^q <br>
-<span style=font-size:190%;vertical-align:middle;>&#x241B;&#x241b</span>
+<span style=font-size:190%;vertical-align:middle;>&#x241B;&#x241B</span>
 <tr><td><b>Next window</b>                                                  <th> ^W
 
 <tr><th  style=font-family:serif colspan=2> Inserting<br>
  <tr><td>Characters typed are inserted<td>
-<tr><td><b>spaces</b> up to the next tab position.                          <th>BackTab
-<tr><td><b>Tab</b> If text is selected indent the selection.                <th> Tab
-<tr><td>line <b>break</b> at the cursor position.  Auto-indent is supported.<th>Enter</b>
+<tr><td><b>Tab</b> If text is selected indent the selection.                <th> [tab]
+<tr><td>line <b>break</b> at the cursor position.  Auto-indent depends on setting.
+<a href=#a class=h><sup>&dagger;</sup></a>
+                                                                        <th>Enter</b>
 
 <tbody bgcolor=azure>
 
 <tr><th style=font-family:serif colspan=2 > Movement <br> go to:
-<tr><td><b>Top</b> of the file                                              <th> ^t <br> ^Home</b>
+<tr><td><b>Top</b> of the file                                              <th> ^t 
 <tr><td><b>left</b>
 to the start of the actual or previous symbol
 skipping over to the previous line.                                         <th valign=top>^&larr;
 
-<tr><td><b>Start-of-line</b> if the Cursor is at <b>start-of-text</b>.<th>  Home
+<tr><td><b>Start-of-line</b>  OR  <b>start-of-text</b>                  <th> [home]
 <tr><td><b>right</b> behind the next symbol or line end,
-skipping over to the next line.                                             <th valign=top> ^&rarr;
+wrapping over to the next line.                                             <th valign=top> ^&rarr;
+<tr><td><b>end-of-code</b>    OR      <b>End-of-line</b>                <th> [end]
 
 
 <tr><td><b>Line #</b><th> ^g
-<tr><td><b>Bottom</b> of the file <th> ^b <br> ^End</b><b>
+<tr><td><b>Bottom</b> of the file                                               <th> ^b <br> ^[end]</b><b>
 
 <tr><td><b>Matching</b> bracket</b>.  The cursor must be on the  bracket.  <br>
 Bracket pairs are ( ), [ ], { } and &lt; >                                  <th valign=top> ^k<br>
 
 <tr><td><b>Current line or selected </b> up/down with the cursor 
-                                                                         <th style=white-space:nowrap;>
-^&uarr;/^&darr;</b>
+                                                                         <th style=white-space:nowrap;> ^&uarr; <small>/</small> ^&darr;
 <tr><td><b>Cursor up / down </b> a screen <th> PgUp PgDn
 
 <tr><td><b>Scroll</b> the window</b> Up/Down</b>                        <th>^&uarr; <small>/</small>  ^&darr;
@@ -198,51 +200,18 @@ Bracket pairs are ( ), [ ], { } and &lt; >                                  <th 
 
 
 
-<tbody bgcolor=mistyrose>
-<tr ><th  style=font-family:serif colspan=2>Deleting</h3>
-<tr><td><b>Selection </b>                                                   <th> Del <br> Backspace
-
-<tr><td><b>Char left</b> of the cursor.  <br>
-Join</b> to the previous line if cursor is at the beginning of the line. <br>
-                                                                             <th valign=middle> Backspace
-
-
-<tr><td><b>Char under</b> (before) the cursor. <br>
-Join with the next line if cursor is at the end of the line <br>
-With auto-indent, delete the leading spaces of the line.                           <th> Del
-
-<tr><td><b>Word</b> under the cursor or spaces up to the next non-space.           <th> ^Del
-<tr><td><b>Line</b>                                                                <th> ShiftDel
-<tr><td><b>Spaces left</b> of the cursor to the next tab 
-or non-space<!-- , <br>
-and move the cursor.           -->                                              <th> ^u <br>BackTab
-
-<tbody>
-<tr><th  style=font-family:serif colspan=2>Finding
-<tr><td><b>Find</b> text across multiple windows Stops at the end i.e. does not wrap.<br>
- <i>^xyz</i><sup class=h title=" the ^ here is not CTRL 
-rather it is the regular expression anchor 
-to beginning of the line">&dagger;</sup> finds <i>xyz </i>at the beginning; <i>xxx</i>$ at the end<br>
-The search string is saved.<br>
-Case sensitivity is set by <a href=#a><i>^a</i></a> .                                   <th>^f
-
-<tr><td><b>Next find</b><th> ^n
-
-<tr><td><b>Find and replace</b><br>
- If text is selected, it affects only the selected region.                              <th>^r
-
 <tbody bgcolor=gainsboro>
 <tr><th  style=font-family:serif colspan=2>Selecting text
 
-<tr><td><b>Start selection </b> and move the cursor to the right <br>
-Once selecting has begun it can be extended by moving the cursor. <br>
-The selection is effected by:<br>
- Delete, Backspace, Cut lines, Copy lines, Insert lines, Tab,<br>
-Backtab, Save and Replace. <br>
-<b>End selecting</b> by pressing  <i>^L</i> or <i>^Space</i> or an operation on selection . <th>^L <p>^Space 
+<tr><td><b>Start selection </b> <br>
+Once selecting is started it can be extended by moving the cursor. <br>
+The selection is effected by Delete, Backspace, Copy, Cut, Paste, Tab,
+Backtab, Find, Save and Replace. <br>
 
-<tr><td><b>Select and extend and move</b>  up / down / left / right             <th> Shift-&uarr; &darr; &larr; &rarr; 
-<tr><td><b>Select previous/next</b> word or extend the Selection.               <th> ^Shift- &larr; <small>/</small> &rarr;
+<b>End selecting</b> by pressing  <i>^L</i> or <i>^space</i> or an operation on selection . <th> shift-&rarr; <small>/</small>  &larr;<p>
+                                                                                                ^L <p>    ^space 
+
+<tr><td><b>Select previous/next</b> word or extend the Selection.               <th> ^shift-&larr; <small>/</small> &rarr;
 <tr><td><b>Copy selection </b> to the clipboard                                 <th> ^c
 <tr><td><b>Cut selection</b>  to the clipboard.
 The selection is cleared.  <br>
@@ -251,20 +220,53 @@ This implements the "Cut &amp; Paste" feature.                                  
 <tr><td><b>Paste </b> the <b>clipboard</b> at the cursor position.  <br>
 If text is selected, it is replaced. <br>
 In the line edit mode: paste the item under the cursor.                         <th> ^v
+
+
+<tbody bgcolor=mistyrose>
+<tr ><th  style=font-family:serif colspan=2>Deleting</h3>
+<tr><td><b>Selection </b>                                                   <th> [del] <br> [backspace]
+
+<tr><td><b>Char left</b> of the cursor.  <br>
+Join</b> to the previous line if cursor is at the beginning of the line. <br>
+                                                                             <th valign=middle> [backspace]
+
+
+<tr><td><b>Char under</b> (before) the cursor. <br>
+Join with the next line if cursor is at the end of the line <br>
+With auto-indent, delete the leading spaces of the line.                           <th> [del]
+
+<tr><td><b>Word</b> under the cursor or spaces up to the next non-space.           <th> ^[del]
+<tr><td><b>Line</b>                                                                <th> shift[del]
+<tr><td><b>Un-indent</b>  a single line  or multiple selected lines. <th> ^u <br>[backtab]
+
+<tbody>
+<tr><th  style=font-family:serif colspan=2>Finding
+<tr><td><b>Find</b> a regular expression. <br>
+ For example <i>^def</i><sup class=h title=" the ^ here is not CTRL 
+rather it is the regular expression anchor 
+to beginning of the line">&dagger;</sup> finds <i>def</i> at the beginning of a line.<br>
+Skips a selection.<br>
+Case sensitivity is set by <a href=#a><i>^a</i></a>.  Stops at the end of file.<br>
+The search string is remembered.                                                      <th> ^f
+
+<tr><td><b>Next </b>find</b>                                                               <th> ^n
+
+<tr><td><b>Find and replace</b>. Optionally:&nbsp; <code>yes, all, no</code><small>(skip)</small><code>, quit</code><br>
+With a selection only the selection is searched and <code>all</code> only applies to the selection. <th>^r
+
 <tbody>
 <tr><th  style=font-family:serif colspan=2>Additional Commands
 
 <tr><td><b>Redraw</b> the screen and display file size and free space        <br> 
 <small><code style=background-color:aqua>
 *main.py Row: 5/116 Col: 30. 2524KB Memory free. File 213KB, 3121KB free.</code></small>
-                                                                                <th>^e
+                                                                                <th> ^e
 <tr><td><b>Undo</b> the last change(s).                                         <th> ^z
 <tr><td><b>Redo</b>  the operation undone by Undo
 immediately after Undo(s). <br>
 Any change to the text invalidates the redo history.                            <th> ^y
 
 <tbody>
-<tr><td><b>Toggle</b> <b>end-of-line</b> and <b>end-of-code</b>.                <th> End
 <tr><td><b>Comment / Uncomment</b> a line or selected area.  <br>
 That is, insert / remove the comment character(s) (default '<i>#</i>')          <th>^p <br> ^_
 <tr id=a ><td>Adjust <b>Attributes</b> that is those provided when <i>pye</i> was <a href=#st>started</a>. <br>
@@ -352,8 +354,7 @@ The undo stack size per window is set on the call to <i>pye()</i> default: micro
 <h3>PC Usage</h3>
 <p>
 The PC version can be called from the command line with:<br>
-<i>python3<br>
-pye.py [<var>filename(s</var>)]</i>
+<i>pye [<var>filename(s</var>)]</i>
 
 <p>
 Using python3 content can be redirected or pipe'd into the editor.
@@ -436,14 +437,12 @@ Best choices are <b>Putty, TeraTerm  or Xsh20 </u></b><br>
 <li><b>ZOC</b> reports mouse positions constantly, and <br>
 sends no key codes for Home, End, PgUp, PGDn and Del. <br>
 <li><b>PowerVT</b> sends no key codes for Home, End, PgUp, PGDn and Del. <br>
-<li><b>Hyperterminal's</b> VT100
-emulation is poor.
+<li><b>Hyperterminal's</b> VT100 emulation is poor.
 </ul>
 <li><b>Linux</b>
 
 <ul>
-<li><b>Gnome</b>
-terminal sometimes does not send the first mouse wheel code, after the pointer
+<li><b>Gnome</b> terminal sometimes does not send the first mouse wheel code, after the pointer
 was moved into the window. <br>
 <li><b>Mate and XFCE4</b> have slightly different keyboard mappings.<br>
 <li><b> Picocom</b> sometimes sends Linux Terminal codes. 
@@ -461,7 +460,7 @@ was moved into the window. <br>
 See <i style=font-weight:normal>Pyboard_Editor.doc</i> in GitHub for additional details.
 
 <p align=right>
-<small><small>DGerman&#x40Real-World-Systems.com version 1.1, 6/13/22 for pye version 2.73</small></small>
+<small><small>DGerman&#x40Real-World-Systems.com version 1.2, 6/17/22 for pye version 2.73</small></small>
 
 </body>
 
