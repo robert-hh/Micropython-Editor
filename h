@@ -1,38 +1,43 @@
-  _xxx_   xxx is a key.  ^ is control or esc    | This file 'h' is 99 characters wide.   --------->
-Go to first line  ^_home_                       |
-Go to top of file ^t                            | ^open file ^w next window  ^e redraw  ^save ^quit
-Scroll up         ^_up_                         | ^find    ^next  ^R find & replace
-                                                |
-Go to line #      ^g   matching bracket   ^k    | Start / End select ^L. Move cursor selects more
-                                                | Select text or extend selection Shift-Up/Dn -L/R
-                                                | Select next or prior WORD    ^Shift<- / ->
-                                                | Extend the selection         ^Shift<- / ->
-Move current line          ^-Up ^-Down          | Move selection up/down       Alt-Up Alt-Down
-Move to before/after WORD   ^<-  ^->            | Copy / Cut  selection to clipboard ^c / ^x,
-                                                | paste clipboard ^v
-                                                |
-Move character under cursor left/right ^<- / ^-> | Comment toggle i.e. add/remove #  ^p
-Insert a line break        Enter                | Change pye attributes ^a
-                                                |  (indent, ^f case, tab size,
-                                                |   comment string, write tabs)
-                                                | Undo  ^z Redo ^y                    Redraw ^e
-Delete char left to the cursor     _BackSpace_   Delete selected  _delete_
-At the beginning of a line, delete previous line-break & merge with previous line   _BackSpace_
-Delete the char under the cursor    _delete_
-At end of line, join the next line with autoindent
-                delete leading spaces of the joined line.  _BackSpace_
-Clear the entry in line edit mode,  _delete_ as first keystroke will
-Delete WORD under the cursor or space up to the next non-space    ^_delete_
-Delete the actual line              Shift-_delete_
+  ^ is control or esc                         | This file 'h' is 99 characters wide.   ----------->
+Go to first line    ^[home]                   |
+Go to top of file   ^t                        | ^open file  ^w next window  ^e redraw   ^save ^quit
+Scroll up           ^[up]                     | ^find    ^next  ^r find & replace
+                                              | 
+Move current line           alt-up alt-down   | Undo  ^z  Redo ^y
+Move character under cursor  alt<- / alt->    |
+                                              | Selection start / end           ^L
+Move to:                                      |
+before/after word   ^<- / ^->                 | Select text                      shift-arrow
+start-of-text and the start of line  [home]   |       Moving cursor selects more.
+end-of-the-text and end-of-line      [end]    | Move selection up/down            alt-up / alt-down
+                                              | Delete selected                  [delete]
+Go to line #   ^g   Matching ()[] {} <>   ^k  | Copy / Cut selected to clipboard ^c / ^x   
+                                              | Paste clipboard                  ^v
+Insert a line break        [enter]            | 
+character under cursor left/right ^<- / ^->   | Comment toggle i.e. add/remove #  ^p
+                                              | Change pye attributes ^a
+Delete:                                       |   (indent, ^f case, tab size,
+Char left of the cursor [backspace]           |    comment string, write tabs)
+Char under the cursor   [delete]
+Word under the cursor  ^[delete] 
+Space up to the next non-space ^[delete]
+line              Shift-[delete]
 
-Toggle the position between the start-of-code and the start of line   _Home_
-Toggle the position between the end-of-the-code and end-of-line       _End_
+Merge with previous line           [backspace] if at the beginning of a line
+Merge with next line if at end of line, 
+     with autoindent delete leading spaces of the joined line.  [backspace]
+Clear the entry in line edit mode,  [delete] as first keystroke will clear the entry.
 
-Scroll the window down         ^_Down_  
-Go to Bottom                   ^B 
-Go to last line                ^_End_                   v.81   phor pye v2.72
-
-Mac keyboard: ^cmd-arrow like ^Arrow.    Shift-fn-arrow as home, end, pg-up, pg-dn
+Scroll the window down         ^[down]  
+Go to Bottom                   ^b
+Go to last line                ^[end]                   v.82   phor pye v2.72
+___________________________________________
+      Mac keyboard: 
+Move to:
+before/after word                   ^cmd-left/right arrow 
+start-of-text and the start of line fn-left
+end-of-the-text and end-of-line     fn-right 
+scroll up/down                      fn-arrow-up/down
 
 Simple usage: transfer this file ( h ) to the target filesystem to the same directory
     as the file being edited.
