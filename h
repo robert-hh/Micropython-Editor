@@ -1,10 +1,10 @@
   ^ is control or esc                         | This file 'h' is 99 characters wide.   ----------->
 Go to first line    ^[home]                   |
-Go to top of file   ^t                        | ^open file  ^w next window  ^e redraw   ^save ^quit
+Go to top of file   ^t                        | ^open file  ^w next window     [esc]save    ^quit
 Scroll up           ^[up]                     | ^find    ^next  ^r find & replace
-                                              | 
-Move current line           alt-up alt-down   | Undo  ^z  Redo ^y
-Move character under cursor  alt<- / alt->    |
+                                              | Undo  ^z  Redo ^y
+Move current line           alt-up alt-down   | ^e redraw   
+Move character under cursor  alt<- / alt->    | 
                                               | Selection start / end           ^L
 Move to:                                      |
 before/after word   ^<- / ^->                 | Select text                      shift-arrow
@@ -23,8 +23,8 @@ Word under the cursor  ^[delete]
 Space up to the next non-space ^[delete]
 line              Shift-[delete]
 
-Join with previous line           [backspace] if at the beginning of a line
-Join with next line if at end of line, 
+Merge with previous line           [backspace] if at the beginning of a line
+Merge with next line if at end of line, 
      with autoindent delete leading spaces of the joined line.  [backspace]
 Clear the entry in line edit mode,  [delete] as first keystroke will clear the entry.
 
