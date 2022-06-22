@@ -23,8 +23,8 @@ Word under the cursor  ^[delete]
 Space up to the next non-space ^[delete]
 line              Shift-[delete]
 
-Merge with previous line           [backspace] if at the beginning of a line
-Merge with next line if at end of line, 
+Join with previous line           [backspace] if at the beginning of a line
+Join with next line if at end of line, 
      with autoindent delete leading spaces of the joined line.  [backspace]
 Clear the entry in line edit mode,  [delete] as first keystroke will clear the entry.
 
