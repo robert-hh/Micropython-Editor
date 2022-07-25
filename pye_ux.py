@@ -53,7 +53,7 @@ class IO_DEVICE:
 
 ## test, if the Editor class is already present
 if "pye_edit" not in globals().keys():
-    from pye import pye_edit, is_micropython, KEY_REDRAW, Editor
+    from pye_core import pye_edit, is_micropython, KEY_REDRAW, Editor
 
 Editor.match_span = 500
 

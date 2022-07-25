@@ -2,7 +2,8 @@
 
 ## Description
 
-A small text editor written in Python running on 
+A small text editor written in Python running on
+
 - MicroPython.org modules like the PyBoards, ESP32, ESP8266, Teensy 3.5, 3.6 and 4.x, RP2040, W60x
 - pycom.io modules like WipPy, Lopy, SiPy, FiPy, GPy
 - Adafruit Circuitpython modules,
@@ -129,6 +130,7 @@ when called with CPython also accepts data from a pipe or redirection.
 ## Files
 
 ### Base files
+
 - pye_core.py: Core file with comments, intended to be the same for all platforms 
 - pye_ux.py: Front-end for Linux CPython and Linux MicroPython
 - pye_gen.py: Front-end for Micropython and Circuitpython modules with I/O through
@@ -143,6 +145,7 @@ the front-end files, using cat and sed.
 - README.md: This one
 
 ### Derived files
+
 - pye.py, pye.mpy: Condensed source files of pye_core.py + pye_gen.py for
 all MicroPython boards. In order to use it on an board with small memory
 like the esp8266, you have to put pye_mp.py into the directory esp8266/modules,
@@ -155,6 +158,7 @@ uos.bundle().
 - pye_win: Executable single file for Windows 10
 
 ### Further front-ends
+
 - pye_lcd.py: Front-end provided by user @kmatch98 for Circuitpython using a LCD as output
 device and UART as input device. The port requires further python scripts.
 - lcd_io.md: Readme for the pye_lcd version, provided by @kmatch98.
@@ -190,6 +194,7 @@ avoid some hassle with terminal settings.
 **1.3** UNDO added. Added a multilevel UNDO (Ctrl-Z) for most functions that
 
 change the content. Other changes:
+
 - Backspace at the first non-blank character mimics BackTab, if Auto-indent is
 enabled
 - Added a REDRAW (Ctrl-E) function, which checks for the changed screen size
