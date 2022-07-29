@@ -47,7 +47,7 @@ shows most of the commands.:
 |Ctrl-Del|Delete the word under the cursor or space up to the next non-space|
 |Shift-Del|Delete the actual line|
 |Ctrl-O|Open a new file. If the file name is left empty, an empty buffer is opened|
-|Ctrl-W|Toggle to the next file buffer|
+|Ctrl-W|Switch to the next file buffer|
 |Ctrl-Q|Close a file buffer or end line-edit|
 |Ctrl-S|Save to file with the option to change the file name. If a new name is given and that file already exists, ask for confirmation.|
 |Ctrl-F|Find|
@@ -57,7 +57,8 @@ shows most of the commands.:
 |Ctrl-T|Go to the first line|
 |Ctrl-B|Go to the last line|
 |Ctrl-K|Goto the bracket matching the one under the cursor|
-|Ctrl-Home & Ctr-End|Got to the first/last line|
+|Ctrl-Home & Ctr-End|Go to the first/last line|
+|Ctrl-PgUp & Ctrl-PgDd|Switch to the previous/next file|
 |Ctrl-L or Ctrl-Space|Start highlighting at the current position, or clear the highlight. The highlight can then be extended by moving the cursor|
 |Ctrl-X|Cut the highlighted text|
 |Ctrl-C or Ctrl-D|Copy the highlighted text|

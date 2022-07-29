@@ -1,4 +1,4 @@
-PYE_VERSION   = " V2.72 "
+PYE_VERSION   = " V2.73 "
 try:
     import usys as sys
 except:
@@ -69,6 +69,7 @@ KEY_TOGGLE    = const(0x01)
 KEY_GET       = const(0x0f)
 KEY_MARK      = const(0x0c)
 KEY_NEXT      = const(0x17)
+KEY_PREV      = const(0xffe5)
 KEY_COMMENT   = const(0xfffc)
 KEY_MATCH     = const(0xfffd)
 KEY_INDENT    = const(0xfffe)
@@ -97,8 +98,8 @@ class Editor:
     "\x1b[4~": KEY_END,
     "\x1b[5~": KEY_PGUP,
     "\x1b[6~": KEY_PGDN,
-    "\x1b[5;5~": KEY_PGUP,
-    "\x1b[6;5~": KEY_PGDN,
+    "\x1b[5;5~": KEY_PREV,
+    "\x1b[6;5~": KEY_NEXT,
     "\x1b[1;5D": KEY_WORD_LEFT,
     "\x1b[1;5C": KEY_WORD_RIGHT,
     "\x03"   : KEY_COPY,
@@ -983,7 +984,7 @@ class Editor:
                 self.clear_to_eol()
                 self.undo = []
                 return key
-            elif key == KEY_NEXT:
+            elif key == KEY_NEXT or key == KEY_PREV:
                 return key
             elif key == KEY_GET:
                 if self.mark is not None:
@@ -1101,6 +1102,8 @@ def pye_edit(content, tab_size=4, undo=50, io_device=None):
                     slot[index].get_file(f)
             elif key == KEY_NEXT:
                 index += 1
+            elif key == KEY_PREV:
+                index -= 1
             elif key == KEY_FORCE_QUIT:
                 break
         except Exception as err:
