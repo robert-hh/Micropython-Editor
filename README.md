@@ -59,6 +59,8 @@ shows most of the commands.:
 |Ctrl-K|Goto the bracket matching the one under the cursor|
 |Ctrl-Home & Ctr-End|Go to the first/last line|
 |Ctrl-PgUp & Ctrl-PgDd|Switch to the previous/next file|
+|Alt-Home|Tag a location in a file|
+|Alt-PgUp & Alt-PgDn|Cycle trough tagged locations|
 |Ctrl-L or Ctrl-Space|Start highlighting at the current position, or clear the highlight. The highlight can then be extended by moving the cursor|
 |Ctrl-X|Cut the highlighted text|
 |Ctrl-C or Ctrl-D|Copy the highlighted text|
@@ -79,32 +81,32 @@ shows most of the commands.:
 **Instead of Ctrl-letter (e.g. Ctrl-Q), Alt-letter (e.g. Alt-Q) or ESC-letter (e.g. ESC followed by Q) can be used, avoiding conflicts with key binding of some terminal emulators.**
 
 The editor is contained in the files pye_gen.py and pye_core.py. Start pye from the REPL prompt
-e.g. with 
+e.g. with
 
-    from pye import pye 
-    res = pye(object_1, object_2, ..[, tabsize=n][, undo=n]) 
+    from pye import pye
+    res = pye(object_1, object_2, ..[, tabsize=n][, undo=n])
 
 You may also use the combined version pye.py resp. pye.mpy:
 
-    from pye import pye  
-    res = pye(object_1, object_2, ..[, tabsize=n][, undo=n]) 
+    from pye import pye
+    res = pye(object_1, object_2, ..[, tabsize=n][, undo=n])
 
 If object_n is a string, it's considered as the name of a file to be edited
 or a directory to be opened. If it’s a file, the content will be loaded,
 and the name of the file will be returned when pye is closed. If the
 file does not exist, an error is displayed, but the edit window is given that
 name. If it’s a directory, the list of file names will be loaded to the edit
-window. If object_n is a list of other items, they will be converted to strings 
-and edited, and the edited list will be returned as strings. 
-If no object is named, pye() will show the list of files in the current directory, 
+window. If object_n is a list of other items, they will be converted to strings
+and edited, and the edited list will be returned as strings.
+If no object is named, pye() will show the list of files in the current directory,
 creating a list of strings, unless you save to a file. In that case,
-the file name will be returned. 
-It is always the last buffer closed, which determines the return value of pye(). 
+the file name will be returned.
+It is always the last buffer closed, which determines the return value of pye().
 
 Optional named parameters:
 
-    tabsize=n     Tab step (integer). The default is 4 
-    undo=n        Size of the undo stack (integer). The minimal size is 4. 
+    tabsize=n     Tab step (integer). The default is 4
+    undo=n        Size of the undo stack (integer). The minimal size is 4.
 
 The Linux/Darwin version can be called from the command line with:
 
@@ -125,21 +127,21 @@ started, when the Redraw-key (Ctrl-E) is hit or on any file window change (Ctrl-
 
 The editor works also well in a Linux or MAC terminal environment (and also in some
 terminal apps of Android - tested with Termux) with both python3 and micropython.
-For that purpose, a small main() section is embedded in pye_ux.py, which 
+For that purpose, a small main() section is embedded in pye_ux.py, which
 when called with CPython also accepts data from a pipe or redirection.
 
 ## Files
 
 ### Base files
 
-- pye_core.py: Core file with comments, intended to be the same for all platforms 
+- pye_core.py: Core file with comments, intended to be the same for all platforms
 - pye_ux.py: Front-end for Linux CPython and Linux MicroPython
 - pye_gen.py: Front-end for Micropython and Circuitpython modules with I/O through
 sys.stdout and sys.stdin.
 - peteensy.py: A front-end for Teensy 3.5 and 3.6 .
 - pye_win.py: an experimental front end for the cmd window of Windows 10. It requires
 enabling the VT100 support, as detailed e.g. here: https://stackoverflow.com/questions/51680709/colored-text-output-in-powershell-console-using-ansi-vt100-codes
-- pye_xbee.py: Core file for XBEE 3 devices. 
+- pye_xbee.py: Core file for XBEE 3 devices.
 - Pyboard Editor.pdf: A short documentation
 - strip.sh: sample Shell script which creates the different derived files out of pye.py and
 the front-end files, using cat and sed.
@@ -498,7 +500,7 @@ the list of files in the current dir
 
 **2.37** Entering text replaces an highlighted area.
 
-**2.38** Add Ctrl-Shift-Left and Ctrl-Shift-Right for move & highlight 
+**2.38** Add Ctrl-Shift-Left and Ctrl-Shift-Right for move & highlight
 
 **2.39** Move a line with Alt-Up and Alt-Dn
 
@@ -536,7 +538,7 @@ the list of files in the current dir
 
 **2.62** Ask for confirmation before overwriting an existing file other than the one initially opened.
 
-**2.63** Change mouse behavior again. Right click opens the "find" dialogue in a text window or "open file" dialogue in a directory listing. 
+**2.63** Change mouse behavior again. Right click opens the "find" dialogue in a text window or "open file" dialogue in a directory listing.
 
 **2.64** Enable additional file name chars in the file save dialogue (was omitted)
 
