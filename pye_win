@@ -19,7 +19,7 @@
 ## - Added multi-file support
 ##
 
-PYE_VERSION   = " V2.76 "
+PYE_VERSION   = " V2.77 "
 try:
     import usys as sys
 except:
@@ -100,7 +100,8 @@ KEY_DEDENT    = const(0xffff)
 KEY_PLACE     = const(0xffe4)
 KEY_NEXT_PLACE = const(0xffe3)
 KEY_PREV_PLACE = const(0xffe2)
-KEY_UNDO_GOTO  = const(0xffe1)
+KEY_UNDO_PREV  = const(0xffe1)
+KEY_UNDO_NEXT  = const(0xffe0)
 
 class Editor:
 
@@ -171,10 +172,11 @@ class Editor:
     "\x1b[3;2~": KEY_DEL_LINE, ## Shift-Del
     "\x0b"   : KEY_MATCH,## Ctrl-K
     "\x1b[M" : KEY_MOUSE,
-    "\x1b[1;3H"  : KEY_PLACE, ## Alt-Home
+    "\x1b[2;3~"  : KEY_PLACE, ## Alt-Ins
     "\x1b[5;3~"  : KEY_PREV_PLACE, ## Alt-PgUp
     "\x1b[6;3~"  : KEY_NEXT_PLACE, ## Alt-PgDn
-    "\x1b[1;3F"  : KEY_UNDO_GOTO, ## Alt-End
+    "\x1b[1;3H"  : KEY_UNDO_PREV, ## Alt-Home
+    "\x1b[1;3F"  : KEY_UNDO_NEXT, ## Alt-End
     }
 
     TERMCMD = [  ## list of terminal control strings
@@ -1079,9 +1081,9 @@ class Editor:
                 else:
                     here[1].cur_line = here[0]
                     return here[1]
-        elif key == KEY_UNDO_GOTO:
+        elif key == KEY_UNDO_PREV or key == KEY_UNDO_NEXT:
             if len(self.undo) > 0:
-                self.undo_index = (self.undo_index - 1) % len(self.undo)
+                self.undo_index = (self.undo_index + (1 if key == KEY_UNDO_NEXT else -1)) % len(self.undo)
                 self.cur_line = self.undo[self.undo_index][0]
                 self.col = self.undo[self.undo_index][4]
 

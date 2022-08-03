@@ -1,4 +1,4 @@
-PYE_VERSION   = " V2.76 "
+PYE_VERSION   = " V2.77 "
 try:
     import usys as sys
 except:
@@ -77,7 +77,8 @@ KEY_DEDENT    = const(0xffff)
 KEY_PLACE     = const(0xffe4)
 KEY_NEXT_PLACE = const(0xffe3)
 KEY_PREV_PLACE = const(0xffe2)
-KEY_UNDO_GOTO  = const(0xffe1)
+KEY_UNDO_PREV  = const(0xffe1)
+KEY_UNDO_NEXT  = const(0xffe0)
 class Editor:
     KEYMAP = {
     "\x1b[A" : KEY_UP,
@@ -145,10 +146,11 @@ class Editor:
     "\x1b[3;2~": KEY_DEL_LINE,
     "\x0b"   : KEY_MATCH,
     "\x1b[M" : KEY_MOUSE,
-    "\x1b[1;3H"  : KEY_PLACE,
+    "\x1b[2;3~"  : KEY_PLACE,
     "\x1b[5;3~"  : KEY_PREV_PLACE,
     "\x1b[6;3~"  : KEY_NEXT_PLACE,
-    "\x1b[1;3F"  : KEY_UNDO_GOTO,
+    "\x1b[1;3H"  : KEY_UNDO_PREV,
+    "\x1b[1;3F"  : KEY_UNDO_NEXT,
     }
     TERMCMD = [
         "\x1b[{row};{col}H",
@@ -989,9 +991,9 @@ class Editor:
                 else:
                     here[1].cur_line = here[0]
                     return here[1]
-        elif key == KEY_UNDO_GOTO:
+        elif key == KEY_UNDO_PREV or key == KEY_UNDO_NEXT:
             if len(self.undo) > 0:
-                self.undo_index = (self.undo_index - 1) % len(self.undo)
+                self.undo_index = (self.undo_index + (1 if key == KEY_UNDO_NEXT else -1)) % len(self.undo)
                 self.cur_line = self.undo[self.undo_index][0]
                 self.col = self.undo[self.undo_index][4]
         return key
