@@ -19,7 +19,7 @@
 ## - Added multi-file support
 ##
 
-PYE_VERSION   = " V2.74 "
+PYE_VERSION   = " V2.75 "
 try:
     import usys as sys
 except:
@@ -878,13 +878,13 @@ class Editor:
             self.set_mark()
             self.move_right(l)
         elif key == KEY_ALT_LEFT:
-            if self.col > 0:
+            if self.col > 0 and self.col < len(l):
                 self.undo_add(self.cur_line, [l], KEY_ALT_LEFT)
                 i = self.col
                 self.content[self.cur_line] = l[:i - 1] + l[i] + l[i - 1] + l[i + 1:]
                 self.move_left()
         elif key == KEY_ALT_RIGHT:
-            if self.col < len(l):
+            if self.col < (len(l) - 1):
                 self.undo_add(self.cur_line, [l], KEY_ALT_RIGHT)
                 i = self.col
                 self.content[self.cur_line] = l[:i] + l[i + 1] + l[i] + l[i + 2:]
