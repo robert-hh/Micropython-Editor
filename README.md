@@ -59,9 +59,9 @@ shows most of the commands.:
 |Ctrl-K|Goto the bracket matching the one under the cursor|
 |Ctrl-Home & Ctr-End|Go to the first/last line|
 |Ctrl-PgUp & Ctrl-PgDd|Switch to the previous/next file|
-|Alt-Home|Tag a location in a file|
+|Alt-Ins|Tag a location in a file|
 |Alt-PgUp & Alt-PgDn|Cycle trough tagged locations|
-|Alt-End|Cycle trough locations with changes, based on the Undo list|
+|Alt-Home & Alt-End|Cycle trough locations with changes, based on the Undo list|
 |Ctrl-L or Ctrl-Space|Start highlighting at the current position, or clear the highlight. The highlight can then be extended by moving the cursor|
 |Ctrl-X|Cut the highlighted text|
 |Ctrl-C or Ctrl-D|Copy the highlighted text|
@@ -564,4 +564,7 @@ the list of files in the current dir
 **2.75** Fix an error with character swap.
 
 **2.76** Cycle trough places with changes.
+
+**2.77** Change key binding for Tag Location to Alt-Ins, using Alt-Home and Alt-End to cycle through
+locations with changes.
 
