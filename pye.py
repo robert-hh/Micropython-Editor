@@ -1,4 +1,4 @@
-PYE_VERSION   = " V2.75 "
+PYE_VERSION   = " V2.76 "
 try:
     import usys as sys
 except:
@@ -77,6 +77,7 @@ KEY_DEDENT    = const(0xffff)
 KEY_PLACE     = const(0xffe4)
 KEY_NEXT_PLACE = const(0xffe3)
 KEY_PREV_PLACE = const(0xffe2)
+KEY_UNDO_GOTO  = const(0xffe1)
 class Editor:
     KEYMAP = {
     "\x1b[A" : KEY_UP,
@@ -147,6 +148,7 @@ class Editor:
     "\x1b[1;3H"  : KEY_PLACE,
     "\x1b[5;3~"  : KEY_PREV_PLACE,
     "\x1b[6;3~"  : KEY_NEXT_PLACE,
+    "\x1b[1;3F"  : KEY_UNDO_GOTO,
     }
     TERMCMD = [
         "\x1b[{row};{col}H",
@@ -187,6 +189,7 @@ class Editor:
         self.content = [""]
         self.undo = []
         self.undo_limit = undo_limit
+        self.undo_index = 0
         self.redo = []
         self.clear_mark()
         self.write_tabs = "n"
@@ -986,6 +989,11 @@ class Editor:
                 else:
                     here[1].cur_line = here[0]
                     return here[1]
+        elif key == KEY_UNDO_GOTO:
+            if len(self.undo) > 0:
+                self.undo_index = (self.undo_index - 1) % len(self.undo)
+                self.cur_line = self.undo[self.undo_index][0]
+                self.col = self.undo[self.undo_index][4]
         return key
     def edit_loop(self):
         if not self.content:

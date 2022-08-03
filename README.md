@@ -61,6 +61,7 @@ shows most of the commands.:
 |Ctrl-PgUp & Ctrl-PgDd|Switch to the previous/next file|
 |Alt-Home|Tag a location in a file|
 |Alt-PgUp & Alt-PgDn|Cycle trough tagged locations|
+|Alt-End|Cycle trough locations with changes, based on the Undo list|
 |Ctrl-L or Ctrl-Space|Start highlighting at the current position, or clear the highlight. The highlight can then be extended by moving the cursor|
 |Ctrl-X|Cut the highlighted text|
 |Ctrl-C or Ctrl-D|Copy the highlighted text|
@@ -555,3 +556,12 @@ the list of files in the current dir
 **2.70** Move character under the cursor left/right with the Alt-Left/Alt-Right key.
 
 **2.72** Add delete line and force quit
+
+**2.73** Use Ctrl-PgUp and Ctr-PgDn to switch files.
+
+**2.74** Add functions to tag locations and go to them, using Alt-Home and Alt-PgUp / Alt-PgDn
+
+**2.75** Fix an error with character swap.
+
+**2.76** Cycle trough places with changes.
+
