@@ -1,4 +1,4 @@
-PYE_VERSION   = " V2.72 "
+PYE_VERSION   = " V2.76 "
 try:
     import usys as sys
 except:
@@ -69,10 +69,16 @@ KEY_TOGGLE    = const(0x01)
 KEY_GET       = const(0x0f)
 KEY_MARK      = const(0x0c)
 KEY_NEXT      = const(0x17)
+KEY_PREV      = const(0xffe5)
 KEY_COMMENT   = const(0xfffc)
 KEY_MATCH     = const(0xfffd)
 KEY_INDENT    = const(0xfffe)
 KEY_DEDENT    = const(0xffff)
+KEY_PLACE     = const(0xffe4)
+KEY_NEXT_PLACE = const(0xffe3)
+KEY_PREV_PLACE = const(0xffe2)
+KEY_UNDO_PREV  = const(0xffe1)
+KEY_UNDO_NEXT  = const(0xffe0)
 class Editor:
     KEYMAP = {
     "\x1b[A" : KEY_UP,
@@ -97,8 +103,8 @@ class Editor:
     "\x1b[4~": KEY_END,
     "\x1b[5~": KEY_PGUP,
     "\x1b[6~": KEY_PGDN,
-    "\x1b[5;5~": KEY_PGUP,
-    "\x1b[6;5~": KEY_PGDN,
+    "\x1b[5;5~": KEY_PREV,
+    "\x1b[6;5~": KEY_NEXT,
     "\x1b[1;5D": KEY_WORD_LEFT,
     "\x1b[1;5C": KEY_WORD_RIGHT,
     "\x03"   : KEY_COPY,
@@ -140,6 +146,11 @@ class Editor:
     "\x1b[3;2~": KEY_DEL_LINE,
     "\x0b"   : KEY_MATCH,
     "\x1b[M" : KEY_MOUSE,
+    "\x1b[2;3~"  : KEY_PLACE,
+    "\x1b[5;3~"  : KEY_PREV_PLACE,
+    "\x1b[6;3~"  : KEY_NEXT_PLACE,
+    "\x1b[1;3H"  : KEY_UNDO_PREV,
+    "\x1b[1;3F"  : KEY_UNDO_NEXT,
     }
     TERMCMD = [
         "\x1b[{row};{col}H",
@@ -168,6 +179,9 @@ class Editor:
     word_char = "_\\"
     file_char = "_.-"
     match_span = 50
+    place_list = []
+    place_index = 0
+    max_places = 20
     def __init__(self, tab_size, undo_limit, io_device):
         self.top_line = self.cur_line = self.row = self.vcol = self.col = self.margin = 0
         self.tab_size = tab_size
@@ -177,6 +191,7 @@ class Editor:
         self.content = [""]
         self.undo = []
         self.undo_limit = undo_limit
+        self.undo_index = 0
         self.redo = []
         self.clear_mark()
         self.write_tabs = "n"
@@ -763,7 +778,7 @@ class Editor:
                         c = 0 if way > 0 else len(self.content[i]) - 1
                     self.message = "No match in {} lines".format(abs(lstop - self.cur_line))
         elif key == KEY_MARK:
-            if self.mark is None: 
+            if self.mark is None:
                 self.set_mark()
                 self.move_right(l)
             else:
@@ -781,13 +796,13 @@ class Editor:
             self.set_mark()
             self.move_right(l)
         elif key == KEY_ALT_LEFT:
-            if self.col > 0:
+            if self.col > 0 and self.col < len(l):
                 self.undo_add(self.cur_line, [l], KEY_ALT_LEFT)
                 i = self.col
                 self.content[self.cur_line] = l[:i - 1] + l[i] + l[i - 1] + l[i + 1:]
                 self.move_left()
         elif key == KEY_ALT_RIGHT:
-            if self.col < len(l):
+            if self.col < (len(l) - 1):
                 self.undo_add(self.cur_line, [l], KEY_ALT_RIGHT)
                 i = self.col
                 self.content[self.cur_line] = l[:i] + l[i + 1] + l[i] + l[i + 2:]
@@ -958,6 +973,29 @@ class Editor:
                         self.content[i] = ns * " " + Editor.comment_char + self.content[i][ns:]
         elif key == KEY_REDRAW:
             self.redraw(True)
+        elif key == KEY_PLACE:
+            here = (self.cur_line, self)
+            if not here in Editor.place_list:
+                if len(Editor.place_list) >= Editor.max_places:
+                    Editor.place_list.pop(0)
+                Editor.place_list.append(here)
+                Editor.place_index = len(Editor.place_list) - 1
+        elif key == KEY_NEXT_PLACE or key == KEY_PREV_PLACE:
+            ni = len(Editor.place_list)
+            if ni > 0:
+                Editor.place_index = (Editor.place_index + (1 if key == KEY_NEXT_PLACE else -1)) % ni
+                here = Editor.place_list[Editor.place_index]
+                if (here[1] == self):
+                    self.cur_line = here[0]
+                    self.row = Editor.height >> 1
+                else:
+                    here[1].cur_line = here[0]
+                    return here[1]
+        elif key == KEY_UNDO_PREV or key == KEY_UNDO_NEXT:
+            if len(self.undo) > 0:
+                self.undo_index = (self.undo_index + (1 if key == KEY_UNDO_NEXT else -1)) % len(self.undo)
+                self.cur_line = self.undo[self.undo_index][0]
+                self.col = self.undo[self.undo_index][4]
         return key
     def edit_loop(self):
         if not self.content:
@@ -977,13 +1015,15 @@ class Editor:
                         continue
                     if res[0].upper() == 'F':
                         key = KEY_FORCE_QUIT
+                Editor.place_list = [item for item in Editor.place_list if item[1] != self]
+                Editor.place_index = 0
                 self.scroll_region(0)
                 self.mouse_reporting(False)
                 self.goto(Editor.height, 0)
                 self.clear_to_eol()
                 self.undo = []
                 return key
-            elif key == KEY_NEXT:
+            elif key == KEY_NEXT or key == KEY_PREV or type(key) is Editor:
                 return key
             elif key == KEY_GET:
                 if self.mark is not None:
@@ -1101,8 +1141,12 @@ def pye_edit(content, tab_size=4, undo=50, io_device=None):
                     slot[index].get_file(f)
             elif key == KEY_NEXT:
                 index += 1
+            elif key == KEY_PREV:
+                index -= 1
             elif key == KEY_FORCE_QUIT:
                 break
+            elif key in slot:
+                index = slot.index(key)
         except Exception as err:
             slot[index].message = "{!r}".format(err)
     Editor.yank_buffer = []
