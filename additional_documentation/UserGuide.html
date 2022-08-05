@@ -47,10 +47,10 @@ terminal emulator such as MSWindows putty, Mac os terminal or Linux terminal.
 
 <h3> Operations include:</h3>
 <ul >
-<li>open (existing or new file), save, quit<br>
-<li>goto <var>line</var>, find, replace, <br>
-<li>cut, copy, paste, redraw, undo, redo,<br>
-<li>indent, dedent(remove leading whitespace), comment,<br>
+<li>open (existing or new file), save, quit, &hellip;<br>
+<li>goto <var>line</var>, find, replace, &hellip;<br>
+<li>cut, copy, paste, redraw, undo, redo, &hellip;<br>
+<li>indent, un-indent, comment, &hellip;<br>
 <li>tab, backtab</i> and scrolling.
 </ul>
 
@@ -184,11 +184,16 @@ wrapping over to the next line.                                             <th 
 
 
 <tr><td><b>Line #</b><th> ^g
-<tr><td><b>Bottom</b> of the file                                               <th> ^b <br> ^[end]</b><b>
+<tr><td><b>Bottom</b> of the file.                                               <th> ^b <br> ^[end]</b><b>
 
 <tr><td><b>Matching</b> bracket</b>.  The cursor must be on the  bracket.  <br>
 Bracket pairs are ( ), [ ], { } and &lt; >                                  <th valign=top> ^k<br>
 
+
+<tr><td><b>bookmark</b> a location in any window.                              <th><span style=font-size:180%;vertical-align:middle;>&#x241B;</span>[home]
+<tr><td style=border-top-width:0><b>next bookmark<b>                                         <th  style=border-top-width:0><span style=font-size:180%;vertical-align:middle;>&#x241B;</span>[end]
+
+<tr><td><b>review</b> changes                                           <th> <span style=font-size:180%;vertical-align:middle;>&#x241B;</span>[end]
 <tr><td><b>Current line or selected </b> up/down with the cursor 
                                                                          <th style=white-space:nowrap;> ^&uarr; <small>/</small> ^&darr;
 <tr><td><b>Cursor up / down </b> a screen <th> PgUp PgDn
@@ -354,7 +359,7 @@ The undo stack size per window is set on the call to <i>pye()</i> default: micro
 <h3>PC Usage</h3>
 <p>
 The PC version can be called from the command line with:<br>
-<i>pye [<var>filename(s</var>)]</i>
+pye.py [<var>filename(s</var>)]</i>
 
 <p>
 Using python3 content can be redirected or pipe'd into the editor.
@@ -456,12 +461,14 @@ was moved into the window. <br>
 </ul>
 </ul>
 </ul>
-<p >
-See <i style=font-weight:normal>Pyboard_Editor.doc</i> in GitHub for additional details.
+<p>
+See <i style=font-weight:normal>Pyboard_Editor.doc</i> in <a href=https://github.com/robert-hh/Micropython-Editor>GitHub</a>
+ for additional details.
 
 <p align=right>
-<small><small>DGerman&#x40Real-World-Systems.com version 1.2, 6/17/22 for pye version 2.73</small></small>
+<small><small>DGerman&#x40Real-World-Systems.com version 1.4, 8/04/22 for pye version 2.77</small></small>
 
 </body>
 
 </html>
+    
