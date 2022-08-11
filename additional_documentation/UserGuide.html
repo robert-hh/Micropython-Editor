@@ -187,13 +187,12 @@ or the line edit mode.                                                      <th>
 <tbody bgcolor=azure>
 
 <tr><th style=font-family:serif colspan=2 > Movement <br> go to:
-<tr><td><b>Top</b> of the file                                              <th> ^t 
-<tr><td><b>Left</b>
-to the start of the actual or previous symbol
-skipping over to the previous line.                                         <th valign=top>^&larr;
+<tr><td><b>Top</b> of the file                                              <th> ^t<br> ^[home] 
+<tr><td><b>Left</b> to the start of the previous word
+skipping over to the previous line.                                         <th valign=top> ^&larr;
 
 <tr><td><b>Start-of-line</b>  OR  <b>start-of-text</b>                  <th> [home]
-<tr><td><b>Right</b> behind the next symbol or line end,
+<tr><td><b>Right</b> after the next word or line end,
 wrapping over to the next line.                                             <th valign=top> ^&rarr;
 <tr><td><b>End-of-code</b>    OR      <b>End-of-line</b>                <th> [end]
 
@@ -206,9 +205,9 @@ next             </b>
                                                                                     <th> ~[home] <br>~[end]
 
 
-<tr><td bgcolor=mintCream><b>Bookmark a location</b> in any window.     <th bgcolor=mintCream>~[ins] 
+<tr><td bgcolor=mintCream><b>Bookmark a location</b> in any window.     <th bgcolor=mintCream> ~[ins] 
 <tr><td style=border-top-width:0><b>previous Bookmark<br>
-next</b>                                                <th  style=border-top-width:0> ~[PgUp] <br>~[PgDn] 
+next</b>                                                <th  style=border-top-width:0> ~[PgUp] <br> ~[PgDn] 
 
 <tbody bgcolor=mintCream>
 
@@ -219,7 +218,7 @@ next</b>                                                <th  style=border-top-wi
                                                                          <th style=white-space:nowrap;> ^&uarr; <small>/</small> ^&darr;
 <tr><td><b>Cursor </b> up / down a screen                               <th> <nobr>[PgUp] / [PgDn]
 
-<tr><td><b>Scroll</b> the window</b> up / down</b>                        <th>^&uarr; <small>/</small>  ^&darr;
+<tr><td><b>Scroll</b> the window</b> up / down</b>                        <th> ^&uarr; <small>/</small>  ^&darr;
 
 
 
@@ -235,7 +234,7 @@ next</b>                                                <th  style=border-top-wi
 Backtab, Find, Save and Replace. </small><br>
 
 <b>End selecting</b> by pressing  <i>^L</i> or <i>^space</i> or an operation(copy, delete,...). 
-                                                                                    <th> shift &rarr; <br>shift &larr;<p>
+                                                                                    <th> shift &rarr; <br> shift &larr;<p>
                                                                                                 ^L <p>    ^space 
 
 <tr><td><b>Select previous / next</b> word or extend the Selection.               <th> ^shift &larr; <small>/</small> ^shift &rarr;
@@ -244,10 +243,10 @@ Backtab, Find, Save and Replace. </small><br>
 The selection is cleared.  <br>
 <small>This implements the "Cut &amp; Paste" feature.</small>                                  <th valign=top> ^x
 
-<tr><td><b>Paste </b> the <b>clipboard</b> at the cursor position.  <br>
+<tr><td><b>Paste </b> the clipboard contents at the cursor position.  <br>
 If text is selected, it is replaced. <br>
 In the line edit mode: paste the item under the cursor.                         <th> ^v
-
+<tr><td><b>Move selection</b> up/ down                                          <th> ~&uarr; / ~&darr;
 
 <tbody bgcolor=mistyrose>
 <tr ><th  style=font-family:serif colspan=2>Deleting</h3>
@@ -260,15 +259,16 @@ Join</b> to the previous line if cursor is at the beginning of the line. <br>
 
 <tr><td><b>Char under</b> (before) the cursor. <br>
 Join with the next line if cursor is at the end of the line <br>
-With auto-indent, delete the leading spaces of the line.                           <th> [del]
+With auto-indent, delete the leading spaces of the line.                                <th> [del]
 
-<tr><td><b>Word</b> under the cursor or spaces up to the next non-space.           <th> ^[del]
-<tr><td><b>Spaces</b> back to the previous <a href=#a>tab</a> stop</a> or non-space                    <th> [backtab]
-<tr><td><b>Line</b>                                                                <th> shift[del]
-<tr><td><b>Un-indent</b>  a single line  or multiple selected lines. <th> ^u <br>[backtab]
+<tr><td><b>Word</b> under the cursor or spaces up to the next non-space.                <th> ^[del]
+<tr><td><b>Spaces</b> back to the previous <a href=#a>tab</a> stop</a> or non-space     <th> [backtab]
+<tr><td><b>Line</b>                                                                     <th> shift[del]
+<tr><td><b>Un-indent</b>  a single line  or multiple selected lines.                    <th> ^u <br>[backtab]
 
 <tbody>
 <tr><th  style=font-family:serif colspan=2>Finding
+
 <tr><td><b>Find</b> a <a href=https://docs.micropython.org/en/latest/library/re.html>regular expression</a>. <br>
  For example <i>^def</i><sup class=h title=" the ^ here is not CTRL 
 rather it is the regular expression anchor 
@@ -277,10 +277,10 @@ Skips a selection.<br>
 Case sensitivity is set by <a href=#a><i>^a</i></a>.  Stops at the end of file.<br>
 The search string is remembered.                                                      <th> ^f
 
-<tr><td><b>Next </b>find</b>                                                               <th> ^n
+<tr><td><b>Next </b>find</b>                                                           <th> ^n
 
 <tr><td><b>Find and replace</b>. Optionally:&nbsp; <code>yes, all, no</code><small>(skip)</small><code>, quit</code><br>
-With a selection only the selection is searched and <code>all</code> only applies to the selection. <th>^r
+With a selection only the selection is searched and <code>all</code> only applies to the selection. <th> ^r <br> ^h
 
 <tbody bgcolor=snow>
 <tr><th  style=font-family:serif colspan=2>Additional Commands
@@ -295,7 +295,7 @@ immediately after Undo(s). <br>
 Any change to the text invalidates the redo history.                            <th> ^y
 
 <tr><td><b>Comment / Uncomment</b> a line or selected area.  <br>
-That is: insert / remove the comment character(s) (<a href=#a>default '<i>#</i>'</a>)          <th>^p <br> ^_
+That is: insert / remove the comment character(s) (<a href=#a>default '<i>#</i>'</a>)          <th> ^p <br> ^_
 
 <tr id=a ><td>Adjust <b>Attributes</b> that is: those provided when <i>pye</i> was <a href=#st>started</a>. <br>
 Enter y,  n, a number or several characters in comma separated fields (example:<i>y,n,4,#,n</i>) <br>
