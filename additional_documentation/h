@@ -1,19 +1,19 @@
-  ^ is [control] or [esc]  ~ is [alt]          | ^open file   ^save    ^quit 
+  ^ is [control] or [esc]      ~ is [alt]      | ^open file   ^save    ^quit 
 Previous window ^[PgUp]                        |
-Scroll up       ^[up]                          | ^find    ^next   find & replace ^r
+Scroll up       ^[up]                          | ^find    ^next   find & replace ^r    ^h
 Go to:                                         | undo  ^z  redo ^y
- top of file   ^t                              | redraw ^e
- first line    ^[home]                         | 
- before / after word   ^<- / ^->               | Selection start / end           ^L
- start-of-text and the start of line  [home]   | Select text                    [shift]-arrow
+ top of file    ^t    ^[home]                  | redraw ^e
+                                               | 
+ beginning of / after word   ^<- / ^->         | Selection start / end            ^l
+ start-of-text and the start of line  [home]   | Select text                     [shift]-arrow
  end-of-the-text and end-of-line      [end]    |       Moving cursor selects more. 
-                                               | Copy / Cut selected to clipboard ^c / ^x
- line #   ^g        Matching ()[] {} <>   ^k   | Paste clipboard                  ^v 
-                                               | Delete selected                  [delete]
- change  previous / next     ~[home] ~[end]    | Move selection up / down         ~up / ~down
+                                               | Copy / Cut selection to clipboard ^c / ^x
+ line #   ^g        Matching ()[] {} <>   ^k   | Paste clipboard                   ^v 
+                                               | Delete selection                   [delete]
+ change  previous / next     ~[home] ~[end]    | Move selection up / down          ^up / ^down
 Create Bookmark              ~[ins]            |
 Go to prior / next bookmark  ~[PgUp] / ~[PgDn] | Indent / un-indent         [tab] / [backtab]
-                                               | Toggle comment (add/ remove #)   ^p
+                                               | Toggle comment (add/ remove #)   ^p    ^_
 Delete:                                        | Move current line up / down      ~up / ~down
  Char left of the cursor [backspace]           | Move character under cursor      ~<-  ~->
  Char under the cursor   [delete]              | Insert a line break              [enter]           
@@ -25,9 +25,8 @@ Join with previous line, if at beginning of line [backspace]
 Join with next line,  if at end of line and
      delete leading spaces of the joined line.  [backspace]
 Clear the entry in line edit mode,  [delete] as first keystroke 
-
-Go to last line        ^[end]                                         
-Go to Bottom           ^b                                       v.90   phor pye v2.77
+                                                                      
+Go to Bottom           ^b   ^[end]                                  v.99   phor pye v2.77
 Scroll the window down ^[down]
 Next window            ^[PgDn]     ^w
 ___________________________________________
