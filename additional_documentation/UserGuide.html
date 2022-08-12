@@ -45,12 +45,13 @@ i        {font-style:normal;font-weight:bold;font-family:courier}
 Allows editing files directly on python based target boards, using a
 terminal emulator such as MSWindows putty, Mac os terminal or Linux terminal.
 
-<h3> Operations include:</h3>
+<h3> <a href=#operations>Operations</a> include:</h3>
 <ul >
-<li>open (existing or new file), save, quit<br>
-<li>goto <var>line</var>, find, replace, <br>
-<li>cut, copy, paste, redraw, undo, redo,<br>
-<li>indent, dedent(remove leading whitespace), comment,<br>
+<li>open (existing or new file), save, quit, &hellip;<br>
+<li>goto <var>line</var>#, find, replace, &hellip;<br>
+<li>create bookmark, go to previous/next bookmark.
+<li>cut, copy, paste, redraw, undo, redo, &hellip;<br>
+<li>indent, un-indent, comment, &hellip;<br>
 <li>tab, backtab</i> and scrolling.
 </ul>
 
@@ -59,11 +60,11 @@ terminal emulator such as MSWindows putty, Mac os terminal or Linux terminal.
 
 <ul>
 <li>Action keys include: <i>^f</i>  find,  <i>^n</i> next, <i>^z</i> undo, <i> ^c</i> copy, <i> ^v</i> paste, &hellip; 
-<li>Special keys, include: <i>home, end, page^</i>, &hellip;</i>
+<li>Special keys, include: <i>[home]</i>, <i>[end]</i>, <i>[PgUp]</i>, &hellip;</i>
 <li>Lines can be joined with cursor at the end of the line using <i>delete</i> or<br>
 with cursor at the beginning with  <i>backspace</i>.
 <li><i>enter</i> key inserts or splits a line with  automatic indentation.
-<li>Command history permits multiple undo and redo.
+<li>Command history permits multiple undo / redo and go to changes.
 <li>Status line shows row, column, etc.
 <li>Multiple files can be edited simultaneously with multiple windows.
 <li>Mouse scrolling and setting the cursor.
@@ -72,7 +73,7 @@ with cursor at the beginning with  <i>backspace</i>.
 </ul>
 
 <p>
-The editor operates in insert mode, that is, characters typed are inserted, control+key and <span style=font-size:180%;vertical-align:middle;>&#x241B;</span>+key are commands.<br>
+The editor operates in insert mode, that is, characters typed are inserted, control+key, alt+key and <span style=font-size:180%;vertical-align:middle;>&#x241B;</span>,key are commands.<br>
 Cursor Keys, home, end, page^ &hellip; work as you would expect.
 
 
@@ -93,7 +94,9 @@ From python <i>REPL</i> prompt:<br>
 <i>
 >>>> from pye import pye<br>
 >>>> <span style=color:silver>[</span>result =<span style=color:silver>]</span> pye(<span style=color:silver>[</span><var> object_1, object_2, &hellip;</var><span style=color:silver>[</span>,
-tabsize=<var>n</var><span style=color:silver>][</span>, undo=<var>n</var> <span style=color:silver>][</span>, backup=y<span style=color:silver>]]</span>)</b>
+tabsize=<var>n</var><span style=color:silver>][</span>, undo=<var>n</var> <span style=color:silver>]</span>
+<!-- ,[ backup=y<span style=color:silver>]]</span> -->
+)</b>
 </i>
 
 <ul>
@@ -103,7 +106,7 @@ tabsize=<var>n</var><span style=color:silver>][</span>, undo=<var>n</var> <span 
 <li> For a <b>file</b>, the content will be loaded. <br>
 If the file does not exist an empty edit window is opened and it is given that name. 
 
-<li> For a <b>directory</b>, the list of file names will be loaded to the edit window. 
+<li> For a <b>directory</b>, the list of filenames will be loaded to the edit window. 
 
 <pre><i> Directory
           /flash
@@ -120,9 +123,8 @@ an empty window is opened.
 </ul>
 
 <p>
-Optional named parameters:<br>
-<ul>
-<li>tabsize =<var>n</var> Tab step (integer). The default is 4.
+<ul> Optional named parameters:
+<li><a href=#a>tabsize</a> =<var>n</var> Tab step (integer). The default is 4.
 <li>undo=<var>n</var> history size (integer). The minimum size is 4.
 <!-- <li>backup=y/n Adds a  '~' (tilde) to original filename before saving changes.      2.73 -->
 </ul>
@@ -146,54 +148,77 @@ function topFunction() {
 document.write('<button onclick="topFunction()" id=topBtn title="Go to top "><b>keys</b></button> <a id=top>');
 
 </script>
-<h3>Keystroke commands</h3>
+<p>
+<h3 id=operations>Keystroke commands (Operations)</h3>
 
-<ul><i>^</i> indicates:<li>
- hold the ctrl key while pressing the next key or
-<li>press the <span style=font-size:180%;vertical-align:middle;>&#x241B;</span> key then then next key.</em></ul>
+Notations:
+<ul><i><big>^</big></i> indicates:
+<li > Hold the ctrl key while pressing the next key OR
+<li> Press the <span style=font-size:180%;vertical-align:middle;>&#x241B;</span> key, then the next key.
+    <small>Not with special keys i.e. [home],&hellip;</small>
+</ul>
+<ul><i><big>~</big></i> indicates:
+<li> Hold the alt key while pressing the next key 
+</ul>
+<p>
 
 <table border=1 cellpadding=5 cellspacing=0 style=font-size:120%>
 <tr><th style=font-family:serif>Function<th style=font-family:serif>Keys
 
+<tbody bgcolor=cornsilk>
  <tr><td><b>Open</b> a new file to a window                                 <th> ^o
-<tr><td><b>Save</b>                                       <th> <span style=font-size:180%;vertical-align:middle;>&#x241B;</span>s
-<tr><td><b>Quit</b> a file window
+<tr><td><b>Save</b>                                       <th> ^s
+<tr><td><b>Quit</b> a window
 or the line edit mode.                                                      <th> ^q <br>
-<span style=font-size:190%;vertical-align:middle;>&#x241B;&#x241B</span>
-<tr><td><b>Next window</b>                                                  <th> ^W
+<span style=font-size:190%;vertical-align:middle;>&#x241B;</span><span style=font-size:30%> </span><span 
+      style=font-size:190%;vertical-align:middle;>&#x241B</span>
+<tr><td><b>Previous window</b>                                 <th>  ^[PgUp]
+<tr><td><b>Next window</b>                                 <th> ^[PgDn] <br> ^W
 
+<tbody>
 <tr><th  style=font-family:serif colspan=2> Inserting<br>
  <tr><td>Characters typed are inserted<td>
-<tr><td><b>Tab</b> If text is selected indent the selection.                <th> [tab]
-<tr><td>line <b>break</b> at the cursor position.  Auto-indent depends on setting.
-<a href=#a class=h><sup>&dagger;</sup></a>
-                                                                        <th>Enter</b>
+<tr><td>Insert spaces to the next tab stop. <small>( Default <a href=#a>tab</a> stops are every 4 columns)</small><br>
+ Indent the selection.                <th> [tab]
+                 
+<tr><td>line <b>break</b> at the cursor position.  <small><a href=#a>Auto-indent</a> depends on setting.</small>
+                                                                        <th>[enter]</b>
 
 <tbody bgcolor=azure>
 
 <tr><th style=font-family:serif colspan=2 > Movement <br> go to:
-<tr><td><b>Top</b> of the file                                              <th> ^t 
-<tr><td><b>left</b>
-to the start of the actual or previous symbol
-skipping over to the previous line.                                         <th valign=top>^&larr;
+<tr><td><b>Top</b> of the file                                              <th> ^t<br> ^[home] 
+<tr><td><b>Left</b> to the start of the previous word
+skipping over to the previous line.                                         <th valign=top> ^&larr;
 
 <tr><td><b>Start-of-line</b>  OR  <b>start-of-text</b>                  <th> [home]
-<tr><td><b>right</b> behind the next symbol or line end,
+<tr><td><b>Right</b> after the next word or line end,
 wrapping over to the next line.                                             <th valign=top> ^&rarr;
-<tr><td><b>end-of-code</b>    OR      <b>End-of-line</b>                <th> [end]
+<tr><td><b>End-of-code</b>    OR      <b>End-of-line</b>                <th> [end]
 
 
 <tr><td><b>Line #</b><th> ^g
 <tr><td><b>Bottom</b> of the file                                               <th> ^b <br> ^[end]</b><b>
 
-<tr><td><b>Matching</b> bracket</b>.  The cursor must be on the  bracket.  <br>
-Bracket pairs are ( ), [ ], { } and &lt; >                                  <th valign=top> ^k<br>
+<tr><td><b>previous Change <br>
+next             </b>
+                                                                                    <th> ~[home] <br>~[end]
 
-<tr><td><b>Current line or selected </b> up/down with the cursor 
+
+<tr><td bgcolor=mintCream><b>Bookmark a location</b> in any window.     <th bgcolor=mintCream> ~[ins] 
+<tr><td style=border-top-width:0><b>previous Bookmark<br>
+next</b>                                                <th  style=border-top-width:0> ~[PgUp] <br> ~[PgDn] 
+
+<tbody bgcolor=mintCream>
+
+<tr><td style=border-top-width:3><b>Match bracket</b> the cursor is on.  <br>
+<small>Bracket pairs are ( ), [ ], { } and &lt; > </small>                                  
+                                                                        <th valign=top style=border-top-width:3> ^k<br>
+<tr><td><b>Current line or selected </b> up / down with the cursor 
                                                                          <th style=white-space:nowrap;> ^&uarr; <small>/</small> ^&darr;
-<tr><td><b>Cursor up / down </b> a screen <th> PgUp PgDn
+<tr><td><b>Cursor </b> up / down a screen                               <th> <nobr>[PgUp] / [PgDn]
 
-<tr><td><b>Scroll</b> the window</b> Up/Down</b>                        <th>^&uarr; <small>/</small>  ^&darr;
+<tr><td><b>Scroll</b> the window</b> up / down</b>                        <th> ^&uarr; <small>/</small>  ^&darr;
 
 
 
@@ -204,23 +229,24 @@ Bracket pairs are ( ), [ ], { } and &lt; >                                  <th 
 <tr><th  style=font-family:serif colspan=2>Selecting text
 
 <tr><td><b>Start selection </b> <br>
-Once selecting is started it can be extended by moving the cursor. <br>
-The selection is effected by Delete, Backspace, Copy, Cut, Paste, Tab,
-Backtab, Find, Save and Replace. <br>
+<small>Once selecting is started it can be extended by moving the cursor. <br></small>
+<small>The selection is effected by Delete, Backspace, Copy, Cut, Paste, Tab,
+Backtab, Find, Save and Replace. </small><br>
 
-<b>End selecting</b> by pressing  <i>^L</i> or <i>^space</i> or an operation on selection . <th> shift-&rarr; <small>/</small>  &larr;<p>
+<b>End selecting</b> by pressing  <i>^L</i> or <i>^space</i> or an operation(copy, delete,...). 
+                                                                                    <th> shift &rarr; <br> shift &larr;<p>
                                                                                                 ^L <p>    ^space 
 
-<tr><td><b>Select previous/next</b> word or extend the Selection.               <th> ^shift-&larr; <small>/</small> &rarr;
+<tr><td><b>Select previous / next</b> word or extend the Selection.               <th> ^shift &larr; <small>/</small> ^shift &rarr;
 <tr><td><b>Copy selection </b> to the clipboard                                 <th> ^c
 <tr><td><b>Cut selection</b>  to the clipboard.
 The selection is cleared.  <br>
-This implements the "Cut &amp; Paste" feature.                                  <th valign=top> ^x
+<small>This implements the "Cut &amp; Paste" feature.</small>                                  <th valign=top> ^x
 
-<tr><td><b>Paste </b> the <b>clipboard</b> at the cursor position.  <br>
+<tr><td><b>Paste </b> the clipboard contents at the cursor position.  <br>
 If text is selected, it is replaced. <br>
 In the line edit mode: paste the item under the cursor.                         <th> ^v
-
+<tr><td><b>Move selection</b> up/ down                                          <th> ~&uarr; / ~&darr;
 
 <tbody bgcolor=mistyrose>
 <tr ><th  style=font-family:serif colspan=2>Deleting</h3>
@@ -233,15 +259,17 @@ Join</b> to the previous line if cursor is at the beginning of the line. <br>
 
 <tr><td><b>Char under</b> (before) the cursor. <br>
 Join with the next line if cursor is at the end of the line <br>
-With auto-indent, delete the leading spaces of the line.                           <th> [del]
+With auto-indent, delete the leading spaces of the line.                                <th> [del]
 
-<tr><td><b>Word</b> under the cursor or spaces up to the next non-space.           <th> ^[del]
-<tr><td><b>Line</b>                                                                <th> shift[del]
-<tr><td><b>Un-indent</b>  a single line  or multiple selected lines. <th> ^u <br>[backtab]
+<tr><td><b>Word</b> under the cursor or spaces up to the next non-space.                <th> ^[del]
+<tr><td><b>Spaces</b> back to the previous <a href=#a>tab</a> stop</a> or non-space     <th> [backtab]
+<tr><td><b>Line</b>                                                                     <th> shift[del]
+<tr><td><b>Un-indent</b>  a single line  or multiple selected lines.                    <th> ^u <br>[backtab]
 
 <tbody>
 <tr><th  style=font-family:serif colspan=2>Finding
-<tr><td><b>Find</b> a regular expression. <br>
+
+<tr><td><b>Find</b> a <a href=https://docs.micropython.org/en/latest/library/re.html>regular expression</a>. <br>
  For example <i>^def</i><sup class=h title=" the ^ here is not CTRL 
 rather it is the regular expression anchor 
 to beginning of the line">&dagger;</sup> finds <i>def</i> at the beginning of a line.<br>
@@ -249,12 +277,12 @@ Skips a selection.<br>
 Case sensitivity is set by <a href=#a><i>^a</i></a>.  Stops at the end of file.<br>
 The search string is remembered.                                                      <th> ^f
 
-<tr><td><b>Next </b>find</b>                                                               <th> ^n
+<tr><td><b>Next </b>find</b>                                                           <th> ^n
 
 <tr><td><b>Find and replace</b>. Optionally:&nbsp; <code>yes, all, no</code><small>(skip)</small><code>, quit</code><br>
-With a selection only the selection is searched and <code>all</code> only applies to the selection. <th>^r
+With a selection only the selection is searched and <code>all</code> only applies to the selection. <th> ^r <br> ^h
 
-<tbody>
+<tbody bgcolor=snow>
 <tr><th  style=font-family:serif colspan=2>Additional Commands
 
 <tr><td><b>Redraw</b> the screen and display file size and free space        <br> 
@@ -266,29 +294,37 @@ With a selection only the selection is searched and <code>all</code> only applie
 immediately after Undo(s). <br>
 Any change to the text invalidates the redo history.                            <th> ^y
 
-<tbody>
 <tr><td><b>Comment / Uncomment</b> a line or selected area.  <br>
-That is, insert / remove the comment character(s) (default '<i>#</i>')          <th>^p <br> ^_
-<tr id=a ><td>Adjust <b>Attributes</b> that is those provided when <i>pye</i> was <a href=#st>started</a>. <br>
-Enter 'y' or 'n' or a number in comma separated fields (example:<i>n,y,4,n</i>) <br>
+That is: insert / remove the comment character(s) (<a href=#a>default '<i>#</i>'</a>)          <th> ^p <br> ^_
+
+<tr id=a ><td>Adjust <b>Attributes</b> that is: those provided when <i>pye</i> was <a href=#st>started</a>. <br>
+Enter y,  n, a number or several characters in comma separated fields (example:<i>y,n,4,#,n</i>) <br>
 Empty field leaves the value unchanged. <p>
 
 <ul>The defaults are :<br>
 <li>auto-indent: y <br>
 <li>search case sensitive: n<br>
-<li>tab-size: 4<br>
+<li>tab-size: 4 ; that is a tab stop occurs every 4 columns<br>
 <li>comment string #<br>
 <li>write-tabs: n <br>
-<li>positioning of the cursor during vertical moves <br>
-(straight vs.  following line ends).<th>^a
+<!--   no longer available <li>positioning of the cursor during vertical moves <br>
+(straight vs.  following line ends). 
+-->
+<th>^a
 </ul>
 
 
 <tbody bgcolor=linen>
-<tr><th  style=font-family:serif colspan=3> Mouse actions
-<tr><td>Set the cursor.<th>Button 1
-<tr><td>Set / Clear highlighting.<th>Button 2
-<tr><td>Scroll Up / Down the screen content by 3 lines per tick. <th>Scroll Wheel
+<tr><th  style=font-family:serif colspan=3> Mouse Actions
+<tr><td>Set the cursor.                                       <td>Button 1
+
+<tr><td>Set / Clear highlighting.                             <td>Double click<br>Button 1
+<tr><td>Find and open a directory window                      <td> button 2
+<tr><td style=border-top-width:0>&nbsp;&nbsp;&nbsp;&nbsp;Search                       <td style=border-top-width:0>button1
+<tr><td style=border-top-width:0>&nbsp;&nbsp;&nbsp;&nbsp;Open file                       <td style=border-top-width:0>button1
+
+
+<tr><td>Scroll Up / Down the screen content by 3 lines per tick. <td>Scroll Wheel
 
 </table>
 <p>
@@ -302,62 +338,61 @@ Empty field leaves the value unchanged. <p>
 <p>
 <h3>Status line</h3>
 <table><tr><td>
-<i style=background-color:aqua>*main.py Row: 5/116 Col: 30 <br>
-^- Astrix indicates window contents have been changed.</i>
+<i style=background-color:aqua>*main.py Row: 5/116 Col: 30 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</i><br>
+^- asterisk indicates window contents have been changed.
 </table>
 <p>
 For online help use <i>^oh</i> to open the file <i>h</i> in a new window and use <i>^w</i>
-to toggle between helpfile and editing window.
+to switch between helpfile and editing window.
 
 <p>
 
-When opening a new window the file name will be prompted for. <br>
+<h3>Opening Files</h3>
+When opening a new window the filename will be prompted for. <br>
 If the name is empty, an empty window will be opened. <br>
-If the file cannot be loaded (for example it does not exist),<br>
-&nbsp;&nbsp;an empty window with that name will be opened. <br>
-If the name is a directory a list of file names will be loaded.
+If the file cannot be loaded (for example it does not exist), an empty window with that name will be opened. <br>
+If the name is a directory a list of filenames will be loaded.
 
 <p>
 
 <h3>Exiting</h3>
 
-<p>
-
-The last window closed, determines the return value. 
-
-<p >When saving an unnamed window, the file name will be prompted for. <br>
-The content is written to a temporary file (basename + ?.pyetmp?) then it is
-renamed to the specified filename. If the target file name is invalid, the
-temporary file will have the content. After saving the window be named as the
-saved file, which acts as Save-as.
+When saving, the content is written to a temporary file (basename + ?.pyetmp?) then it is
+renamed to the filename. <br>
+When saving an unnamed window, the filename will be prompted for. <br>
+If the filename is invalid, the temporary file will have the content. <br>
+After saving the window will be named as the saved file, which acts as Save-as.<br>
 
 <p>
-For quit if the edited text was changed, ask for confirmation. <br>
-If the last buffer is closed, the editor terminates.
-<p>
-For save:
-The name of the file will be returned when pye exits. <br>
+For quit, if the edited text was changed, confirmation is asked for. <p>
+
+When the last window is closed, the pye terminates providing  the return value: 
+
+<table border=1 cellpadding=3 cellspacing=0>
+<tr><th>Editing                      <th> Return Value
+<tr><td>&nbsp;&nbsp;file<td>&nbsp; name of the file 
+<tr><td>&nbsp;&nbsp;list<td>&nbsp; list 
+<tr><td>&nbsp;&nbsp;directory <td>&nbsp; name of the directory 
+</table>
+
+<h3>Options</h3>
 
 The option to replace <b>all</b> sequences of spaces <b>by
 tabs</b>, tab size 8. If the initial file contained tab characters, this is the default. 
-
-<p >When editing a list, the list is returned when pye exits.
-
-<p> When editing a directory the name of the directory will be returned when pye exits. 
-<p> When reading files, tabs are replaced by spaces, tab size 8, and white space at the end of a line is discarded. <br>
+When reading files, tabs are replaced by spaces, tab size 8, and white space at the end of a line is discarded. <p>
 
 <p>
-The undo stack size per window is set on the call to <i>pye()</i> default: micro 50, PC systems 500.
+The undo stack size per window can be set <i>pye()</i> default: micro 50, PC systems 500.
 
 
 <p>
 <h3>PC Usage</h3>
 <p>
 The PC version can be called from the command line with:<br>
-<i>pye [<var>filename(s</var>)]</i>
+<code>pye.py <i style=color:silver>[</i></code><var>filename</var> , &hellip; <i style=color:silver>]</i></code>
 
 <p>
-Using python3 content can be redirected or pipe'd into the editor.
+Using <code>python3 pye.py <i style=color:silver>[</i></code><var>filename</var> , &hellip; <i style=color:silver>]</i></code> content can be redirected or pipe'd to pye.
 
 <p>
 
@@ -365,21 +400,23 @@ Using python3 content can be redirected or pipe'd into the editor.
 
 <p >
 Uses stdin/stdout on the MicroPython boards.
+<h3>Board specific information</h3>
 <p>
-For WiPy1, <b>only</b> the Pre-Compiled version fits, unless using Telnet with the UART session closed. 
+<i>WiPy1</i>: <em>only</em> works only on a Telnet session with the UART connection closed.<br>
+<i>ESP8266</i>: <em>only</em> the frozen bytecode variant can be used.<br>
+
+<h3>Memory Considerations</h3>
 <p>
-The size of a file that can be edited is limited by the memory of the target. <br>
-REDRAW  updates available memory show in the status line.
+The size of a file that can be edited is limited by the memory of the target board. <br>
+Files up to about 13kb on ESP8266 and 68kb on PyBoard should fit. <br>
+REDRAW updates available memory show in the status line.
 In addition to the file, clipboard and especially undo consume memory. <br>
 The undo stack can be limited in the call to <i>pye</i> using <i>undo=<var>n</var></i>. <br>
 The clipboard size can be reduced by copying a single line into it. <br>
-Files up to about 13kb on ESP8266 and 68kb characters on PyBoard should be safe to edit. <br>
-The largest suitable file size is in the same order of what can be handled as source file.
 
 <p>
 When saving a file on PyBoard, the changes may not
-be visible in the file system of a connected PC until you disconnect and
-reconnect the Pyboard drive. <br>
+be visible in the file system of a connected PC until you disconnect and reconnect the Pyboard drive. <br>
 See also the related discussion in the MicroPython Forum.
 
 <p >
@@ -457,10 +494,11 @@ was moved into the window. <br>
 </ul>
 </ul>
 <p >
-See <i style=font-weight:normal>Pyboard_Editor.doc</i> in GitHub for additional details.
+See <i style=font-weight:normal>Pyboard_Editor.doc</i> in <a href=https://github.com/robert-hh/Micropython-Editor>GitHub</a>
+ for additional details.
 
 <p align=right>
-<small><small>DGerman&#x40Real-World-Systems.com version 1.2, 6/17/22 for pye version 2.73</small></small>
+<small><small>DGerman&#x40Real-World-Systems.com version 1.5, 8/10/22 for pye version 2.77</small></small>
 
 </body>
 
