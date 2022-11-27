@@ -19,7 +19,7 @@
 ## - Added multi-file support
 ##
 
-PYE_VERSION   = " V2.77 "
+PYE_VERSION   = " V2.78 "
 try:
     import usys as sys
 except:
@@ -102,6 +102,7 @@ KEY_NEXT_PLACE = const(0xffe3)
 KEY_PREV_PLACE = const(0xffe2)
 KEY_UNDO_PREV  = const(0xffe1)
 KEY_UNDO_NEXT  = const(0xffe0)
+KEY_UNDO_YANK  = const(0xffdf)
 
 class Editor:
 
@@ -153,7 +154,7 @@ class Editor:
     "\x15"   : KEY_BACKTAB, ## Ctrl-U
     "\x18"   : KEY_CUT, ## Ctrl-X
     "\x16"   : KEY_PASTE, ## Ctrl-V
-    "\x04"   : KEY_COPY, ## Ctrl-D
+    "\x04"   : KEY_UNDO_YANK, ## Ctrl-D
     "\x0c"   : KEY_MARK, ## Ctrl-L
     "\x00"   : KEY_MARK, ## Ctrl-Space
     "\x14"   : KEY_FIRST, ## Ctrl-T
@@ -1086,6 +1087,9 @@ class Editor:
                 self.undo_index = (self.undo_index + (1 if key == KEY_UNDO_NEXT else -1)) % len(self.undo)
                 self.cur_line = self.undo[self.undo_index][0]
                 self.col = self.undo[self.undo_index][4]
+        elif key == KEY_UNDO_YANK:
+            if len(self.undo) > 0:
+                Editor.yank_buffer = self.undo[self.undo_index][2]
 
         return key
 
