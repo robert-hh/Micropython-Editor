@@ -14,7 +14,8 @@ elif sys.implementation.name == "circuitpython":
     from io import StringIO
 else:
     is_micropython = False
-    const = lambda x:x
+    def const(x):
+        return x
     import os
     from _io import StringIO
 from re import compile as re_compile
@@ -364,7 +365,8 @@ class Editor:
         res = self.mark_range()
         return (res[0], res[2]) if res[3] > 0 else (res[0], res[2] - 1)
     def line_edit(self, prompt, default, zap=None):
-        push_msg = lambda msg: self.wr(msg + Editor.TERMCMD[13] * len(msg))
+        def push_msg(msg):
+            self.wr(msg + Editor.TERMCMD[13] * len(msg))
         self.goto(Editor.height, 0)
         self.hilite(1)
         self.wr(prompt)
@@ -530,7 +532,7 @@ class Editor:
         redo_start = len(redo)
         while len(undo) > 0 and chain:
             action = undo.pop()
-            if not action[3] in (KEY_INDENT, KEY_DEDENT, KEY_COMMENT):
+            if action[3] not in (KEY_INDENT, KEY_DEDENT, KEY_COMMENT):
                 self.cur_line = action[0]
             self.col = action[4]
             if len(redo) >= self.undo_limit:
@@ -728,12 +730,17 @@ class Editor:
             Editor.autoindent, Editor.case, self.tab_size, Editor.comment_char, self.write_tabs), "")
             try:
                 res =  [i.lstrip().lower() for i in pat.split(",")]
-                if res[0]: Editor.autoindent = 'y' if res[0][0] == 'y' else 'n'
-                if res[1]: Editor.case     = 'y' if res[1][0] == 'y' else 'n'
-                if res[2]: self.tab_size = int(res[2])
-                if res[3]: Editor.comment_char = res[3]
-                if res[4]: self.write_tabs = 'y' if res[4][0] == 'y' else 'n'
-            except:
+                if res[0]:
+                    Editor.autoindent = 'y' if res[0][0] == 'y' else 'n'
+                if res[1]:
+                    Editor.case     = 'y' if res[1][0] == 'y' else 'n'
+                if res[2]:
+                    self.tab_size = int(res[2])
+                if res[3]:
+                    Editor.comment_char = res[3]
+                if res[4]:
+                    self.write_tabs = 'y' if res[4][0] == 'y' else 'n'
+            except IndexError:
                 pass
         elif key == KEY_SCRLUP:
             ni = 1 if char is None else 3
@@ -976,7 +983,7 @@ class Editor:
             self.redraw(True)
         elif key == KEY_PLACE:
             here = (self.cur_line, self)
-            if not here in Editor.place_list:
+            if here not in Editor.place_list:
                 if len(Editor.place_list) >= Editor.max_places:
                     Editor.place_list.pop(0)
                 Editor.place_list.append(here)
