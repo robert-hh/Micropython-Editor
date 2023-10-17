@@ -6,10 +6,12 @@ try:
 except:
     import sys
 
+
 class IO_DEVICE:
     def __init__(self):
         try:
             from micropython import kbd_intr
+
             kbd_intr(-1)
         except ImportError:
             pass
@@ -30,22 +32,25 @@ class IO_DEVICE:
     def deinit_tty(self):
         try:
             from micropython import kbd_intr
+
             kbd_intr(3)
         except ImportError:
             pass
 
     def get_screen_size(self):
-        self.wr('\x1b[999;999H\x1b[6n')
-        pos = ''
-        char = self.rd() ## expect ESC[yyy;xxxR
-        while char != 'R':
+        self.wr("\x1b[999;999H\x1b[6n")
+        pos = ""
+        char = self.rd()  ## expect ESC[yyy;xxxR
+        while char != "R":
             pos += char
             char = self.rd()
-        return [int(i, 10) for i in pos.lstrip("\n\x1b[").split(';')]
+        return [int(i, 10) for i in pos.lstrip("\n\x1b[").split(";")]
+
 
 ## test, if the Editor class is already present
 if "pye_edit" not in globals().keys():
     from pye import pye_edit
+
 
 def pye(*args, tab_size=4, undo=50):
     io_device = IO_DEVICE()
