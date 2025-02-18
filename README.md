@@ -1,5 +1,10 @@
 ﻿# Micropython-Editor
 
+## Installation
+```sh
+mpremote mip install github:robert-hh/Micropython-Editor
+```
+
 ## Description
 
 A small text editor written in Python running on
