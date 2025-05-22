@@ -1,6 +1,7 @@
 {
   "urls": [
-    ["pye.mpy", "github:robert-hh/Micropython-Editor/pye.mpy"]
+    ["pye.mpy", "github:robert-hh/Micropython-Editor/pye.mpy"],
+    ["pye.py", "github:robert-hh/Micropython-Editor/pye.py"]
   ],
   "version": "2.78"
 }
