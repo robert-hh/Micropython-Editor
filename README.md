@@ -68,9 +68,10 @@ shows most of the commands.:
 |Alt-PgUp & Alt-PgDn|Cycle trough bookmarked locations|
 |Alt-Home & Alt-End|Cycle trough locations with changes, based on the Undo list|
 |Ctrl-L or Ctrl-Space|Start highlighting at the current position, or clear the highlight. The highlight can then be extended by moving the cursor|
-|Ctrl-X|Cut the highlighted text|
-|Ctrl-C or Ctrl-D|Copy the highlighted text|
+|Ctrl-X|Cut the highlighted text. If the mark is not set, cut the current line.|
+|Ctrl-C|Copy the highlighted text. If the mark is not set, copy the current line.|
 |Ctrl-V|Insert the copied/cut text.|
+|Ctrl-D|Copy text from the Undo buffer to the paste buffer.|
 |Ctrl-Z|Undo the last change(s)|
 |Ctrl-Y|Redo the last undo(s), repeating what had been undone by undo|
 |Ctrl-P|Comment/Uncomment a line or highlighted area|
@@ -568,8 +569,11 @@ the list of files in the current dir
 
 **2.75** Fix an error with character swap.
 
-**2.76** Cycle through places with changes.
+**2.76** Cycle through places with changes.  
 
-**2.77** Change key binding for bookmark location to Alt-Ins, using Alt-Home and Alt-End to cycle through
-locations with changes.
+**2.77** Change key binding for bookmark location to Alt-Ins, using Alt-Home and Alt-End
+to cycle through locations with changes.  
 
+**2.78** Use Ctrl-D to copy text from the UNDO buffer to the Paste buffer.
+
+**2.79** Cut or copy the current line if no text is highlighted.  
