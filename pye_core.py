@@ -2,7 +2,7 @@
 ## Small python text editor based on the
 ## Very simple VT100 terminal text editor widget
 ## Copyright (c) 2015 Paul Sokolovsky (initial code)
-## Copyright (c) 2015-2021 Robert Hammelrath (additional code)
+## Copyright (c) 2015-2025 Robert Hammelrath (additional code)
 ## Distributed under MIT License
 ## Changes:
 ## - Ported the code to boards from micropython.org, Pycom Boards,
@@ -19,7 +19,7 @@
 ## - Added multi-file support
 ##
 
-PYE_VERSION = " V2.78 "
+PYE_VERSION = " V2.79 "
 try:
     import usys as sys
 except:
@@ -1116,12 +1116,24 @@ class Editor:
                     self.cur_line, self.col = cur_line, cur_col  ## restore pos
                     self.message = "'{}' replaced {} times".format(pat, count)
         elif key == KEY_CUT:  # delete line or line(s) into buffer
-            if self.mark is not None:
-                self.delete_mark(True)
+            if self.mark is None:
+                if self.cur_line < self.total_lines - 1:
+                    self.mark = (self.cur_line + 1, 0)
+                else:
+                    self.mark = (self.cur_line, len(l))
+                self.col = 0
+            self.delete_mark(True)
         elif key == KEY_COPY:  # copy line(s) into buffer
-            if self.mark is not None:
-                self.yank_mark()
-                self.clear_mark()
+            col = self.col
+            if self.mark is None:
+                if self.cur_line < self.total_lines - 1:
+                    self.mark = (self.cur_line + 1, 0)
+                else:
+                    self.mark = (self.cur_line, len(l))
+                self.col = 0
+            self.yank_mark()
+            self.clear_mark()
+            self.col = col
         elif key == KEY_PASTE:  ## insert buffer
             if Editor.yank_buffer:
                 self.col = self.vcol
