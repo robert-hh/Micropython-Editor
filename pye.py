@@ -1145,7 +1145,7 @@ class Editor:
             self.message = ""
             key = self.handle_edit_keys(key, char)
             if key == KEY_QUIT:
-                if self.hash != self.hash_buffer():
+                if self.hash != self.hash_buffer() and not self.is_dir:
                     res = self.line_edit("File changed! Quit (y/N/f)? ", "N")
                     if not res or res[0].upper() == "N":
                         continue
@@ -1185,8 +1185,8 @@ class Editor:
         if fname:
             try:
                 self.fname = fname
-                if fname in (".", "..") or (os.stat(fname)[0] & 0x4000):
-                    os.chdir(fname)
+                if fname in (".", "..", "") or (os.stat(fname)[0] & 0x4000):
+                    os.chdir(fname or ".")
                     self.work_dir = os.getcwd()
                     self.fname = "/" if self.work_dir == "/" else self.work_dir.split("/")[-1]
                     self.content = ["Directory '{}'".format(self.work_dir), ""] + sorted(
@@ -1274,7 +1274,8 @@ def pye_edit(content, tab_size=4, undo=50, io_device=None):
                     break
                 del slot[index]
             elif key == KEY_GET:
-                f = slot[index].line_edit("Open file: ", "", Editor.file_char)
+                dfn = slot[index].content[slot[index].cur_line].strip() if slot[index].is_dir else ""
+                f = slot[index].line_edit("Open file: ", dfn, Editor.file_char)
                 if f is not None:
                     slot.append(Editor(tab_size, undo, io_device))
                     index = len(slot) - 1
