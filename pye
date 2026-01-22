@@ -4,7 +4,7 @@
 ## Small python text editor based on the
 ## Very simple VT100 terminal text editor widget
 ## Copyright (c) 2015 Paul Sokolovsky (initial code)
-## Copyright (c) 2015-2021 Robert Hammelrath (additional code)
+## Copyright (c) 2015-2025 Robert Hammelrath (additional code)
 ## Distributed under MIT License
 ## Changes:
 ## - Ported the code to boards from micropython.org, Pycom Boards,
@@ -28,23 +28,18 @@ except:
     import sys
 import gc
 
-if sys.implementation.name == "micropython":
+if sys.implementation.name == "micropython" or sys.implementation.name == "circuitpython":
     is_micropython = True
-    import uos as os
-    from uio import StringIO
-elif sys.implementation.name == "circuitpython":
-    is_micropython = True
-    import os
+    import os as os
     from io import StringIO
 else:
     is_micropython = False
+    import os
+    from _io import StringIO
 
     def const(x):
         return x
 
-    # const = lambda x:x
-    import os
-    from _io import StringIO
 from re import compile as re_compile
 import time
 

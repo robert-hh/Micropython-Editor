@@ -4,20 +4,16 @@ try:
 except:
     import sys
 import gc
-if sys.implementation.name == "micropython":
+if sys.implementation.name == "micropython" or sys.implementation.name == "circuitpython":
     is_micropython = True
-    import uos as os
-    from uio import StringIO
-elif sys.implementation.name == "circuitpython":
-    is_micropython = True
-    import os
+    import os as os
     from io import StringIO
 else:
     is_micropython = False
-    def const(x):
-        return x
     import os
     from _io import StringIO
+    def const(x):
+        return x
 from re import compile as re_compile
 import time
 KEY_NONE = const(0x00)

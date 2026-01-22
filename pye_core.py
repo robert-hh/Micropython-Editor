@@ -19,30 +19,25 @@
 ## - Added multi-file support
 ##
 
-PYE_VERSION = " V2.79 "
+PYE_VERSION = " V2.80 "
 try:
     import usys as sys
 except:
     import sys
 import gc
 
-if sys.implementation.name == "micropython":
+if sys.implementation.name == "micropython" or sys.implementation.name == "circuitpython":
     is_micropython = True
-    import uos as os
-    from uio import StringIO
-elif sys.implementation.name == "circuitpython":
-    is_micropython = True
-    import os
+    import os as os
     from io import StringIO
 else:
     is_micropython = False
+    import os
+    from _io import StringIO
 
     def const(x):
         return x
 
-    # const = lambda x:x
-    import os
-    from _io import StringIO
 from re import compile as re_compile
 import time
 
