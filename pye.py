@@ -1,7 +1,7 @@
-PYE_VERSION = " V2.79 "
+PYE_VERSION = " V2.80 "
 try:
     import usys as sys
-except:
+except Exception:
     import sys
 import gc
 if sys.implementation.name == "micropython" or sys.implementation.name == "circuitpython":
@@ -515,7 +515,7 @@ class Editor:
             pattern = pattern.lower()
         try:
             rex = re_compile(pattern)
-        except:
+        except Exception:
             self.message = "Invalid pattern: " + pattern
             return None
         start = self.cur_line
@@ -1069,7 +1069,7 @@ class Editor:
                         res = self.line_edit("The file exists! Overwrite (y/N)? ", "N")
                         if not res or res[0].upper() != "Y":
                             return
-                    except:
+                    except Exception:
                         pass
                 self.put_file(fname)
                 self.fname = fname
@@ -1215,7 +1215,7 @@ class Editor:
                 f.write("\n")
         try:
             os.remove(fname)
-        except:
+        except Exception:
             pass
         os.rename(tmpfile, fname)
     def expandtabs(self, s):
@@ -1255,7 +1255,7 @@ def pye_edit(content, tab_size=4, undo=50, io_device=None):
                     slot[index].content = [
                         str(_) for _ in f
                     ]
-                except:
+                except Exception:
                     slot[index].content = [str(f)]
             index += 1
     else:
@@ -1290,7 +1290,7 @@ def pye_edit(content, tab_size=4, undo=50, io_device=None):
     return slot[0].content if (slot[0].fname == "") else slot[0].fname
 try:
     import usys as sys
-except:
+except Exception:
     import sys
 class IO_DEVICE:
     def __init__(self):

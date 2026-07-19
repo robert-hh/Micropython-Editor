@@ -3,7 +3,7 @@
 #
 try:
     import usys as sys
-except:
+except Exception:
     import sys
 
 

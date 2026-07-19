@@ -796,7 +796,7 @@ class Editor:
                     Editor.comment_char = res[3]
                 if res[4]:
                     self.write_tabs = "y" if res[4][0] == "y" else "n"
-            except:
+            except Exception:
                 pass
         elif key == KEY_SCRLUP:  ##
             ni = 1 if char is None else 3
@@ -1053,7 +1053,7 @@ class Editor:
                         res = self.line_edit("The file exists! Overwrite (y/N)? ", "N")
                         if not res or res[0].upper() != "Y":
                             return
-                    except:
+                    except Exception:
                         pass
                 self.put_file(fname)
                 self.fname = fname  ## remember (new) name
@@ -1173,7 +1173,7 @@ class Editor:
 
         try:
             remove(fname)
-        except:
+        except Exception:
             pass
         with open(fname, "w") as f:
             for l in self.content:
@@ -1223,7 +1223,7 @@ def pye_edit(content, tab_size=4, undo=50, io_device=None):
                     slot[index].content = [
                         str(_) for _ in f
                     ]  ## iterable item -> make strings and edit
-                except:
+                except Exception:
                     slot[index].content = [str(f)]
             index += 1
     else:

@@ -577,3 +577,6 @@ to cycle through locations with changes.
 **2.78** Use Ctrl-D to copy text from the UNDO buffer to the Paste buffer.
 
 **2.79** Cut or copy the current line if no text is highlighted.  
+
+**2.80** Replace bare "except:" by "except Exception:".  
+
