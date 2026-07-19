@@ -22,7 +22,7 @@
 PYE_VERSION = " V2.80 "
 try:
     import usys as sys
-except:
+except Exception:
     import sys
 import gc
 
@@ -588,7 +588,7 @@ class Editor:
             pattern = pattern.lower()
         try:
             rex = re_compile(pattern)
-        except:
+        except Exception:
             self.message = "Invalid pattern: " + pattern
             return None
         start = self.cur_line
@@ -1164,7 +1164,7 @@ class Editor:
                         res = self.line_edit("The file exists! Overwrite (y/N)? ", "N")
                         if not res or res[0].upper() != "Y":
                             return
-                    except:
+                    except Exception:
                         pass
                 self.put_file(fname)
                 self.fname = fname  ## remember (new) name
@@ -1323,7 +1323,7 @@ class Editor:
                 f.write("\n")
         try:
             os.remove(fname)
-        except:
+        except Exception:
             pass
         os.rename(tmpfile, fname)
 
@@ -1370,7 +1370,7 @@ def pye_edit(content, tab_size=4, undo=50, io_device=None):
                     slot[index].content = [
                         str(_) for _ in f
                     ]  ## iterable item -> make strings and edit
-                except:
+                except Exception:
                     slot[index].content = [str(f)]
             index += 1
     else:

@@ -3,7 +3,7 @@
 #
 try:
     import usys as sys
-except:
+except Exception:
     import sys
 
 
@@ -50,7 +50,7 @@ class IO_DEVICE:
                     "\x93": "3;5~",  # CTRL-DEL
                     "\x94": "Z",  # Ctrl-Tab = BACKTAB,
                 }[c]
-            except:
+            except Exception:
                 self.peek_char = "~"  # illegal code, will be ignored
             return "\x1b["
         else:
